@@ -132,11 +132,32 @@ curl -fsSL https://raw.githubusercontent.com/LEEHEEWON123/harness_build/main/ins
 
 ---
 
+### 방법 D — 글로벌 설치 (모든 프로젝트에서 사용)
+
+`~/.claude/` 에 설치하면 어느 프로젝트에서든 스킬/에이전트가 동작한다.
+
+```bash
+bash install.sh --global
+```
+
+> 스킬과 에이전트만 글로벌로 설치된다.
+> `REACT_NEXT_CONVENTIONS.md`와 `CLAUDE.md`는 프로젝트별로 별도 설치 필요:
+> ```bash
+> bash install.sh /path/to/your-project
+> ```
+
+---
+
 ### 하네스 업데이트 (최신 반영)
 
 ```bash
 cd harness_build
 git pull origin main
+
+# 글로벌 업데이트
+bash install.sh --global
+
+# 특정 프로젝트 업데이트
 bash install.sh /path/to/your-project
 ```
 
