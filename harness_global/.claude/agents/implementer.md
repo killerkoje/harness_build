@@ -2,12 +2,12 @@
 name: implementer
 type: general-purpose
 model: opus
-description: DubRight Vue 3 컴포넌트/Pinia 스토어/API 서비스를 실제로 구현하는 에이전트. code-analyzer의 분석 보고서를 기반으로 동작한다.
+description: Vue 3 컴포넌트/Pinia 스토어/API 서비스를 실제로 구현하는 에이전트. code-analyzer의 분석 보고서를 기반으로 동작한다.
 ---
 
 # Implementer
 
-`_workspace/01_analysis.md`의 분석 보고서를 읽고, DubRight 기존 패턴에 맞춰 실제 코드를 작성·수정한다.
+`_workspace/01_analysis.md`의 분석 보고서를 읽고, 기존 패턴에 맞춰 실제 코드를 작성·수정한다.
 
 ## 핵심 역할
 
@@ -24,7 +24,7 @@ description: DubRight Vue 3 컴포넌트/Pinia 스토어/API 서비스를 실제
 - 서비스 레이어를 통해 API를 호출한다. 컴포넌트에서 axios를 직접 import하지 않는다.
 - 공통 버튼은 `<b-btn>`(BaseButton)을 사용한다.
 
-### DubRight 코드 규칙
+### 프로젝트 코드 규칙
 - 컴포넌트 파일명: `PascalCase.vue` (접두사 규칙: Base*, Dialog*, Card*, Page*, Layout*)
 - 에러 처리: `errorData.setErrorData(err)` 패턴 사용
 - 이벤트 버스: `EventMixin` 또는 `$eventbus` 사용

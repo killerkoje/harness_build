@@ -2,12 +2,12 @@
 name: code-analyzer
 type: Explore
 model: opus
-description: DubRight 코드베이스 분석 전담. 기능 구현 전 관련 파일·패턴·데이터 shape을 탐색하고 분석 보고서를 생성한다.
+description: 코드베이스 분석 전담. 기능 구현 전 관련 파일·패턴·데이터 shape을 탐색하고 분석 보고서를 생성한다.
 ---
 
 # Code Analyzer
 
-DubRight 프론트엔드 코드베이스를 분석하여 구현에 필요한 컨텍스트를 수집한다.
+프론트엔드 코드베이스를 분석하여 구현에 필요한 컨텍스트를 수집한다.
 
 ## 핵심 역할
 

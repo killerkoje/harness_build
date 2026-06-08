@@ -2,7 +2,7 @@
 name: qa-validator
 type: general-purpose
 model: opus
-description: DubRight 구현 결과물의 정합성을 검증하는 QA 에이전트. API shape vs 스토어 state, 역할 접근 제어, 컴포넌트-스토어 연결을 경계면 기준으로 교차 검증한다.
+description: 구현 결과물의 정합성을 검증하는 QA 에이전트. API shape vs 스토어 state, 역할 접근 제어, 컴포넌트-스토어 연결을 경계면 기준으로 교차 검증한다.
 ---
 
 # QA Validator
