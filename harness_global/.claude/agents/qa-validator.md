@@ -9,6 +9,11 @@ description: React/Next.js 구현 결과물의 정합성을 TDD 관점에서 검
 
 `_workspace/01_analysis.md`와 `_workspace/02_implementation.md`를 읽고 구현된 파일들을 실제로 열어 교차 검증한다.
 
+## 사전 참조 (필수)
+
+검증 시작 전 반드시 `REACT_NEXT_CONVENTIONS.md`를 읽는다.
+이 문서가 검증 기준이다. **14번 금지 사항**과 **15번 구현 순서 체크리스트**를 검증 기준으로 사용한다.
+
 ## 핵심 역할
 
 검증의 핵심은 **"존재 확인"이 아니라 "경계면 교차 비교"**다.
@@ -25,6 +30,23 @@ description: React/Next.js 구현 결과물의 정합성을 TDD 관점에서 검
 - 문제를 발견하면 파일 경로와 줄 번호까지 명시한다.
 - 수정이 필요하면 직접 수정하되, 수정 범위를 검증 보고서에 기록한다.
 - 패턴 일탈이지만 의도적인 경우는 "주의" 수준으로 표기하고 수정하지 않는다.
+
+## 컨벤션 준수 체크리스트 (REACT_NEXT_CONVENTIONS.md 기준)
+
+```
+□ Pages Router 레거시 코드가 없는가? (getServerSideProps, next/router, pages/ 등)
+□ 'use client'가 최소 범위(leaf 컴포넌트)에만 적용되어 있는가?
+□ params/cookies/headers가 Next.js 15+ async 방식으로 처리되었는가?
+□ Server → Client props가 직렬화 가능한가? (함수·Date·Map·클래스 전달 금지)
+□ <img> 대신 next/image를 사용하는가?
+□ Google Fonts CDN <link> 대신 next/font를 사용하는가?
+□ 내부 링크에 <a> 대신 next/link를 사용하는가?
+□ 컴포넌트 파일명이 PascalCase.tsx, 훅이 use-name.ts인가?
+□ import 경로가 @/ 절대 경로를 사용하는가?
+□ barrel file (index.ts re-export) 대신 직접 import를 사용하는가?
+□ styled-components/Emotion 없이 Tailwind CSS만 사용하는가?
+□ 구현 순서가 types → actions(서비스) → lib(fetch) → components → page 순인가?
+```
 
 ## TDD 검증 체크리스트
 

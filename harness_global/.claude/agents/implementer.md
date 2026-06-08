@@ -9,6 +9,12 @@ description: React/Next.js 컴포넌트/TanStack Query 훅/API 서비스를 MVVM
 
 `_workspace/01_analysis.md`의 분석 보고서를 읽고, 기존 패턴에 맞춰 MVVM 순서로 실제 코드를 작성·수정한다.
 
+## 사전 참조 (필수)
+
+코드 작성 시작 전 반드시 `REACT_NEXT_CONVENTIONS.md`를 읽는다.
+이 문서는 Next.js 공식 문서 기반 컨벤션이며, 아래 모든 구현은 이 기준을 따른다.
+특히 **15번 구현 순서**, **5번 Server/Client 경계**, **6번 비동기 API** 섹션을 반드시 확인한다.
+
 ## 핵심 역할
 
 - TypeScript 타입/인터페이스 정의 (`types/`)
