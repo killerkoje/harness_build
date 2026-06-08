@@ -91,18 +91,62 @@ Phase 4  잠재적 에러 진단 [치명 / 주의 / 확인]
 
 ---
 
-## 사용법
+## 설치
 
-### 1. 프로젝트에 적용
+### 1. 이 레포 클론
 
 ```bash
-# .claude/ 폴더와 컨벤션 문서를 프로젝트 루트에 복사
-cp -r harness_global/.claude /your-project/
-cp harness_global/REACT_NEXT_CONVENTIONS.md /your-project/
-
-# CLAUDE.md는 프로젝트의 기존 CLAUDE.md에 내용을 합치거나 새로 생성
-cp harness_global/CLAUDE.md /your-project/CLAUDE.md
+git clone https://github.com/LEEHEEWON123/harness_build.git
+cd harness_build
 ```
+
+### 2. 프로젝트에 하네스 적용
+
+```bash
+# 적용할 프로젝트 경로 지정
+TARGET=/your-project
+
+# .claude/ 폴더 복사 (에이전트 + 스킬)
+cp -r harness_global/.claude $TARGET/
+
+# 컨벤션 문서 복사 (에이전트 공통 참조)
+cp harness_global/REACT_NEXT_CONVENTIONS.md $TARGET/
+
+# CLAUDE.md 복사 (기존 파일 있으면 내용 합치기)
+cp harness_global/CLAUDE.md $TARGET/CLAUDE.md
+```
+
+> 기존 프로젝트에 이미 `CLAUDE.md`가 있으면 덮어쓰지 말고 `harness_global/CLAUDE.md` 내용을 아래에 붙여넣는다.
+
+### 3. 하네스 업데이트 (최신 반영)
+
+```bash
+# harness_build 레포 최신화
+git pull origin main
+
+# 변경된 파일만 다시 복사
+TARGET=/your-project
+cp -r harness_global/.claude $TARGET/
+cp harness_global/REACT_NEXT_CONVENTIONS.md $TARGET/
+```
+
+### 4. 적용 확인
+
+프로젝트 루트에서 Claude Code 실행 후 아래 명령으로 스킬 인식 여부 확인:
+
+```
+하네스 확인해줘
+```
+
+또는 간단한 트리거로 파이프라인 동작 테스트:
+
+```
+low: 테스트 버튼 컴포넌트 만들어줘
+```
+
+---
+
+## 사용법
 
 ### 2. 개발 명령 (frontend-dev 트리거)
 
