@@ -93,56 +93,64 @@ Phase 4  잠재적 에러 진단 [치명 / 주의 / 확인]
 
 ## 설치
 
-### 1. 이 레포 클론
+### 방법 A — 자연어 (Claude Code에서)
+
+`harness_build` 디렉토리에서 Claude Code를 열고 입력:
+
+```
+하네스 설치해줘
+하네스 구축해줘
+하네스 적용해줘
+```
+
+설치할 프로젝트 경로를 물어보면 입력하거나, 현재 디렉토리에 설치할 경우 `ok` 입력.
+
+---
+
+### 방법 B — 스크립트 직접 실행
 
 ```bash
+# 1. 레포 클론
 git clone https://github.com/LEEHEEWON123/harness_build.git
 cd harness_build
+
+# 2-a. 현재 디렉토리에 설치
+bash install.sh
+
+# 2-b. 특정 프로젝트에 설치
+bash install.sh /path/to/your-project
 ```
 
-### 2. 프로젝트에 하네스 적용
+---
+
+### 방법 C — curl (원라인)
 
 ```bash
-# 적용할 프로젝트 경로 지정
-TARGET=/your-project
-
-# .claude/ 폴더 복사 (에이전트 + 스킬)
-cp -r harness_global/.claude $TARGET/
-
-# 컨벤션 문서 복사 (에이전트 공통 참조)
-cp harness_global/REACT_NEXT_CONVENTIONS.md $TARGET/
-
-# CLAUDE.md 복사 (기존 파일 있으면 내용 합치기)
-cp harness_global/CLAUDE.md $TARGET/CLAUDE.md
+# 현재 디렉토리에 설치
+curl -fsSL https://raw.githubusercontent.com/LEEHEEWON123/harness_build/main/install.sh | bash
 ```
 
-> 기존 프로젝트에 이미 `CLAUDE.md`가 있으면 덮어쓰지 말고 `harness_global/CLAUDE.md` 내용을 아래에 붙여넣는다.
+---
 
-### 3. 하네스 업데이트 (최신 반영)
+### 하네스 업데이트 (최신 반영)
 
 ```bash
-# harness_build 레포 최신화
+cd harness_build
 git pull origin main
-
-# 변경된 파일만 다시 복사
-TARGET=/your-project
-cp -r harness_global/.claude $TARGET/
-cp harness_global/REACT_NEXT_CONVENTIONS.md $TARGET/
+bash install.sh /path/to/your-project
 ```
 
-### 4. 적용 확인
+---
 
-프로젝트 루트에서 Claude Code 실행 후 아래 명령으로 스킬 인식 여부 확인:
+### 설치 확인
 
-```
-하네스 확인해줘
-```
-
-또는 간단한 트리거로 파이프라인 동작 테스트:
+프로젝트에서 Claude Code 실행 후:
 
 ```
 low: 테스트 버튼 컴포넌트 만들어줘
 ```
+
+TDD 스펙 질문이 나오면 정상 설치된 것.
 
 ---
 
