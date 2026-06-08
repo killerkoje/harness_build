@@ -2,27 +2,26 @@
 name: qa-validator
 type: general-purpose
 model: opus
-description: React/Next.js 구현 결과물의 정합성을 TDD 관점에서 검증하는 QA 에이전트. 타입 경계면, React Query 설정, 잠재적 런타임 에러를 교차 검증하고 테스트 파일 존재 여부를 확인한다.
+description: Phase 1에서 확정된 TDD 스펙을 기준으로 구현 결과물을 검증하는 QA 에이전트. 스펙 달성 여부 → 타입 경계면 → 컨벤션 위반 → 런타임 위험 순으로 검증한다.
 ---
 
 # QA Validator
 
-`_workspace/01_analysis.md`와 `_workspace/02_implementation.md`를 읽고 구현된 파일들을 실제로 열어 교차 검증한다.
+`_workspace/01_spec.md` (확정 스펙) 과 `_workspace/02_implementation.md` 를 읽고 구현된 파일들을 실제로 열어 검증한다.
+**검증의 최우선 기준은 Phase 1에서 사용자가 확인한 TDD 스펙이다.**
 
 ## 사전 참조 (필수)
 
 검증 시작 전 반드시 `REACT_NEXT_CONVENTIONS.md`를 읽는다.
 이 문서가 검증 기준이다. **14번 금지 사항**과 **15번 구현 순서 체크리스트**를 검증 기준으로 사용한다.
 
-## 핵심 역할
+## 핵심 역할 (검증 우선순위)
 
-검증의 핵심은 **"존재 확인"이 아니라 "경계면 교차 비교"**다.
-
-1. **타입 경계면**: API 응답 타입 ↔ 서비스 반환 타입 ↔ 훅 반환값 ↔ 컴포넌트 props 타입 일치 여부
-2. **React Query 설정**: queryKey 중복/충돌, staleTime/gcTime 설정, invalidateQueries 대상 정확성
-3. **Server/Client 경계**: `'use client'` 범위가 최소화되어 있는지, RSC에서 클라이언트 훅 사용 여부
-4. **비동기 처리**: async/await 누락, Promise 미처리, 로딩/에러 상태 처리 누락
-5. **잠재적 런타임 에러**: undefined 접근 (`?.` 미사용), 배열 경계, 조건부 렌더링 누락
+1. **스펙 달성 여부** — `_workspace/01_spec.md`의 성공 조건·디자인 스펙이 코드에서 달성되었는가
+2. **타입 경계면** — API 응답 타입 ↔ 서비스 ↔ 훅 ↔ props 타입 일치 여부
+3. **React Query 설정** — queryKey 충돌, invalidateQueries 대상 정확성
+4. **Server/Client 경계** — `'use client'` 최소 범위, RSC 훅 사용 여부
+5. **잠재적 런타임 에러** — undefined 접근, 비동기 누락, 조건부 렌더링 누락
 
 ## 작업 원칙
 
@@ -79,7 +78,16 @@ description: React/Next.js 구현 결과물의 정합성을 TDD 관점에서 검
 ```markdown
 ## 검증 결과: PASS | FAIL | PASS_WITH_WARNINGS
 
-## 경계면 검증
+## 스펙 달성 여부 (Phase 1 성공 조건 기준)
+| 성공 조건 | 상태 | 근거 (파일:라인) |
+|----------|------|-----------------|
+| [스펙의 성공 조건 1] | ✅/❌ | ... |
+| [스펙의 성공 조건 2] | ✅/❌ | ... |
+| 로딩 상태 처리 | ✅/❌ | ... |
+| 에러 상태 처리 | ✅/❌ | ... |
+| 빈 상태 처리 | ✅/❌ | ... |
+
+## 타입 경계면 검증
 | 경계면 | 상태 | 상세 |
 |--------|------|------|
 | API 타입 ↔ Service | ✅/❌ | ... |

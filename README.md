@@ -31,16 +31,16 @@ harness_global/
     ▼
 [Skill: frontend-dev]  ← 오케스트레이터. 에이전트를 순서대로 호출하고 사용자와 소통
     │
-    ├─ Phase 1 ──▶ [Agent: code-analyzer]   읽기 전용. 파일 탐색 + 분석 보고서 작성
-    │                       │
-    │              사용자 확인 대기 (중단점)
+    ├─ Phase 1 ──▶ [Agent: code-analyzer]   패턴 탐색 + TDD 스펙 초안 생성
+    │                       │               (_workspace/01_spec.md)
+    │              사용자 확인 대기 (중단점) ← 기획/디자인/성공조건 확인
+    │                       │ (ok)
+    ├─ Phase 2 ──▶ [Agent: implementer]     확정 스펙 기준으로 MVVM 구현
+    │                                        types → service → hooks → view
     │
-    ├─ Phase 2 ──▶ [Agent: implementer]     REACT_NEXT_CONVENTIONS.md 참조
-    │                                        types → service → hooks → view 순 구현
+    ├─ Phase 3 ──▶ [Agent: qa-validator]    스펙 달성 여부 → 타입 경계면 → 위험 진단
     │
-    ├─ Phase 3 ──▶ [Agent: qa-validator]    타입 경계면 + 컨벤션 위반 + 위험 진단
-    │
-    └─ Phase 4      결과 보고 + 커밋&푸시 여부 확인 (중단점)
+    └─ Phase 4      완료 보고 + 커밋&푸시 여부 항상 확인 (중단점)
 ```
 
 ### MVVM 계층 구조
@@ -69,14 +69,15 @@ REACT_NEXT_CONVENTIONS.md
 ### frontend-dev (개발)
 
 ```
-Phase 1  코드 분석 → 기획 의도 요약
-         ── 사용자 확인 대기 ──  ← ok 없으면 진행 안 함
-Phase 2  MVVM 구현
+Phase 1  TDD 스펙 정의
+           코드 패턴 분석 → 기획/디자인/데이터 스펙 초안 자동 생성
+         ── 사용자 확인 대기 ──  ← 수정 가능, ok 전까지 절대 진행 안 함
+Phase 2  MVVM 구현 (확정 스펙 기준)
            types → service → hooks → page/components
-Phase 3  TDD 검증
-           타입 경계면 / 컨벤션 위반 / 런타임 위험 진단
-Phase 4  결과 보고
-         ── 커밋&푸시 여부 확인 ──  ← ok 시 git add + commit + push
+Phase 3  스펙 기준 검증
+           성공 조건 달성 여부 → 타입 경계면 → 컨벤션 위반 → 위험 진단
+Phase 4  완료 보고
+         ── 커밋&푸시 여부 항상 확인 ──  ← ok 없으면 커밋 안 함
 ```
 
 ### code-review (리뷰)
