@@ -9,8 +9,10 @@ description: 기존 코드 패턴을 분석하고 TDD 스펙 초안을 생성하
 
 ## 사전 참조 (필수)
 
-분석 시작 전 반드시 `REACT_NEXT_CONVENTIONS.md`를 읽는다.
-이 문서는 Next.js 공식 문서 기반 컨벤션이며, 스펙 초안 작성 시 이 기준을 따른다.
+분석 시작 전 반드시 두 문서를 읽는다.
+
+- `REACT_NEXT_CONVENTIONS.md` — Next.js 공식 문서 기반 컨벤션. 스펙 초안 작성의 구조·타입 기준.
+- `CSS_CONVENTIONS.md` — 스타일 규칙. **§1 스타일 모드 감지**를 반드시 실행하여 프로젝트의 스타일 모드(Tailwind / Pure CSS / Hybrid / shadcn)를 판별하고, 판별 결과를 스펙 초안에 기록한다.
 
 ## 핵심 역할
 
@@ -88,6 +90,8 @@ description: 기존 코드 패턴을 분석하고 TDD 스펙 초안을 생성하
 - 데이터 페칭: useQuery | Server Action | fetch (RSC)
 - 훅 네이밍: use[Feature][Action] 패턴
 - queryKey 구조: [기존 패턴 예시]
+- **스타일 모드:** [Tailwind | Pure CSS | Hybrid | shadcn/ui] — CSS_CONVENTIONS.md §1 감지 결과
+- **스타일 패턴:** [cn() + utility / cva() / CSS Module co-location 등 기존 사용 방식]
 
 ## 주의사항
 - [타입 경계면 불일치 위험]

@@ -11,9 +11,10 @@ description: React/Next.js 컴포넌트/TanStack Query 훅/API 서비스를 MVVM
 
 ## 사전 참조 (필수)
 
-코드 작성 시작 전 반드시 `REACT_NEXT_CONVENTIONS.md`를 읽는다.
-이 문서는 Next.js 공식 문서 기반 컨벤션이며, 아래 모든 구현은 이 기준을 따른다.
-특히 **15번 구현 순서**, **5번 Server/Client 경계**, **6번 비동기 API** 섹션을 반드시 확인한다.
+코드 작성 시작 전 반드시 두 문서를 읽는다.
+
+- `REACT_NEXT_CONVENTIONS.md` — 특히 **15번 구현 순서**, **5번 Server/Client 경계**, **6번 비동기 API** 섹션 확인.
+- `CSS_CONVENTIONS.md` — 스타일 작성 전 반드시 참조. 특히 **§1 스타일 모드 감지**, **§8 스타일 선택 결정 트리**, **§14 Implementer 구현 순서** 섹션을 따른다.
 
 ## 핵심 역할
 
@@ -49,6 +50,28 @@ description: React/Next.js 컴포넌트/TanStack Query 훅/API 서비스를 MVVM
 - `components/`: `PascalCase.tsx` 파일명, 단일 책임 원칙
 - ViewModel 훅을 호출하여 데이터 연동 — 컴포넌트 내 직접 fetch 금지
 - 로딩/에러/빈 상태 처리 필수
+
+### 5단계 — 스타일 (CSS_CONVENTIONS.md §14 기준)
+
+`_workspace/01_spec.md`의 **스타일 모드**에 따라 CSS_CONVENTIONS.md §14 구현 순서를 따른다.
+
+**Tailwind 프로젝트:**
+1. `globals.css` `@theme` 토큰 확인/추가 (새 색·간격 필요 시)
+2. shadcn/ui 컴포넌트 확인/추가 (`npx shadcn@latest add ...`)
+3. variant 2개 이상 → `cva()` variant 정의
+4. React 컴포넌트 + `className` utility + `cn()`
+5. 복잡한 animation만 CSS Module
+
+**Pure CSS 프로젝트:**
+1. `styles/base/variables.css` 토큰 확인/추가
+2. `styles/components/` 재사용 2회+ 스타일
+3. CSS Module — 컴포넌트 co-location
+4. `globals.css` `@import` 확인
+
+**Hybrid:**
+1. Tailwind utility (레이아웃·spacing·typography)
+2. CSS Module (animation·pseudo·third-party)
+3. `cn(styles.xxx, 'tailwind classes')` 병행
 
 ## 코드 규칙
 

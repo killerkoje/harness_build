@@ -12,8 +12,10 @@ description: Phase 1에서 확정된 TDD 스펙을 기준으로 구현 결과물
 
 ## 사전 참조 (필수)
 
-검증 시작 전 반드시 `REACT_NEXT_CONVENTIONS.md`를 읽는다.
-이 문서가 검증 기준이다. **14번 금지 사항**과 **15번 구현 순서 체크리스트**를 검증 기준으로 사용한다.
+검증 시작 전 반드시 두 문서를 읽는다.
+
+- `REACT_NEXT_CONVENTIONS.md` — **14번 금지 사항**과 **15번 구현 순서 체크리스트**를 검증 기준으로 사용한다.
+- `CSS_CONVENTIONS.md` — **§13 QA 체크리스트**를 스타일 검증 기준으로 사용한다.
 
 ## 핵심 역할 (검증 우선순위)
 
@@ -29,6 +31,43 @@ description: Phase 1에서 확정된 TDD 스펙을 기준으로 구현 결과물
 - 문제를 발견하면 파일 경로와 줄 번호까지 명시한다.
 - 수정이 필요하면 직접 수정하되, 수정 범위를 검증 보고서에 기록한다.
 - 패턴 일탈이지만 의도적인 경우는 "주의" 수준으로 표기하고 수정하지 않는다.
+
+## CSS 컨벤션 체크리스트 (CSS_CONVENTIONS.md §13 기준)
+
+```
+[공통]
+□ 스타일 모드(Tailwind/Pure/Hybrid)와 구현 방식이 일치하는가?
+□ 기존 파일 패턴과 동일한 스타일링 방식을 사용하는가?
+
+[Tailwind]
+□ cn() 사용 (문자열 concat 없음)
+□ conflicting utility 없음
+□ 동일 className 3회+ 반복 → 컴포넌트 추출됨
+□ arbitrary value 3회+ → @theme 승격됨
+□ @apply 3개 미만
+
+[Pure CSS]
+□ BEM 또는 프로젝트 네이밍 일관
+□ CSS 변수 사용 (magic number 없음)
+□ 선택자 특이성 ≤ 0-2-0
+□ !important 없음
+□ 섹션 순서: base → layout → component → utility
+
+[CSS Module]
+□ co-location (컴포넌트 옆 .module.css)
+□ camelCase 클래스명
+□ :global() 최소 사용
+
+[a11y]
+□ focus-visible 스타일 존재
+□ 인터랙티브 요소 touch target ≥ 44px
+□ outline: none 단독 사용 없음
+
+[리팩토링]
+□ inline style 정적 값 → utility/class 변환됨
+□ CSS-in-JS 잔존 없음
+□ 미사용 CSS 클래스 없음
+```
 
 ## 컨벤션 준수 체크리스트 (REACT_NEXT_CONVENTIONS.md 기준)
 
@@ -95,6 +134,15 @@ description: Phase 1에서 확정된 TDD 스펙을 기준으로 구현 결과물
 | Hook ↔ Component props | ✅/❌ | ... |
 | React Query 설정 | ✅/❌ | ... |
 | Server/Client 경계 | ✅/❌ | ... |
+
+## CSS 스타일 검증 (CSS_CONVENTIONS.md §13)
+| 항목 | 상태 | 상세 |
+|------|------|------|
+| 스타일 모드 일관성 | ✅/❌ | ... |
+| inline style 정적 값 제거 | ✅/❌ | ... |
+| 반복 class 컴포넌트 추출 | ✅/❌ | ... |
+| a11y (focus-visible, touch target) | ✅/❌ | ... |
+| CSS 금지사항 (!important, ID 선택자 등) | ✅/❌ | ... |
 
 ## 잠재적 위험
 ### [치명] (수정 필요)
