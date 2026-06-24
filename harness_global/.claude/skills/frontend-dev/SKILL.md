@@ -33,7 +33,7 @@ description: |
 # 기능 개발 오케스트레이터
 
 React / Next.js (App Router) + TypeScript + TanStack Query 기반 MVVM 프로젝트의 기능 개발을
-**TDD 스펙 정의 → MVVM 구현 → 스펙 기준 검증 → 커밋 확인** 4단계 파이프라인으로 조율한다.
+**기획 확인 → 스펙 확정 → 테스트 선행 작성 → MVVM 구현 → 테스트 실행 검증 → 커밋 확인** 파이프라인으로 조율한다.
 
 ---
 
@@ -54,11 +54,12 @@ React / Next.js (App Router) + TypeScript + TanStack Query 기반 MVVM 프로젝
 
 ## 에이전트 팀
 
-| 에이전트 | 역할 |
-|---------|------|
-| Code Analyzer | 기존 코드 패턴 탐색 + TDD 스펙 초안 생성 |
-| Implementer | 확정된 스펙 기준으로 MVVM 순서 구현 |
-| QA Validator | 스펙 달성 여부 검증 + 위험 진단 |
+| 에이전트 | Phase | 역할 |
+|---------|-------|------|
+| Code Analyzer | 1 | 기존 코드 패턴 탐색 + TDD 스펙 초안 생성 |
+| Test Writer | 1.5 | 확정 스펙 기준 테스트 파일 선행 생성 (TDD Red) |
+| Implementer | 2 | 테스트 기준으로 MVVM 순서 구현 (TDD Green) |
+| QA Validator | 3 | 테스트 실행 + 스펙 달성 검증 + 위험 진단 |
 
 ---
 
@@ -127,9 +128,45 @@ Code Analyzer가 생성한 스펙 초안을 바탕으로 아래 형식을 출력
 
 ---
 
+### Phase 1.5: 테스트 파일 생성
+
+Phase 1 사용자 확인(ok) 직후, Phase 2 구현 전에 실행한다.
+**테스트 파일이 구현보다 먼저 존재해야 TDD다.**
+
+> **`low:` 레벨 스킵:** `DEPTH_MODEL`이 `haiku`(low 또는 레벨 미지정)이면 이 Phase를 건너뛰고 Phase 2로 바로 진행한다.
+> 단일 파일 스타일 수정·텍스트 변경 등 단순 작업에는 테스트 생성이 불필요하다.
+
+```
+Agent(
+  subagent_type: "general-purpose",
+  agents_file: ".claude/agents/test-writer.md",
+  model: {DEPTH_MODEL},
+  prompt: """
+    _workspace/01_spec.md를 읽고 성공 조건을 기준으로 테스트 파일을 생성하라.
+    - 테스트 환경(vitest/jest, msw 여부)을 먼저 감지하라.
+    - 감지된 환경에 맞는 템플릿으로 실제 테스트 파일을 프로젝트에 작성하라.
+    - 생성 결과와 실행 명령어를 _workspace/01_test_plan.md에 저장하라.
+  """
+)
+```
+
+완료 후 한 줄 출력:
+```
+[테스트 생성 완료] {생성된 파일 수}개 파일 → {테스트 러너} / {모킹 전략}
+예) [테스트 생성 완료] 2개 파일 → vitest / MSW
+```
+
+`01_test_plan.md`에 `RUN: false`가 기록된 경우(테스트 러너 없음) 사용자에게 알린다:
+```
+⚠️ 테스트 러너 감지 안 됨. 테스트 파일은 생성되었으나 Phase 3에서 실행을 생략합니다.
+   vitest 설치: pnpm add -D vitest @testing-library/react jsdom msw
+```
+
+---
+
 ### Phase 2: MVVM 구현
 
-Phase 1 사용자 확인 후 실행:
+Phase 1.5 완료 후 실행:
 
 ```
 Agent(
@@ -138,6 +175,8 @@ Agent(
   model: {DEPTH_MODEL},
   prompt: """
     _workspace/01_spec.md 를 읽고 확정된 스펙을 기준으로 MVVM 순서로 구현하라.
+    _workspace/01_test_plan.md 가 존재하면 반드시 읽고, 생성된 테스트 파일들을 직접 열어
+    테스트 assertion 기준에 맞게 구현하라. 목표는 테스트가 PASS되는 코드다.
     구현 결과를 _workspace/02_implementation.md 에 저장하라.
   """
 )
@@ -151,7 +190,11 @@ Agent(
 
 ---
 
-### Phase 3: 스펙 기준 검증
+### Phase 3: 테스트 실행 + 스펙 기준 검증 (retry loop)
+
+`RETRY_COUNT = 0`, `MAX_RETRIES = 2`로 시작하여 아래 루프를 실행한다.
+
+#### 3-A: QA Validator 호출
 
 ```
 Agent(
@@ -159,14 +202,65 @@ Agent(
   agents_file: ".claude/agents/qa-validator.md",
   model: {DEPTH_MODEL},
   prompt: """
-    _workspace/01_spec.md (확정 스펙) 와 _workspace/02_implementation.md 를 읽고
-    구현 파일을 직접 열어 스펙 달성 여부를 검증하라.
-    결과를 _workspace/03_qa_report.md 에 저장하라.
+    아래 순서로 검증하라:
+    1. _workspace/01_test_plan.md를 읽어 테스트 실행 여부를 확인하라.
+       RUN: true이면 명시된 명령어로 테스트를 실행하고 결과를 캡처하라.
+    2. _workspace/01_spec.md, _workspace/02_implementation.md를 읽고
+       구현 파일을 직접 열어 스펙 달성 여부를 정적 검증하라.
+    3. 결과를 _workspace/03_qa_report.md에 저장하라.
   """
 )
 ```
 
+#### 3-B: 결과 판정 + 분기
+
+`_workspace/03_qa_report.md`를 읽어 판정한다:
+
+**→ PASS 또는 PASS_WITH_WARNINGS:**
+Phase 4로 진행.
+
+**→ FAIL이고 `RETRY_COUNT < MAX_RETRIES`:**
+
+`RETRY_COUNT`를 1 증가시키고, Implementer를 재호출한다:
+
+```
+Agent(
+  subagent_type: "general-purpose",
+  agents_file: ".claude/agents/implementer.md",
+  model: {DEPTH_MODEL},
+  prompt: """
+    _workspace/03_qa_report.md의 FAIL 항목을 읽고 문제를 수정하라.
+    - 테스트 FAIL: 해당 테스트가 PASS되도록 구현을 수정하라.
+    - 정적 분석 [치명] 항목: 코드를 직접 수정하라.
+    수정 완료 후 _workspace/02_implementation.md를 업데이트하라.
+  """
+)
+```
+
+Implementer 완료 후 3-A로 돌아가 재검증한다.
+
+**→ FAIL이고 `RETRY_COUNT >= MAX_RETRIES`:**
+
+자동 수정을 중단하고 사용자에게 보고한다:
+
+```
+## ⚠️ 자동 수정 한도 초과 ({MAX_RETRIES}회 시도)
+
+### 미해결 FAIL 항목
+[03_qa_report.md의 FAIL 목록]
+
+### 원인 추정
+[반복 실패 패턴 분석]
+
+---
+수동으로 확인 후 다시 시도하시겠습니까?
+- "구현 수정해줘" → Implementer 재호출
+- "QA 다시 해줘" → QA 재실행
+- "일단 진행해" → FAIL 상태로 Phase 4 진행
+```
+
 **검증 기준 (스펙 우선):**
+- 테스트 실행 결과 (PASS/FAIL) — 최우선
 - Phase 1에서 정의한 성공 조건이 코드에서 달성되었는가
 - 디자인 스펙의 컴포넌트/상태(로딩·에러·빈) 처리가 구현되었는가
 - 타입 경계면: API 타입 ↔ 훅 ↔ props 일치
@@ -209,8 +303,10 @@ Agent(
 |-------|------|------|
 | Analyzer (1-A) | 사용자 요청 원문 | `_workspace/01_spec.md` (초안) |
 | 사용자 확인 (1-B) | 스펙 질문 출력 | 사용자 ok + `_workspace/01_spec.md` (확정) |
-| Implementer (2) | `_workspace/01_spec.md` | 실제 파일 + `_workspace/02_implementation.md` |
-| QA Validator (3) | `_workspace/01_spec.md` + `_workspace/02_implementation.md` + 구현 파일 | `_workspace/03_qa_report.md` |
+| Test Writer (1.5) | `_workspace/01_spec.md` | 테스트 파일 (프로젝트) + `_workspace/01_test_plan.md` |
+| Implementer (2) | `_workspace/01_spec.md` + `_workspace/01_test_plan.md` + 테스트 파일 | 실제 파일 + `_workspace/02_implementation.md` |
+| QA Validator (3) | `_workspace/01_test_plan.md` + `_workspace/01_spec.md` + `_workspace/02_implementation.md` + 구현 파일 | `_workspace/03_qa_report.md` |
+| Implementer retry (3-B) | `_workspace/03_qa_report.md` | 수정된 실제 파일 + `_workspace/02_implementation.md` 업데이트 |
 
 ---
 
@@ -224,9 +320,10 @@ Agent(
 
 ## 부분 재실행
 
-| 요청 | 재호출 |
-|------|--------|
-| "스펙 다시 정해줘" | Phase 1 전체 재실행 |
-| "구현 수정해줘" | Implementer만 (01_spec.md 재사용) |
-| "QA 다시 해줘" | QA Validator만 |
-| "전체 다시 해줘" | 전체 파이프라인 |
+| 요청 | 재호출 | 비고 |
+|------|--------|------|
+| "스펙 다시 정해줘" | Phase 1 전체 재실행 | 01_test_plan.md도 재생성 |
+| "테스트 다시 만들어줘" | Phase 1.5 재실행 | 01_spec.md 재사용 |
+| "구현 수정해줘" | Implementer만 (01_spec.md + 01_test_plan.md 재사용) | |
+| "QA 다시 해줘" | QA Validator만 (retry_count 초기화) | |
+| "전체 다시 해줘" | 전체 파이프라인 | |

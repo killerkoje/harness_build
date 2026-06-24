@@ -1,7 +1,7 @@
 # harness_build
 
 React / Next.js 프로젝트 전용 Claude 하네스.
-자연어 명령 한 줄로 **TDD 스펙 정의 → MVVM 구현 → 스펙 기준 검증 → 커밋**까지 자동 실행된다.
+자연어 명령 한 줄로 **기획 확인 → 스펙 확정 → 테스트 선행 작성 → MVVM 구현 → 테스트 실행 검증 → 커밋**까지 자동 실행된다.
 
 ---
 
@@ -13,14 +13,16 @@ React / Next.js 프로젝트 전용 Claude 하네스.
 harness_global/
 ├── CLAUDE.md                        ← 스킬 트리거 정의 (프로젝트 루트에 복사)
 ├── REACT_NEXT_CONVENTIONS.md        ← Next.js 공식 문서 기반 컨벤션 (에이전트 공통 참조)
+├── CSS_CONVENTIONS.md               ← Tailwind/Pure CSS/Modules 스타일 규칙 (에이전트 공통 참조)
 └── .claude/
     ├── skills/                      ← 사용자 명령을 받아 파이프라인을 조율하는 오케스트레이터
-    │   ├── frontend-dev/SKILL.md    ← 개발 파이프라인 (Phase 1~4)
+    │   ├── frontend-dev/SKILL.md    ← 개발 파이프라인 (기획 → 확정 → 구현 → 테스트 → 완료)
     │   └── code-review/SKILL.md     ← 기획-코드 리뷰어
     └── agents/                      ← 스킬이 호출하는 전문 서브 에이전트
-        ├── code-analyzer.md         ← 코드베이스 분석 전담 (Explore 타입)
-        ├── implementer.md           ← MVVM 순서 코드 구현 전담
-        └── qa-validator.md          ← TDD 검증 + 컨벤션 위반 + 위험 진단
+        ├── code-analyzer.md         ← 코드베이스 분석 + TDD 스펙 초안 생성 (Phase 1)
+        ├── test-writer.md           ← 스펙 기반 테스트 파일 선행 생성 (Phase 1.5)
+        ├── implementer.md           ← MVVM 순서 코드 구현 (Phase 2)
+        └── qa-validator.md          ← 테스트 실행 + 스펙 검증 + 위험 진단 (Phase 3)
 ```
 
 ### 에이전트 역할 분리
@@ -31,14 +33,20 @@ harness_global/
     ▼
 [Skill: frontend-dev]  ← 오케스트레이터. 에이전트를 순서대로 호출하고 사용자와 소통
     │
-    ├─ Phase 1 ──▶ [Agent: code-analyzer]   패턴 탐색 + TDD 스펙 초안 생성
-    │                       │               (_workspace/01_spec.md)
-    │              사용자 확인 대기 (중단점) ← 기획/디자인/성공조건 확인
-    │                       │ (ok)
-    ├─ Phase 2 ──▶ [Agent: implementer]     확정 스펙 기준으로 MVVM 구현
-    │                                        types → service → hooks → view
+    ├─ Phase 1 ───▶ [Agent: code-analyzer]   패턴 탐색 + TDD 스펙 초안 생성
+    │                        │               (_workspace/01_spec.md)
+    │               사용자 확인 대기 (중단점) ← 기획/디자인/성공조건 확인
+    │                        │ (ok)
     │
-    ├─ Phase 3 ──▶ [Agent: qa-validator]    스펙 달성 여부 → 타입 경계면 → 위험 진단
+    ├─ Phase 1.5 ─▶ [Agent: test-writer]     확정 스펙 → 테스트 파일 선행 생성  ← mid/high만
+    │                                         (_workspace/01_test_plan.md)
+    │
+    ├─ Phase 2 ───▶ [Agent: implementer]     테스트 기준으로 MVVM 구현
+    │                                         types → service → hooks → view
+    │
+    ├─ Phase 3 ───▶ [Agent: qa-validator]    vitest/jest 실제 실행
+    │                        │               FAIL → implementer 자동 재호출 (최대 2회)
+    │                        │               (_workspace/03_qa_report.md)
     │
     └─ Phase 4      완료 보고 + 커밋&푸시 여부 항상 확인 (중단점)
 ```
@@ -46,20 +54,21 @@ harness_global/
 ### MVVM 계층 구조
 
 ```
-types/                  ← Model    TypeScript 인터페이스, API 응답/요청 타입
-services/ | lib/api/    ← Model    fetch 함수, API 레이어
-hooks/                  ← ViewModel TanStack Query (useQuery / useMutation)
-app/ | components/      ← View     page.tsx, React 컴포넌트
+types/                  ← Model      TypeScript 인터페이스, API 응답/요청 타입
+services/ | lib/api/    ← Model      fetch 함수, API 레이어
+hooks/                  ← ViewModel  TanStack Query (useQuery / useMutation)
+app/ | components/      ← View       page.tsx, React 컴포넌트
 ```
 
 ### 컨벤션 참조 흐름
 
 ```
-REACT_NEXT_CONVENTIONS.md
+REACT_NEXT_CONVENTIONS.md + CSS_CONVENTIONS.md
         │
         ├── code-analyzer  → 분석 기준 (기존 패턴 파악 시 참조)
+        ├── test-writer    → 테스트 생성 기준 (스펙 성공 조건 → 케이스 매핑)
         ├── implementer    → 구현 기준 (§15 구현순서, §5 Server/Client, §6 비동기 API)
-        └── qa-validator   → 검증 기준 (§14 금지사항 체크리스트)
+        └── qa-validator   → 검증 기준 (§14 금지사항 체크리스트, §13 CSS QA)
 ```
 
 ---
@@ -69,15 +78,26 @@ REACT_NEXT_CONVENTIONS.md
 ### frontend-dev (개발)
 
 ```
-Phase 1  TDD 스펙 정의
-           코드 패턴 분석 → 기획/디자인/데이터 스펙 초안 자동 생성
-         ── 사용자 확인 대기 ──  ← 수정 가능, ok 전까지 절대 진행 안 함
-Phase 2  MVVM 구현 (확정 스펙 기준)
-           types → service → hooks → page/components
-Phase 3  스펙 기준 검증
-           성공 조건 달성 여부 → 타입 경계면 → 컨벤션 위반 → 위험 진단
-Phase 4  완료 보고
-         ── 커밋&푸시 여부 항상 확인 ──  ← ok 없으면 커밋 안 함
+기획
+  Phase 1   코드 패턴 분석 → 기획/디자인/데이터 스펙 초안 자동 생성
+          ── 사용자 확인 대기 ──  ← 수정 가능, ok 전까지 절대 진행 안 함
+
+확정 후 테스트 선행 작성 (mid / high만)
+  Phase 1.5 확정 스펙 → vitest/jest 테스트 파일 생성 (TDD Red)
+            low: 레벨은 스킵
+
+구현
+  Phase 2   MVVM 구현 — 테스트 assertion 기준으로
+            types → service → hooks → page/components
+
+테스트
+  Phase 3   vitest / jest 실제 실행
+            FAIL → implementer 자동 재시도 (최대 2회)
+            2회 초과 → 사용자에게 미해결 항목 보고
+
+구현 완료
+  Phase 4   완료 보고
+          ── 커밋&푸시 여부 항상 확인 ──  ← ok 없으면 커밋 안 함
 ```
 
 ### code-review (리뷰)
@@ -141,7 +161,7 @@ bash install.sh --global
 ```
 
 > 스킬과 에이전트만 글로벌로 설치된다.
-> `REACT_NEXT_CONVENTIONS.md`와 `CLAUDE.md`는 프로젝트별로 별도 설치 필요:
+> `REACT_NEXT_CONVENTIONS.md`, `CSS_CONVENTIONS.md`, `CLAUDE.md`는 프로젝트별로 별도 설치 필요:
 > ```bash
 > bash install.sh /path/to/your-project
 > ```
@@ -168,16 +188,16 @@ bash install.sh /path/to/your-project
 프로젝트에서 Claude Code 실행 후:
 
 ```
-low: 테스트 버튼 컴포넌트 만들어줘
+mid: 테스트 버튼 컴포넌트 만들어줘
 ```
 
-TDD 스펙 질문이 나오면 정상 설치된 것.
+TDD 스펙 질문 → ok → 테스트 파일 생성 → 구현 → vitest 실행 순으로 진행되면 정상 설치된 것.
 
 ---
 
 ## 사용법
 
-### 2. 개발 명령 (frontend-dev 트리거)
+### 개발 명령 (frontend-dev 트리거)
 
 #### 레벨 + 기능 명시 (권장)
 
@@ -196,7 +216,7 @@ mid: 장바구니 기능 추가해줘
      - CartIcon에 뱃지 표시
 ```
 
-#### 레벨 없이 (haiku 기본값)
+#### 레벨 없이 (haiku 기본값, 테스트 생성 스킵)
 
 ```
 유저 카드 컴포넌트 만들어줘
@@ -210,15 +230,17 @@ mid: 장바구니 기능 추가해줘
 에러 수정해줘 — 로그인 후 리다이렉트 안 돼
 ```
 
-#### 재실행 / 부분 수정
+#### 부분 재실행
 
 ```
-다시 해줘
-아까 거 수정해줘 — API 엔드포인트 바꿔줘
-구현 수정해줘 — 응답 타입 바뀌었어
+스펙 다시 정해줘           ← Phase 1부터 재실행
+테스트 다시 만들어줘        ← Phase 1.5만 재실행
+구현 수정해줘              ← Phase 2만 재실행
+QA 다시 해줘               ← Phase 3만 재실행 (retry_count 초기화)
+전체 다시 해줘             ← 전체 파이프라인
 ```
 
-### 3. 리뷰 명령 (code-review 트리거)
+### 리뷰 명령 (code-review 트리거)
 
 ```
 리뷰해줘
@@ -228,14 +250,14 @@ mid: 장바구니 기능 추가해줘
 components/UserCard.tsx 확인해봐
 ```
 
-### 4. 기획 레벨 기준
+### 기획 레벨 기준
 
-| 레벨 | 모델 | 적합한 작업 |
-|------|------|------------|
-| `low:` | haiku | 단일 파일 수정, 스타일 변경, 텍스트 수정 |
-| `mid:` | sonnet | 훅 + 서비스 + 컴포넌트 1~2개 |
-| `high:` | opus | 신규 페이지, 다수 컴포넌트, 모델 설계 포함 |
-| (없음) | haiku | 기본값 |
+| 레벨 | 모델 | 테스트 생성 | 적합한 작업 |
+|------|------|-----------|------------|
+| `low:` | haiku | 스킵 | 단일 파일 수정, 스타일 변경, 텍스트 수정 |
+| `mid:` | sonnet | 생성 | 훅 + 서비스 + 컴포넌트 1~2개 |
+| `high:` | opus | 생성 | 신규 페이지, 다수 컴포넌트, 모델 설계 포함 |
+| (없음) | haiku | 스킵 | 기본값 |
 
 ---
 
@@ -245,7 +267,8 @@ components/UserCard.tsx 확인해봐
 |------|------|
 | 프레임워크 | Next.js 15+ (App Router) |
 | 언어 | TypeScript strict |
-| 스타일 | Tailwind CSS + shadcn/ui |
+| 스타일 | Tailwind CSS + shadcn/ui / Pure CSS / CSS Modules |
 | 서버 상태 | TanStack Query v5 |
+| 테스트 | vitest + @testing-library/react + msw |
 | 아키텍처 | MVVM |
 | 컨벤션 기준 | Next.js 공식 문서 + Vercel Best Practices |

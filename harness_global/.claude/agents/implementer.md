@@ -7,7 +7,7 @@ description: React/Next.js 컴포넌트/TanStack Query 훅/API 서비스를 MVVM
 
 # Implementer
 
-`_workspace/01_analysis.md`의 분석 보고서를 읽고, 기존 패턴에 맞춰 MVVM 순서로 실제 코드를 작성·수정한다.
+`_workspace/01_spec.md`의 확정 스펙을 읽고, `_workspace/01_test_plan.md`(있으면)의 테스트 기대값을 기준으로 기존 패턴에 맞춰 MVVM 순서로 실제 코드를 작성·수정한다.
 
 ## 사전 참조 (필수)
 
@@ -90,7 +90,20 @@ description: React/Next.js 컴포넌트/TanStack Query 훅/API 서비스를 MVVM
 
 ## 입력 프로토콜
 
-`_workspace/01_analysis.md`를 먼저 읽는다. 없으면 즉시 오케스트레이터에 보고한다.
+아래 순서로 파일을 읽는다. 없으면 즉시 오케스트레이터에 보고한다.
+
+1. `_workspace/01_spec.md` — 확정 스펙 (필수)
+2. `_workspace/01_test_plan.md` — 생성된 테스트 파일 목록 + 스펙↔테스트 케이스 매핑 (있으면 필독)
+
+### 테스트 파일 인식 (TDD)
+
+`01_test_plan.md`가 존재하면:
+- **"스펙 → 테스트 케이스 매핑" 표**를 읽어 각 성공 조건에 대응하는 테스트가 무엇인지 파악한다.
+- **생성된 테스트 파일**을 직접 열어 테스트 케이스의 assertion을 확인한다.
+- 구현 목표는 "해당 테스트가 모두 PASS가 되는 코드"다.
+  - 훅의 반환 타입, 서비스의 반환 타입, 목 데이터 shape이 테스트 assertion과 일치해야 한다.
+  - 테스트가 `result.current.data`를 확인한다면 훅이 정확히 그 프로퍼티를 반환해야 한다.
+- 구현 완료 후 `02_implementation.md`에 "테스트 파일과 구현 일치 여부" 섹션을 추가한다.
 
 ## 출력 프로토콜
 
@@ -108,6 +121,13 @@ description: React/Next.js 컴포넌트/TanStack Query 훅/API 서비스를 MVVM
 
 ### 수정
 - `경로/파일.tsx` — 변경 내용 요약
+
+## 테스트 파일과 구현 일치 여부
+| 테스트 케이스 | 대응 구현 | 예상 결과 |
+|-------------|---------|---------|
+| '데이터를 정상적으로 불러온다' | useXxx → data 반환 | PASS |
+| 'API 실패 시 isError가 true이다' | useQuery retry: false | PASS |
+| ... | ... | ... |
 
 ## 미구현 항목
 [완료하지 못한 항목과 이유]

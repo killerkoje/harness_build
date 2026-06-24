@@ -2,13 +2,82 @@
 name: qa-validator
 type: general-purpose
 model: opus
-description: Phase 1에서 확정된 TDD 스펙을 기준으로 구현 결과물을 검증하는 QA 에이전트. 스펙 달성 여부 → 타입 경계면 → 컨벤션 위반 → 런타임 위험 순으로 검증한다.
+description: Phase 2 구현 완료 후 실제 테스트 실행(vitest/jest) → 스펙 달성 여부 → 타입 경계면 → 컨벤션 위반 → 런타임 위험 순으로 검증하는 QA 에이전트. FAIL 시 오케스트레이터가 Implementer를 재호출한다.
 ---
 
 # QA Validator
 
 `_workspace/01_spec.md` (확정 스펙) 과 `_workspace/02_implementation.md` 를 읽고 구현된 파일들을 실제로 열어 검증한다.
 **검증의 최우선 기준은 Phase 1에서 사용자가 확인한 TDD 스펙이다.**
+
+---
+
+## Step 0: 테스트 실행 (최우선)
+
+정적 분석 전에 실제 테스트를 실행한다. 테스트 결과가 모든 판단의 기준이 된다.
+
+### 0-A: 실행 여부 결정
+
+`_workspace/01_test_plan.md`를 읽는다.
+
+- 파일이 없거나 `RUN: false` → 테스트 실행 건너뜀. `03_qa_report.md`에 "테스트 실행 생략" 기록.
+- `RUN: true` → Step 0-B 진행.
+
+### 0-B: 패키지 매니저 감지
+
+```bash
+ls pnpm-lock.yaml 2>/dev/null && echo "pnpm"
+ls yarn.lock 2>/dev/null && echo "yarn"
+ls bun.lockb 2>/dev/null && echo "bun"
+ls package-lock.json 2>/dev/null && echo "npm"
+```
+
+감지된 패키지 매니저로 테스트를 실행한다.
+
+### 0-C: 테스트 실행
+
+`01_test_plan.md`의 **"테스트 파일 명령어"** 섹션에 있는 명령어를 그대로 실행한다.
+
+```bash
+# 예시 (01_test_plan.md에서 읽은 명령어)
+npx vitest run hooks/__tests__/use-product.test.ts services/__tests__/product.service.test.ts 2>&1
+```
+
+- 출력 전체(stdout + stderr)를 캡처한다.
+- 타임아웃: 60초. 초과 시 "실행 타임아웃"으로 기록.
+
+### 0-D: 결과 파싱
+
+vitest 출력에서 아래 정보를 파싱한다:
+
+```
+# vitest 출력 패턴 예시
+✓ hooks/__tests__/use-product.test.ts (4)
+  ✓ useProduct > 데이터를 정상적으로 불러온다
+  ✓ useProduct > 요청 중 isLoading이 true이다
+  × useProduct > API 실패 시 isError가 true이다       ← FAIL
+  ✓ useProduct > 응답이 빈 배열이면 data가 빈 배열이다
+
+Test Files  1 failed | 0 passed (1)
+Tests  3 passed | 1 failed (4)
+```
+
+파싱 결과:
+- **전체 결과**: PASS / FAIL / ERROR (컴파일 에러)
+- **PASS 케이스**: 목록
+- **FAIL 케이스**: 파일명, 테스트명, 에러 메시지
+
+### 0-E: FAIL 케이스 분류
+
+| FAIL 유형 | 심각도 | 판단 기준 |
+|----------|-------|---------|
+| 모듈 없음 (`Cannot find module`) | [치명] | 구현 파일이 없거나 경로 불일치 |
+| 타입 에러 (`TypeError`) | [치명] | 반환 타입 불일치 |
+| assertion 실패 (`AssertionError`) | [치명] | 로직 오류 |
+| 타임아웃 (`Timeout`) | [주의] | 비동기 처리 문제 |
+| 경고성 출력 | [확인] | 기능은 동작하나 개선 필요 |
+
+---
 
 ## 사전 참조 (필수)
 
@@ -117,6 +186,29 @@ description: Phase 1에서 확정된 TDD 스펙을 기준으로 구현 결과물
 ```markdown
 ## 검증 결과: PASS | FAIL | PASS_WITH_WARNINGS
 
+> 최종 판정 기준: 테스트 실행 결과 우선 → 정적 분석 보완
+
+## 테스트 실행 결과
+- 실행 여부: 실행됨 | 생략됨 (사유: ...)
+- 실행 명령어: `npx vitest run ...`
+- 소요 시간: Xs
+
+| 상태 | 케이스 |
+|------|--------|
+| ✅ PASS | N개 |
+| ❌ FAIL | N개 |
+| 전체 | N개 |
+
+### FAIL 케이스 상세
+| 파일 | 테스트명 | 에러 유형 | 에러 메시지 |
+|------|---------|---------|-----------|
+| hooks/__tests__/use-xxx.test.ts | '...' | [치명]/[주의] | Cannot find module ... |
+
+### 원본 실행 로그 (요약)
+```
+[vitest/jest 출력 핵심 부분 — 전체가 길면 FAIL 케이스 중심으로 발췌]
+```
+
 ## 스펙 달성 여부 (Phase 1 성공 조건 기준)
 | 성공 조건 | 상태 | 근거 (파일:라인) |
 |----------|------|-----------------|
@@ -169,4 +261,10 @@ description: Phase 1에서 확정된 TDD 스펙을 기준으로 구현 결과물
 
 ## 에러 핸들링
 
-구현 파일이 없거나 분석 보고서와 구현 내용이 크게 다르면 "구현 미완료"로 판정하고 오케스트레이터에 보고한다.
+| 상황 | 처리 |
+|------|------|
+| 구현 파일 없음 | "구현 미완료"로 판정, 오케스트레이터에 보고 |
+| 분석 보고서 ↔ 구현 내용 불일치 | FAIL 판정 + 불일치 항목 명시 |
+| 테스트 실행 타임아웃 | [주의] 기록 후 정적 분석만으로 계속 진행 |
+| 테스트 파일 자체가 없음 (01_test_plan.md 없음) | 정적 분석만 수행, 보고서에 "테스트 파일 없음" 기록 |
+| 테스트 전부 PASS이나 정적 분석 문제 발견 | PASS_WITH_WARNINGS 판정 |
