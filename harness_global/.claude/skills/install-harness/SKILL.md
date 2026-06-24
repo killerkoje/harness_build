@@ -51,10 +51,14 @@ cp -r {HARNESS_ROOT}/harness_global/.claude {TARGET_PATH}/
 
 # 2. 컨벤션 문서 복사
 cp {HARNESS_ROOT}/harness_global/REACT_NEXT_CONVENTIONS.md {TARGET_PATH}/
+cp {HARNESS_ROOT}/harness_global/CSS_CONVENTIONS.md {TARGET_PATH}/
 
 # 3. CLAUDE.md 처리
 #    - 대상에 CLAUDE.md가 없으면: 그냥 복사
 #    - 대상에 CLAUDE.md가 있으면: 기존 파일 끝에 하네스 내용 append
+
+# 4. 버전 기록
+cat {HARNESS_ROOT}/harness_global/VERSION > {TARGET_PATH}/.harness-version
 ```
 
 CLAUDE.md append 방법:
@@ -76,11 +80,14 @@ cat {HARNESS_ROOT}/harness_global/CLAUDE.md >> {TARGET_PATH}/CLAUDE.md
 - .claude/skills/frontend-dev/     ← 개발 파이프라인 스킬
 - .claude/skills/code-review/      ← 리뷰 스킬
 - .claude/skills/install-harness/  ← 설치 스킬 (이 파일)
-- .claude/agents/code-analyzer.md  ← 분석 에이전트
-- .claude/agents/implementer.md    ← 구현 에이전트
-- .claude/agents/qa-validator.md   ← QA 에이전트
-- REACT_NEXT_CONVENTIONS.md        ← 컨벤션 문서
+- .claude/agents/code-analyzer.md  ← 분석 에이전트 (Phase 1)
+- .claude/agents/test-writer.md    ← 테스트 선행 생성 에이전트 (Phase 1.5)
+- .claude/agents/implementer.md    ← 구현 에이전트 (Phase 2)
+- .claude/agents/qa-validator.md   ← QA 에이전트 (Phase 3)
+- REACT_NEXT_CONVENTIONS.md        ← Next.js 컨벤션 문서
+- CSS_CONVENTIONS.md               ← CSS/Tailwind 스타일 규칙
 - CLAUDE.md                        ← 트리거 정의 (기존 파일에 추가됨)
+- .harness-version                 ← 설치된 하네스 버전
 
 이제 해당 프로젝트에서 Claude Code를 열고 아래 명령을 사용하세요:
 

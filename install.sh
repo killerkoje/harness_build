@@ -48,9 +48,10 @@ if [ "$GLOBAL_MODE" = true ]; then
   echo "→ agents/ 복사 중..."
   cp -r "$HARNESS_ROOT/harness_global/.claude/agents/"* "$TARGET/agents/"
 
+  HARNESS_VERSION=$(cat "$HARNESS_ROOT/harness_global/VERSION" 2>/dev/null || echo "unknown")
   echo ""
   echo "─────────────────────────────────"
-  echo "글로벌 설치 완료! → $TARGET"
+  echo "글로벌 설치 완료! → $TARGET (v$HARNESS_VERSION)"
   echo ""
   echo "이제 어느 프로젝트에서든 Claude Code를 열고:"
   echo "  low/mid/high: [기능 설명]  ← 개발 파이프라인"
@@ -83,6 +84,9 @@ cp -r "$HARNESS_ROOT/harness_global/.claude" "$TARGET/"
 echo "→ REACT_NEXT_CONVENTIONS.md 복사 중..."
 cp "$HARNESS_ROOT/harness_global/REACT_NEXT_CONVENTIONS.md" "$TARGET/"
 
+echo "→ CSS_CONVENTIONS.md 복사 중..."
+cp "$HARNESS_ROOT/harness_global/CSS_CONVENTIONS.md" "$TARGET/"
+
 # 3. CLAUDE.md 처리
 if [ -f "$TARGET/CLAUDE.md" ]; then
   echo "→ CLAUDE.md 기존 파일에 append 중..."
@@ -94,9 +98,14 @@ else
   cp "$HARNESS_ROOT/harness_global/CLAUDE.md" "$TARGET/CLAUDE.md"
 fi
 
+# 4. 버전 기록
+HARNESS_VERSION=$(cat "$HARNESS_ROOT/harness_global/VERSION" 2>/dev/null || echo "unknown")
+echo "→ .harness-version 기록 중... ($HARNESS_VERSION)"
+echo "$HARNESS_VERSION" > "$TARGET/.harness-version"
+
 echo ""
 echo "─────────────────────────────────"
-echo "설치 완료! → $TARGET"
+echo "설치 완료! → $TARGET (v$HARNESS_VERSION)"
 echo ""
 echo "이제 해당 프로젝트에서 Claude Code를 열고:"
 echo "  low/mid/high: [기능 설명]  ← 개발 파이프라인"
