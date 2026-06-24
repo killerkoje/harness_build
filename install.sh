@@ -42,11 +42,14 @@ fi
 
 # ─── 글로벌 설치 ───
 if [ "$GLOBAL_MODE" = true ]; then
-  echo "→ skills/ 복사 중..."
+  echo "→ core: skills/ 복사 중..."
   cp -r "$HARNESS_ROOT/harness_global/.claude/skills/"* "$TARGET/skills/"
 
-  echo "→ agents/ 복사 중..."
+  echo "→ core: agents/ 복사 중..."
   cp -r "$HARNESS_ROOT/harness_global/.claude/agents/"* "$TARGET/agents/"
+
+  echo "→ stack(next): agents/ 복사 중..."
+  cp -r "$HARNESS_ROOT/harness_global/stacks/next/agents/"* "$TARGET/agents/"
 
   HARNESS_VERSION=$(cat "$HARNESS_ROOT/harness_global/VERSION" 2>/dev/null || echo "unknown")
   echo ""
@@ -76,16 +79,39 @@ if [ -d "$TARGET/.claude" ]; then
   fi
 fi
 
-# 1. .claude/ 복사
-echo "→ .claude/ 복사 중..."
+# 스택 결정 (harness.config.yaml 있으면 읽기, 없으면 next 기본값)
+STACK="next"
+if [ -f "$TARGET/harness.config.yaml" ]; then
+  STACK=$(grep '^stack:' "$TARGET/harness.config.yaml" 2>/dev/null | awk '{print $2}' | tr -d '"' || echo "next")
+fi
+if [ -z "$STACK" ] || [ "$STACK" = "auto" ]; then
+  STACK="next"
+fi
+echo "스택: $STACK"
+
+# 1. core .claude/ 복사
+echo "→ core: .claude/ 복사 중..."
 cp -r "$HARNESS_ROOT/harness_global/.claude" "$TARGET/"
 
-# 2. 컨벤션 문서 복사
-echo "→ REACT_NEXT_CONVENTIONS.md 복사 중..."
-cp "$HARNESS_ROOT/harness_global/REACT_NEXT_CONVENTIONS.md" "$TARGET/"
+# 1-1. stack 전용 에이전트 복사 (.claude/agents/ 에 합류)
+STACK_AGENTS="$HARNESS_ROOT/harness_global/stacks/$STACK/agents"
+if [ -d "$STACK_AGENTS" ]; then
+  echo "→ stack($STACK): agents/ 복사 중..."
+  cp "$STACK_AGENTS/"* "$TARGET/.claude/agents/"
+else
+  echo "→ stack($STACK): agents 없음 — core 에이전트만 사용"
+fi
 
-echo "→ CSS_CONVENTIONS.md 복사 중..."
-cp "$HARNESS_ROOT/harness_global/CSS_CONVENTIONS.md" "$TARGET/"
+# 2. stack 컨벤션 문서 복사
+STACK_ROOT="$HARNESS_ROOT/harness_global/stacks/$STACK"
+if [ -f "$STACK_ROOT/REACT_NEXT_CONVENTIONS.md" ]; then
+  echo "→ stack($STACK): REACT_NEXT_CONVENTIONS.md 복사 중..."
+  cp "$STACK_ROOT/REACT_NEXT_CONVENTIONS.md" "$TARGET/"
+fi
+if [ -f "$STACK_ROOT/CSS_CONVENTIONS.md" ]; then
+  echo "→ stack($STACK): CSS_CONVENTIONS.md 복사 중..."
+  cp "$STACK_ROOT/CSS_CONVENTIONS.md" "$TARGET/"
+fi
 
 # 3. CLAUDE.md 처리
 if [ -f "$TARGET/CLAUDE.md" ]; then
@@ -98,10 +124,25 @@ else
   cp "$HARNESS_ROOT/harness_global/CLAUDE.md" "$TARGET/CLAUDE.md"
 fi
 
-# 4. 버전 기록
+# 4. harness.config.yaml 생성 (없는 경우만)
+if [ ! -f "$TARGET/harness.config.yaml" ]; then
+  echo "→ harness.config.yaml 생성 중..."
+  cp "$HARNESS_ROOT/harness_global/harness.config.yaml" "$TARGET/"
+else
+  echo "→ harness.config.yaml 이미 존재 — 유지함"
+fi
+
+# 5. 버전 기록
 HARNESS_VERSION=$(cat "$HARNESS_ROOT/harness_global/VERSION" 2>/dev/null || echo "unknown")
 echo "→ .harness-version 기록 중... ($HARNESS_VERSION)"
 echo "$HARNESS_VERSION" > "$TARGET/.harness-version"
+
+# 6. Cursor 통합 (자동 감지)
+if [ -d "$TARGET/.cursor" ]; then
+  echo "→ .cursor/ 감지됨 — Cursor 룰 파일 복사 중..."
+  mkdir -p "$TARGET/.cursor/rules"
+  cp -r "$HARNESS_ROOT/harness_global/cursor/"* "$TARGET/.cursor/rules/"
+fi
 
 echo ""
 echo "─────────────────────────────────"

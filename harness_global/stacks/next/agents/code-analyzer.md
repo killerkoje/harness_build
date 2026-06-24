@@ -9,10 +9,22 @@ description: 기존 코드 패턴을 분석하고 TDD 스펙 초안을 생성하
 
 ## 사전 참조 (필수)
 
-분석 시작 전 반드시 두 문서를 읽는다.
+### harness.config.yaml 읽기
+
+분석 시작 전 가장 먼저 프로젝트 루트의 config를 읽는다:
+
+```bash
+cat harness.config.yaml 2>/dev/null
+```
+
+- `style_mode`가 `auto` 또는 파일 없음 → CSS_CONVENTIONS.md §1 감지 로직 실행
+- `style_mode`가 명시되어 있으면 → 그 값을 스펙 초안의 스타일 모드로 사용 (감지 생략)
+- `stack`이 명시되어 있으면 → 스펙 초안 상단에 기록
+
+### 컨벤션 문서 읽기
 
 - `REACT_NEXT_CONVENTIONS.md` — Next.js 공식 문서 기반 컨벤션. 스펙 초안 작성의 구조·타입 기준.
-- `CSS_CONVENTIONS.md` — 스타일 규칙. **§1 스타일 모드 감지**를 반드시 실행하여 프로젝트의 스타일 모드(Tailwind / Pure CSS / Hybrid / shadcn)를 판별하고, 판별 결과를 스펙 초안에 기록한다.
+- `CSS_CONVENTIONS.md` — 스타일 규칙. `style_mode: auto`일 때 **§1 스타일 모드 감지**를 실행하여 판별 결과를 스펙 초안에 기록한다.
 
 ## 핵심 역할
 

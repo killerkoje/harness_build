@@ -46,19 +46,30 @@ ls {TARGET_PATH}
 아래 순서로 파일을 복사한다:
 
 ```bash
-# 1. .claude/ 폴더 복사 (에이전트 + 스킬 전체)
+# 1. core .claude/ 폴더 복사 (스택 무관 오케스트레이터 + 공통 에이전트)
 cp -r {HARNESS_ROOT}/harness_global/.claude {TARGET_PATH}/
 
-# 2. 컨벤션 문서 복사
-cp {HARNESS_ROOT}/harness_global/REACT_NEXT_CONVENTIONS.md {TARGET_PATH}/
-cp {HARNESS_ROOT}/harness_global/CSS_CONVENTIONS.md {TARGET_PATH}/
+# 1-1. stack 전용 에이전트 복사 (기본값: next)
+cp {HARNESS_ROOT}/harness_global/stacks/next/agents/* {TARGET_PATH}/.claude/agents/
+
+# 2. stack 컨벤션 문서 복사
+cp {HARNESS_ROOT}/harness_global/stacks/next/REACT_NEXT_CONVENTIONS.md {TARGET_PATH}/
+cp {HARNESS_ROOT}/harness_global/stacks/next/CSS_CONVENTIONS.md {TARGET_PATH}/
 
 # 3. CLAUDE.md 처리
 #    - 대상에 CLAUDE.md가 없으면: 그냥 복사
 #    - 대상에 CLAUDE.md가 있으면: 기존 파일 끝에 하네스 내용 append
 
-# 4. 버전 기록
+# 4. harness.config.yaml 생성 (없는 경우만)
+cp {HARNESS_ROOT}/harness_global/harness.config.yaml {TARGET_PATH}/
+
+# 5. 버전 기록
 cat {HARNESS_ROOT}/harness_global/VERSION > {TARGET_PATH}/.harness-version
+
+# 6. Cursor 룰 복사 (.cursor/ 디렉토리가 있는 경우만)
+if [ -d {TARGET_PATH}/.cursor ]; then
+  cp -r {HARNESS_ROOT}/harness_global/cursor/* {TARGET_PATH}/.cursor/rules/
+fi
 ```
 
 CLAUDE.md append 방법:
@@ -77,17 +88,28 @@ cat {HARNESS_ROOT}/harness_global/CLAUDE.md >> {TARGET_PATH}/CLAUDE.md
 설치 경로: {TARGET_PATH}
 
 설치된 파일:
+[core]
 - .claude/skills/frontend-dev/     ← 개발 파이프라인 스킬
-- .claude/skills/code-review/      ← 리뷰 스킬
+- .claude/skills/code-review/      ← 리뷰 스킬 (PR diff 리뷰 포함)
 - .claude/skills/install-harness/  ← 설치 스킬 (이 파일)
-- .claude/agents/code-analyzer.md  ← 분석 에이전트 (Phase 1)
 - .claude/agents/test-writer.md    ← 테스트 선행 생성 에이전트 (Phase 1.5)
-- .claude/agents/implementer.md    ← 구현 에이전트 (Phase 2)
 - .claude/agents/qa-validator.md   ← QA 에이전트 (Phase 3)
+
+[stack: next]
+- .claude/agents/code-analyzer.md  ← Next.js 분석 에이전트 (Phase 1)
+- .claude/agents/implementer.md    ← MVVM 구현 에이전트 (Phase 2)
 - REACT_NEXT_CONVENTIONS.md        ← Next.js 컨벤션 문서
 - CSS_CONVENTIONS.md               ← CSS/Tailwind 스타일 규칙
+
+[공통]
 - CLAUDE.md                        ← 트리거 정의 (기존 파일에 추가됨)
+- harness.config.yaml              ← 프로젝트별 하네스 설정
 - .harness-version                 ← 설치된 하네스 버전
+
+[Cursor — .cursor/ 디렉토리가 있을 때만]
+- .cursor/rules/react-next.mdc     ← Next.js App Router 규칙
+- .cursor/rules/css.mdc            ← CSS/Tailwind 규칙
+- .cursor/rules/mvvm-tdd.mdc       ← MVVM + TDD 원칙
 
 이제 해당 프로젝트에서 Claude Code를 열고 아래 명령을 사용하세요:
 

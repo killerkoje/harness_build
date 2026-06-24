@@ -15,6 +15,10 @@ description: |
   문제 있어?, 뭐가 이상해?, 잘못된 거 있어?, 위험한 부분 있어?,
   개선할 거 있어?, 놓친 거 있어?, 빠진 거 있어?
 
+  [PR diff 리뷰]
+  PR 리뷰해줘, PR 봐줘, PR #123 리뷰해줘, 풀리퀘 리뷰해줘, 풀리퀘 봐줘,
+  pr review, PR 검토해줘, 이 PR 봐줘, 머지 전에 봐줘
+
   [제외 — 이 스킬을 쓰지 않는 경우]
   버그 고쳐줘 / 기능 추가해줘 / 수정해줘
   → 코드를 새로 만들거나 수정하는 요청은 frontend-dev 스킬을 사용한다.
@@ -23,8 +27,64 @@ description: |
 # 기획-코드 리뷰어
 
 사용자가 제시한 기획 의도와 실제 React/Next.js 코드를 4단계로 검토한다.
+**PR diff 리뷰** 요청 시에는 Phase 0에서 diff를 먼저 수집한 후 동일한 4단계를 적용한다.
 
-## 입력 조건
+---
+
+## Phase 0: 리뷰 타입 분기
+
+요청에서 리뷰 타입을 판단한다.
+
+### 타입 A — 코드 파일 리뷰 (기본)
+
+"리뷰해줘", "코드 검토해줘" 등 파일/컴포넌트 기반 요청.
+→ Phase 0 건너뛰고 바로 **입력 조건** 확인 후 Phase 1 진행.
+
+### 타입 B — PR diff 리뷰
+
+"PR 리뷰해줘", "PR #N 리뷰해줘" 등 PR 기반 요청.
+
+#### Step 0-1: PR 정보 수집
+
+```bash
+# PR 번호가 명시된 경우 (예: PR #42 리뷰해줘)
+gh pr view [N] --json number,title,body,baseRefName,headRefName 2>/dev/null
+
+# PR 번호 없이 현재 브랜치 기준
+gh pr view --json number,title,body,baseRefName,headRefName 2>/dev/null
+```
+
+gh CLI가 없거나 PR이 없으면:
+```bash
+git log main..HEAD --oneline 2>/dev/null   # 또는 origin/main
+git diff main...HEAD --stat 2>/dev/null
+```
+
+#### Step 0-2: diff 수집
+
+```bash
+# gh 사용 가능한 경우
+gh pr diff [N] 2>/dev/null
+
+# gh 없는 경우
+git diff main...HEAD 2>/dev/null
+```
+
+diff가 너무 크면 (1000줄+) 변경된 파일 목록만 먼저 확인:
+```bash
+git diff main...HEAD --name-only
+```
+→ 핵심 파일 (훅, 서비스, 페이지) 우선으로 직접 읽기.
+
+#### Step 0-3: PR diff 리뷰 전용 입력 구성
+
+수집한 PR 정보로 아래를 구성하여 Phase 1~4를 진행한다:
+- **기획 의도** = PR title + body (없으면 커밋 메시지에서 추론)
+- **코드 범위** = diff에서 변경된 파일 목록
+
+---
+
+## 입력 조건 (타입 A — 코드 파일 리뷰)
 
 이 스킬은 두 가지를 입력으로 받는다:
 - **기획 의도**: 사용자가 텍스트로 설명한 기능의 목적, 동작 방식, 엣지케이스

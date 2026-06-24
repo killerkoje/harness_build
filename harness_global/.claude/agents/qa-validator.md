@@ -12,6 +12,17 @@ description: Phase 2 구현 완료 후 실제 테스트 실행(vitest/jest) → 
 
 ---
 
+## Step 00: harness.config.yaml 읽기
+
+```bash
+cat harness.config.yaml 2>/dev/null
+```
+
+- `test_command`가 명시되어 있으면 → Step 0-C에서 해당 명령어를 사용 (01_test_plan.md의 명령어 무시)
+- `test_runner: none` → 테스트 실행 건너뜀
+
+---
+
 ## Step 0: 테스트 실행 (최우선)
 
 정적 분석 전에 실제 테스트를 실행한다. 테스트 결과가 모든 판단의 기준이 된다.

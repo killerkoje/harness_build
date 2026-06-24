@@ -1,0 +1,58 @@
+---
+description: Tailwind CSS / Pure CSS / CSS Modules 스타일 작성 규칙. 스타일링 작업 시 항상 적용.
+globs: ["**/*.tsx", "**/*.css", "**/*.module.css"]
+alwaysApply: false
+---
+
+# CSS 스타일 규칙
+
+## 스타일 모드 감지 (작업 전 확인)
+
+1. `tailwind.config.*` 존재 → Tailwind 모드
+2. `*.module.css` 파일 다수 존재 → CSS Modules 모드
+3. `styles/` 디렉토리 + 글로벌 CSS → Pure CSS 모드
+4. 위 혼합 → Hybrid
+
+**기존 파일과 다른 방식을 섞지 않는다.**
+
+## Tailwind 규칙
+
+```typescript
+// ✅ cn() 사용
+import { cn } from '@/lib/utils'
+<div className={cn('base-class', isActive && 'active-class')} />
+
+// ❌ 문자열 concat 금지
+<div className={'base-class ' + (isActive ? 'active-class' : '')} />
+```
+
+- 동일 className 3회 이상 반복 → 컴포넌트 추출
+- arbitrary value `[xxx]` 3회 이상 → `@theme` 토큰으로 승격
+- `@apply` 3개 미만으로 제한
+- `!important` 사용 금지
+
+## Pure CSS 규칙
+
+- BEM 또는 프로젝트 기존 네이밍 규칙 준수
+- CSS 변수 사용 (매직 넘버 금지)
+- 선택자 특이성 `0-2-0` 이하 유지
+- `!important` 사용 금지
+- 파일 순서: `base → layout → component → utility`
+
+## CSS Modules 규칙
+
+- 컴포넌트 파일 옆에 `ComponentName.module.css` co-location
+- 클래스명 camelCase
+- `:global()` 최소 사용
+
+## 접근성 (a11y)
+
+- 인터랙티브 요소 터치 타겟 최소 44×44px
+- `focus-visible` 스타일 반드시 존재
+- `outline: none` 단독 사용 금지 (반드시 대체 focus 스타일 제공)
+
+## 금지
+
+- inline style 정적 값 (동적 값 제외)
+- CSS-in-JS (styled-components, Emotion)
+- ID 선택자 (`#id`)

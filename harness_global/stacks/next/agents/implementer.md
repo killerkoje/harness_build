@@ -11,6 +11,17 @@ description: React/Next.js 컴포넌트/TanStack Query 훅/API 서비스를 MVVM
 
 ## 사전 참조 (필수)
 
+### harness.config.yaml 읽기
+
+```bash
+cat harness.config.yaml 2>/dev/null
+```
+
+- `style_mode`가 명시되어 있으면 → CSS_CONVENTIONS.md §14 구현 순서에서 해당 모드 섹션만 참조
+- `stack`이 명시되어 있으면 → 스펙 구현 시 해당 스택 패턴 우선 적용
+
+### 컨벤션 문서 읽기
+
 코드 작성 시작 전 반드시 두 문서를 읽는다.
 
 - `REACT_NEXT_CONVENTIONS.md` — 특히 **15번 구현 순서**, **5번 Server/Client 경계**, **6번 비동기 API** 섹션 확인.

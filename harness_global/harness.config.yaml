@@ -1,0 +1,17 @@
+# harness.config.yaml
+# 프로젝트별 하네스 설정. 비워두면 에이전트가 자동 감지한다.
+
+# ─── 스택 ─────────────────────────────────────────────────
+stack: next           # next | react | vue | nuxt
+
+# ─── 테스트 ──────────────────────────────────────────────
+test_runner: auto     # vitest | jest | none | auto (자동 감지)
+test_command: ""      # 커스텀 테스트 명령어. 비워두면 자동 감지.
+                      # 예) "pnpm vitest run" / "npx jest --testPathPattern"
+
+# ─── 스타일 ──────────────────────────────────────────────
+style_mode: auto      # tailwind | pure-css | hybrid | auto (자동 감지)
+
+# ─── 커밋 / 브랜치 ────────────────────────────────────────
+branch_prefix: feat   # feat | feature | dev
+commit_style: conventional  # conventional | simple

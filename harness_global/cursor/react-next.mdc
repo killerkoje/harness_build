@@ -1,0 +1,53 @@
+---
+description: Next.js App Router + TypeScript 코드 작성 규칙. 컴포넌트 생성, 라우팅, 비동기 처리 시 항상 적용.
+globs: ["app/**/*.tsx", "app/**/*.ts", "components/**/*.tsx", "hooks/**/*.ts", "services/**/*.ts", "types/**/*.ts"]
+alwaysApply: false
+---
+
+# Next.js App Router 핵심 규칙
+
+## Server / Client 경계
+
+- 기본은 Server Component. `useState`, `useEffect`, 이벤트 핸들러가 필요할 때만 `'use client'`
+- `'use client'`는 트리의 최하단(leaf) 컴포넌트에만 붙인다
+- Server Component → Client Component에 함수·Date·Map·클래스 인스턴스 전달 금지 (직렬화 불가)
+
+## 비동기 params / cookies / headers (Next.js 15+)
+
+```typescript
+// ✅ 올바른 방식
+const { id } = await params
+const cookieStore = await cookies()
+
+// ❌ 금지
+const { id } = params
+```
+
+## 파일명 규칙
+
+- 컴포넌트: `PascalCase.tsx`
+- 훅: `useCamelCase.ts`
+- 서비스: `camelCase.service.ts`
+- 타입: `camelCase.types.ts`
+- import 경로: `@/` 절대경로 사용, barrel file(index.ts) 금지
+
+## 금지 사항
+
+- `<img>` 대신 `next/image`
+- `<a>` (내부 링크) 대신 `next/link`
+- Google Fonts CDN `<link>` 대신 `next/font`
+- `pages/` 디렉토리, `getServerSideProps`, `next/router` (App Router에서 사용 금지)
+- `any` 타입
+- 컴포넌트 내 직접 `fetch` 호출 (서비스 레이어 통해서만)
+
+## MVVM 구현 순서
+
+```
+types/ → services/ → hooks/ → components/ → app/page.tsx
+```
+
+## TanStack Query
+
+- queryKey: `[도메인, 액션, 파라미터]` 구조 유지
+- `useMutation` 성공 후 반드시 `queryClient.invalidateQueries` 호출
+- `retry: false` + `gcTime: Infinity` (테스트 환경)
