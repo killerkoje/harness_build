@@ -295,6 +295,28 @@ Implementer 완료 후 3-A로 돌아가 재검증한다.
 >
 > **커밋 확인 없이 자동 커밋하지 않는다. 항상 물어본다.**
 
+커밋 완료 직후 → **Phase 4.5** 실행.
+
+---
+
+### Phase 4.5: 패턴 학습 (mid / high만)
+
+`DEPTH_MODEL`이 `haiku`(low)이면 이 Phase를 건너뛴다.
+
+```
+Agent(
+  subagent_type: "general-purpose",
+  agents_file: ".claude/agents/pattern-extractor.md",
+  model: "sonnet",
+  prompt: """
+    커밋이 완료되었다.
+    _workspace/02_implementation.md와 방금 커밋된 파일들을 읽고
+    팀 패턴을 추출해 .harness/patterns/에 적재하라.
+    AUTO 항목은 즉시 등록하고, SUGGEST 항목은 사용자에게 간결하게 제안하라.
+  """
+)
+```
+
 ---
 
 ## 데이터 전달 프로토콜
@@ -307,6 +329,7 @@ Implementer 완료 후 3-A로 돌아가 재검증한다.
 | Implementer (2) | `_workspace/01_spec.md` + `_workspace/01_test_plan.md` + 테스트 파일 | 실제 파일 + `_workspace/02_implementation.md` |
 | QA Validator (3) | `_workspace/01_test_plan.md` + `_workspace/01_spec.md` + `_workspace/02_implementation.md` + 구현 파일 | `_workspace/03_qa_report.md` |
 | Implementer retry (3-B) | `_workspace/03_qa_report.md` | 수정된 실제 파일 + `_workspace/02_implementation.md` 업데이트 |
+| Pattern Extractor (4.5) | `_workspace/02_implementation.md` + 커밋된 파일 + `.harness/patterns/` | `.harness/patterns/*.yaml` 업데이트 + 제안 출력 |
 
 ---
 

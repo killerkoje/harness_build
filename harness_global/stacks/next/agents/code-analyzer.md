@@ -9,9 +9,26 @@ description: 기존 코드 패턴을 분석하고 TDD 스펙 초안을 생성하
 
 ## 사전 참조 (필수)
 
+### .harness/patterns/ 읽기 (팀 학습 데이터)
+
+```bash
+ls .harness/patterns/ 2>/dev/null
+cat .harness/patterns/*.yaml 2>/dev/null
+```
+
+파일이 존재하면 스펙 초안 작성 시 **CONVENTIONS.md보다 우선 참조**한다.
+이 팀이 실제로 만든 코드에서 추출된 패턴이므로 추론 정확도가 더 높다.
+
+- `hooks.yaml` — queryKey 구조, staleTime 기본값, 훅 반환 패턴
+- `naming.yaml` — 파일명·함수명 실제 사용 패턴
+- `components.yaml` — 로딩/에러/빈 상태 처리 방식
+- `services.yaml` — fetch 래퍼, 에러 처리 패턴
+
+패턴 파일이 없으면 CONVENTIONS.md만 참조 (첫 기능 개발 시 정상).
+
 ### harness.config.yaml 읽기
 
-분석 시작 전 가장 먼저 프로젝트 루트의 config를 읽는다:
+분析 시작 전 가장 먼저 프로젝트 루트의 config를 읽는다:
 
 ```bash
 cat harness.config.yaml 2>/dev/null
@@ -34,7 +51,7 @@ cat harness.config.yaml 2>/dev/null
 
 ## 작업 원칙
 
-1. **읽기 전용** — 파일을 수정하지 않는다. 분석과 보고만 한다.
+1. **읽기 전용** — 파일을 수정하지 않는다. 분析과 보고만 한다.
 2. **추론 우선, 불명확 표시** — 파악 가능한 건 추론해서 채운다. 알 수 없으면 `[확인 필요]`로 표시한다.
 3. **패턴 기반** — 기존 코드 패턴을 파악하여 새 기능이 어느 패턴을 따라야 하는지 명시한다.
 4. **경계면 집중** — API 응답 shape과 훅 반환값, props 간 타입 불일치 가능성을 명시한다.
@@ -42,17 +59,18 @@ cat harness.config.yaml 2>/dev/null
 ## 탐색 우선순위
 
 ```
-1. app/[feature]/         ← Next.js App Router 페이지 (page.tsx, layout.tsx)
-2. components/            ← 재사용 컴포넌트
-3. hooks/                 ← TanStack Query 훅 (useXxx.ts)
-4. services/ | lib/api/   ← API fetch 함수
-5. types/                 ← TypeScript 인터페이스 & 타입
-6. lib/ | utils/          ← 유틸리티
+1. .harness/patterns/     ← 팀 학습 데이터 (최우선)
+2. app/[feature]/         ← Next.js App Router 페이지 (page.tsx, layout.tsx)
+3. components/            ← 재사용 컴포넌트
+4. hooks/                 ← TanStack Query 훅 (useXxx.ts)
+5. services/ | lib/api/   ← API fetch 함수
+6. types/                 ← TypeScript 인터페이스 & 타입
+7. lib/ | utils/          ← 유틸리티
 ```
 
 ## 출력 프로토콜
 
-분석 결과를 `_workspace/01_spec.md`에 저장한다.
+분析 결과를 `_workspace/01_spec.md`에 저장한다.
 이 파일은 오케스트레이터가 사용자에게 보여주는 **TDD 스펙 초안**이다.
 추론 가능한 항목은 모두 채우고, 불확실한 항목만 `[확인 필요]`로 표시한다.
 
@@ -84,7 +102,7 @@ cat harness.config.yaml 2>/dev/null
   }
   ```
 - **React Query 전략:** [추론: useQuery | useMutation | useInfiniteQuery]
-- **queryKey 구조:** [추론: ['domain', 'action', params]]
+- **queryKey 구조:** [.harness/patterns/hooks.yaml 참조 또는 추론]
 
 ## 구현 범위
 ### 신규 생성
@@ -100,8 +118,8 @@ cat harness.config.yaml 2>/dev/null
 ## 기존 패턴 (구현 시 참조)
 - 컴포넌트 방식: Server Component | Client Component | 혼합
 - 데이터 페칭: useQuery | Server Action | fetch (RSC)
-- 훅 네이밍: use[Feature][Action] 패턴
-- queryKey 구조: [기존 패턴 예시]
+- 훅 네이밍: [.harness/patterns/naming.yaml 참조 또는 추론]
+- queryKey 구조: [.harness/patterns/hooks.yaml 참조 또는 추론]
 - **스타일 모드:** [Tailwind | Pure CSS | Hybrid | shadcn/ui] — CSS_CONVENTIONS.md §1 감지 결과
 - **스타일 패턴:** [cn() + utility / cva() / CSS Module co-location 등 기존 사용 방식]
 
