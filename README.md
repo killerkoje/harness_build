@@ -1,7 +1,10 @@
 # harness_build
 
 React / Next.js 프로젝트 전용 Claude 하네스.
-자연어 명령 한 줄로 **기획 확인 → 스펙 확정 → 테스트 선행 작성 → MVVM 구현 → 테스트 실행 검증 → 커밋**까지 자동 실행된다.
+자연어 명령 한 줄로 **기획 확인 → 스펙 확정 → 테스트 선행 작성 → MVVM 구현 → 테스트 실행 검증 → 패턴 학습 → 커밋**까지 자동 실행된다.
+
+> **AX 플랫폼**: 팀이 만든 코드에서 패턴을 추출해 `.harness/patterns/`에 적재한다.
+> 다음 기획 시 그 데이터를 우선 참조하여 스펙 추론 정확도가 점점 높아진다.
 
 ---
 
@@ -10,19 +13,32 @@ React / Next.js 프로젝트 전용 Claude 하네스.
 ### 전체 구조
 
 ```
-harness_global/
-├── CLAUDE.md                        ← 스킬 트리거 정의 (프로젝트 루트에 복사)
-├── REACT_NEXT_CONVENTIONS.md        ← Next.js 공식 문서 기반 컨벤션 (에이전트 공통 참조)
-├── CSS_CONVENTIONS.md               ← Tailwind/Pure CSS/Modules 스타일 규칙 (에이전트 공통 참조)
-└── .claude/
-    ├── skills/                      ← 사용자 명령을 받아 파이프라인을 조율하는 오케스트레이터
-    │   ├── frontend-dev/SKILL.md    ← 개발 파이프라인 (기획 → 확정 → 구현 → 테스트 → 완료)
-    │   └── code-review/SKILL.md     ← 기획-코드 리뷰어
-    └── agents/                      ← 스킬이 호출하는 전문 서브 에이전트
-        ├── code-analyzer.md         ← 코드베이스 분석 + TDD 스펙 초안 생성 (Phase 1)
-        ├── test-writer.md           ← 스펙 기반 테스트 파일 선행 생성 (Phase 1.5)
-        ├── implementer.md           ← MVVM 순서 코드 구현 (Phase 2)
-        └── qa-validator.md          ← 테스트 실행 + 스펙 검증 + 위험 진단 (Phase 3)
+harness_build/
+├── install.sh                            ← 설치 스크립트 (프로젝트 / 글로벌)
+└── harness_global/
+    ├── VERSION                           ← 하네스 버전 (현재 0.2.0)
+    ├── CLAUDE.md                         ← 스킬 트리거 정의 (프로젝트 루트에 복사)
+    ├── harness.config.yaml               ← 프로젝트별 하네스 설정
+    ├── cursor/                           ← Cursor IDE 룰 파일 (자동 감지 시 복사)
+    │   ├── react-next.mdc
+    │   ├── css.mdc
+    │   └── mvvm-tdd.mdc
+    ├── .claude/                          ← 스택 무관 공통 (core)
+    │   ├── skills/
+    │   │   ├── frontend-dev/SKILL.md     ← 개발 파이프라인 오케스트레이터
+    │   │   ├── code-review/SKILL.md      ← 기획-코드 리뷰어
+    │   │   └── install-harness/SKILL.md  ← 자연어 설치 스킬
+    │   └── agents/                       ← 스택 무관 서브 에이전트
+    │       ├── test-writer.md            ← 테스트 선행 생성 (Phase 1.5)
+    │       ├── qa-validator.md           ← 테스트 실행 + 검증 (Phase 3)
+    │       └── pattern-extractor.md      ← 패턴 추출 + 학습 적재 (Phase 4.5)
+    └── stacks/
+        └── next/                         ← Next.js 전용 (stack: next)
+            ├── REACT_NEXT_CONVENTIONS.md ← Next.js 공식 문서 기반 컨벤션
+            ├── CSS_CONVENTIONS.md        ← Tailwind/Pure CSS/Modules 스타일 규칙
+            └── agents/
+                ├── code-analyzer.md      ← 코드베이스 분석 + 스펙 초안 (Phase 1)
+                └── implementer.md        ← MVVM 구현 (Phase 2)
 ```
 
 ### 에이전트 역할 분리
@@ -33,22 +49,52 @@ harness_global/
     ▼
 [Skill: frontend-dev]  ← 오케스트레이터. 에이전트를 순서대로 호출하고 사용자와 소통
     │
-    ├─ Phase 1 ───▶ [Agent: code-analyzer]   패턴 탐색 + TDD 스펙 초안 생성
-    │                        │               (_workspace/01_spec.md)
+    ├─ Phase 1   ──▶ [Agent: code-analyzer]     패턴 탐색 + TDD 스펙 초안 생성
+    │                        │                  (_workspace/01_spec.md)
     │               사용자 확인 대기 (중단점) ← 기획/디자인/성공조건 확인
     │                        │ (ok)
     │
-    ├─ Phase 1.5 ─▶ [Agent: test-writer]     확정 스펙 → 테스트 파일 선행 생성  ← mid/high만
-    │                                         (_workspace/01_test_plan.md)
+    ├─ Phase 1.5 ──▶ [Agent: test-writer]        확정 스펙 → 테스트 파일 선행 생성  ← mid/high만
+    │                                            (_workspace/01_test_plan.md)
     │
-    ├─ Phase 2 ───▶ [Agent: implementer]     테스트 기준으로 MVVM 구현
-    │                                         types → service → hooks → view
+    ├─ Phase 2   ──▶ [Agent: implementer]        테스트 assertion 기준으로 MVVM 구현
+    │                                            types → service → hooks → view
     │
-    ├─ Phase 3 ───▶ [Agent: qa-validator]    vitest/jest 실제 실행
-    │                        │               FAIL → implementer 자동 재호출 (최대 2회)
-    │                        │               (_workspace/03_qa_report.md)
+    ├─ Phase 3   ──▶ [Agent: qa-validator]       vitest/jest 실제 실행
+    │                        │                  FAIL → implementer 자동 재호출 (최대 2회)
+    │                        │                  (_workspace/03_qa_report.md)
     │
-    └─ Phase 4      완료 보고 + 커밋&푸시 여부 항상 확인 (중단점)
+    ├─ Phase 4             완료 보고
+    │               ── 커밋&푸시 여부 항상 확인 ──  ← ok 없으면 커밋 안 함
+    │
+    └─ Phase 4.5 ──▶ [Agent: pattern-extractor]  커밋 승인 후 패턴 추출 + 학습 적재  ← mid/high만
+                                                 (.harness/patterns/*.yaml)
+```
+
+### AX 학습 루프
+
+```
+팀이 기능을 완료할 때마다 컨텍스트가 쌓인다:
+
+  [구현 완료 + 커밋]
+          │
+          ▼
+  [pattern-extractor]  ← 신뢰도 × 영향도 매트릭스로 분류
+          │
+          ├── AUTO   → .harness/patterns/*.yaml 즉시 등록
+          ├── SUGGEST → candidates.md 제안 (사람이 승인)
+          └── FLAG   → 후보 기록만
+          │
+          ▼
+  [.harness/patterns/]
+    hooks.yaml        ← queryKey 구조, staleTime 기본값
+    naming.yaml       ← 파일명·함수명 패턴
+    components.yaml   ← 로딩/에러/빈 상태 처리
+    services.yaml     ← fetch 래퍼, 에러 처리 패턴
+          │
+          ▼
+  [다음 기획 시 code-analyzer가 우선 참조]
+  → 스펙 추론 정확도 점점 상승
 ```
 
 ### MVVM 계층 구조
@@ -60,17 +106,6 @@ hooks/                  ← ViewModel  TanStack Query (useQuery / useMutation)
 app/ | components/      ← View       page.tsx, React 컴포넌트
 ```
 
-### 컨벤션 참조 흐름
-
-```
-REACT_NEXT_CONVENTIONS.md + CSS_CONVENTIONS.md
-        │
-        ├── code-analyzer  → 분석 기준 (기존 패턴 파악 시 참조)
-        ├── test-writer    → 테스트 생성 기준 (스펙 성공 조건 → 케이스 매핑)
-        ├── implementer    → 구현 기준 (§15 구현순서, §5 Server/Client, §6 비동기 API)
-        └── qa-validator   → 검증 기준 (§14 금지사항 체크리스트, §13 CSS QA)
-```
-
 ---
 
 ## 파이프라인
@@ -79,35 +114,60 @@ REACT_NEXT_CONVENTIONS.md + CSS_CONVENTIONS.md
 
 ```
 기획
-  Phase 1   코드 패턴 분석 → 기획/디자인/데이터 스펙 초안 자동 생성
-          ── 사용자 확인 대기 ──  ← 수정 가능, ok 전까지 절대 진행 안 함
+  Phase 1    .harness/patterns/ 우선 참조 → 코드 패턴 분석 → 스펙 초안 자동 생성
+           ── 사용자 확인 대기 ──  ← 수정 가능, ok 전까지 절대 진행 안 함
 
 확정 후 테스트 선행 작성 (mid / high만)
-  Phase 1.5 확정 스펙 → vitest/jest 테스트 파일 생성 (TDD Red)
-            low: 레벨은 스킵
+  Phase 1.5  확정 스펙 → vitest/jest 테스트 파일 생성 (TDD Red)
+             low: 레벨은 스킵
 
 구현
-  Phase 2   MVVM 구현 — 테스트 assertion 기준으로
-            types → service → hooks → page/components
+  Phase 2    MVVM 구현 — 테스트 assertion 기준으로
+             types → service → hooks → page/components
 
 테스트
-  Phase 3   vitest / jest 실제 실행
-            FAIL → implementer 자동 재시도 (최대 2회)
-            2회 초과 → 사용자에게 미해결 항목 보고
+  Phase 3    vitest / jest 실제 실행
+             FAIL → implementer 자동 재시도 (최대 2회)
+             2회 초과 → 사용자에게 미해결 항목 보고
 
 구현 완료
-  Phase 4   완료 보고
-          ── 커밋&푸시 여부 항상 확인 ──  ← ok 없으면 커밋 안 함
+  Phase 4    완료 보고
+           ── 커밋&푸시 여부 항상 확인 ──  ← ok 없으면 커밋 안 함
+
+패턴 학습 (mid / high만)
+  Phase 4.5  커밋 승인 후 pattern-extractor 실행
+             → .harness/patterns/ 업데이트 (다음 기획에 반영)
 ```
 
 ### code-review (리뷰)
 
 ```
+Phase 0  타입 분기 — 파일 리뷰 vs PR diff 리뷰 자동 판별
 Phase 1  기획 의도 파악 (핵심 동작 / 데이터 흐름 / 엣지케이스)
 Phase 2  코드 절충 검토 (일치 / 불일치 / 코드에만 존재)
 Phase 3  연결 도메인 나열 (영향 판단은 사용자 몫)
 Phase 4  잠재적 에러 진단 [치명 / 주의 / 확인]
 ```
+
+---
+
+## harness.config.yaml
+
+프로젝트 루트에 설치되는 설정 파일. 하네스 동작을 프로젝트별로 오버라이드한다.
+
+```yaml
+# harness.config.yaml
+stack: next          # next | react | vue (기본값: next)
+test_runner: auto    # auto | vitest | jest
+test_command: ""     # 빈 문자열이면 자동 감지 (예: "npx vitest run --reporter=verbose")
+style_mode: auto     # auto | tailwind | pure-css | hybrid
+branch_prefix: feat  # 브랜치 이름 앞에 붙는 prefix
+commit_style: conventional  # conventional | simple
+```
+
+- `style_mode: auto` → CSS_CONVENTIONS.md §1 감지 로직으로 자동 판별
+- `test_command` 지정 시 qa-validator가 그 명령으로 테스트 실행
+- `stack` 값이 명시되면 install.sh가 해당 스택 에이전트를 자동 선택
 
 ---
 
@@ -183,6 +243,37 @@ bash install.sh /path/to/your-project
 
 ---
 
+### 설치 후 생성되는 파일
+
+```
+your-project/
+├── .claude/
+│   ├── skills/
+│   │   ├── frontend-dev/SKILL.md
+│   │   ├── code-review/SKILL.md
+│   │   └── install-harness/SKILL.md
+│   └── agents/
+│       ├── code-analyzer.md       ← stack: next
+│       ├── test-writer.md
+│       ├── implementer.md         ← stack: next
+│       ├── qa-validator.md
+│       └── pattern-extractor.md
+├── REACT_NEXT_CONVENTIONS.md
+├── CSS_CONVENTIONS.md
+├── CLAUDE.md
+├── harness.config.yaml
+└── .harness-version               ← 설치된 버전 기록
+```
+
+Cursor IDE 사용 시 `.cursor/` 디렉토리가 있으면 자동으로 룰 파일도 복사된다:
+
+```
+your-project/.cursor/rules/
+├── react-next.mdc
+├── css.mdc
+└── mvvm-tdd.mdc
+```
+
 ### 설치 확인
 
 프로젝트에서 Claude Code 실행 후:
@@ -248,16 +339,34 @@ QA 다시 해줘               ← Phase 3만 재실행 (retry_count 초기화)
 기획이랑 맞는지 봐줘
 기획 의도랑 어긋난 거 있어?
 components/UserCard.tsx 확인해봐
+
+PR 리뷰해줘            ← 현재 브랜치 diff 전체 리뷰
+PR #42 리뷰해줘        ← 특정 PR 번호 리뷰
 ```
 
 ### 기획 레벨 기준
 
-| 레벨 | 모델 | 테스트 생성 | 적합한 작업 |
-|------|------|-----------|------------|
-| `low:` | haiku | 스킵 | 단일 파일 수정, 스타일 변경, 텍스트 수정 |
-| `mid:` | sonnet | 생성 | 훅 + 서비스 + 컴포넌트 1~2개 |
-| `high:` | opus | 생성 | 신규 페이지, 다수 컴포넌트, 모델 설계 포함 |
-| (없음) | haiku | 스킵 | 기본값 |
+| 레벨 | 모델 | 테스트 생성 | 패턴 학습 | 적합한 작업 |
+|------|------|-----------|---------|------------|
+| `low:` | haiku | 스킵 | 스킵 | 단일 파일 수정, 스타일 변경, 텍스트 수정 |
+| `mid:` | sonnet | 생성 | 실행 | 훅 + 서비스 + 컴포넌트 1~2개 |
+| `high:` | opus | 생성 | 실행 | 신규 페이지, 다수 컴포넌트, 모델 설계 포함 |
+| (없음) | haiku | 스킵 | 스킵 | 기본값 |
+
+---
+
+## Cursor IDE 지원
+
+`.cursor/` 디렉토리가 있는 프로젝트에 설치하면 Cursor 룰 파일이 자동으로 복사된다.
+
+| 파일 | 역할 |
+|------|------|
+| `react-next.mdc` | Next.js App Router 규칙 (Server/Client Component, 라우팅) |
+| `css.mdc` | CSS/Tailwind 스타일 규칙 |
+| `mvvm-tdd.mdc` | MVVM 계층 구조 + TDD 원칙 |
+
+> Cursor에서는 컨벤션 룰 적용만 지원한다.
+> 풀 파이프라인(Phase 1~4.5)은 Claude Code에서만 동작한다.
 
 ---
 
