@@ -69,6 +69,7 @@ harness_build/
     │
     └─ Phase 4.5 ──▶ [Agent: pattern-extractor]  커밋 승인 후 패턴 추출 + 학습 적재  ← mid/high만
                                                  (.harness/patterns/*.yaml)
+                                                 low: 스킵 — 단순 수정은 패턴 추출 대상 아님
 ```
 
 ### AX 학습 루프
