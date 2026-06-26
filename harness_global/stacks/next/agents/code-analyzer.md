@@ -19,6 +19,15 @@ cat .harness/patterns/*.yaml 2>/dev/null
 파일이 존재하면 스펙 초안 작성 시 **CONVENTIONS.md보다 우선 참조**한다.
 이 팀이 실제로 만든 코드에서 추출된 패턴이므로 추론 정확도가 더 높다.
 
+**활성 패턴만 사용:** `deprecated: true`인 항목은 스펙 추론에 쓰지 않는다.
+`superseded_by`가 있으면 대체 패턴 id를 참조한다.
+
+**충돌 시 선택 우선순위** (동일 관심사에 활성 패턴이 여러 개일 때):
+1. `observed` 높은 순
+2. `confidence: high` 우선
+3. `last_seen` 최신 순
+4. 그래도 동률이면 `[확인 필요]`로 표기하고 사용자에게 질문
+
 - `hooks.yaml` — queryKey 구조, staleTime 기본값, 훅 반환 패턴
 - `naming.yaml` — 파일명·함수명 실제 사용 패턴
 - `components.yaml` — 로딩/에러/빈 상태 처리 방식
@@ -76,6 +85,18 @@ cat harness.config.yaml 2>/dev/null
 
 ```markdown
 # TDD 스펙 초안
+
+## patterns_applied
+
+`.harness/patterns/`에서 **활성 패턴**(`deprecated: false` 또는 필드 없음)만 참조하여 스펙을 작성했다.
+적용한 패턴의 `id`를 아래에 기록한다 (AX 감사·추적용).
+
+| id | 적용 내용 |
+|----|----------|
+| query-key-structure | queryKey 2레벨 구조를 데이터 섹션에 반영 |
+| loading-state-pattern | Skeleton 로딩 처리를 디자인 섹션에 반영 |
+
+(패턴 파일 없거나 미적용 시: `없음`)
 
 ## 기능
 - **무엇을 만드는가:** [추론: 한 문장 요약]

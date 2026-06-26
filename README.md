@@ -66,6 +66,7 @@ harness_build/
     │
     ├─ Phase 4             완료 보고
     │               ── 커밋&푸시 여부 항상 확인 ──  ← ok 없으면 커밋 안 함
+    │               Step 4-B: 선택 이유 한 줄 (mid/high, skip 가능)
     │
     └─ Phase 4.5 ──▶ [Agent: pattern-extractor]  커밋 승인 후 패턴 추출 + 학습 적재  ← mid/high만
                                                  (.harness/patterns/*.yaml)
@@ -81,6 +82,8 @@ harness_build/
           │
           ▼
   [pattern-extractor]  ← 신뢰도 × 영향도 매트릭스로 분류
+          │              reason: 04_pattern_reason.md → 커밋 body 순
+          │              deprecated / superseded_by 로 레거시 패턴 퇴화
           │
           ├── AUTO   → .harness/patterns/*.yaml 즉시 등록
           ├── SUGGEST → candidates.md 제안 (사람이 승인)
@@ -95,6 +98,7 @@ harness_build/
           │
           ▼
   [다음 기획 시 code-analyzer가 우선 참조]
+  → 01_spec.md patterns_applied 섹션에 적용 id 기록 (AX 감사 추적)
   → 스펙 추론 정확도 점점 상승
 ```
 
@@ -134,6 +138,7 @@ app/ | components/      ← View       page.tsx, React 컴포넌트
 구현 완료
   Phase 4    완료 보고
            ── 커밋&푸시 여부 항상 확인 ──  ← ok 없으면 커밋 안 함
+           Step 4-B: 선택 이유 한 줄 (mid/high, skip 가능) → 04_pattern_reason.md
 
 패턴 학습 (mid / high만)
   Phase 4.5  커밋 승인 후 pattern-extractor 실행

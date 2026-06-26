@@ -288,17 +288,47 @@ Implementer 완료 후 3-A로 돌아가 재검증한다.
 
 ---
 커밋 & 푸시 하시겠습니까?
+(팀 패턴으로 남기려면: ok + 저장)
 ```
 
 > **커밋 확인 없이 자동 커밋하지 않는다. 항상 물어본다.**
 >
 > 응답별 처리:
-> - `yes` / `ok` / `ㅇㅋ` → 커밋 & 푸시. Phase 4.5는 `source: [qa_pass]`로 실행
-> - `yes + 저장` / `저장` / `패턴 저장` → 커밋 & 푸시. Phase 4.5를 `source: [user_approved, qa_pass]`로 실행
+> - `yes` / `ok` / `ㅇㅋ` → Step 4-B(선택 이유) 후 커밋 & 푸시. Phase 4.5는 `source: [qa_pass]`
+> - `yes + 저장` / `저장` / `패턴 저장` (이유 포함 가능) → Step 4-B(필요 시) 후 커밋 & 푸시. Phase 4.5는 `source: [user_approved, qa_pass]`
 > - `no` → 커밋 없이 종료
 >
 > `yes + 저장`은 "이 구현 방식을 팀 패턴으로 명시 등록한다"는 의미다.
-> 커밋 메시지 body에 선택 이유가 있으면 pattern-extractor가 `reason` 필드에 자동 추출한다.
+
+#### Step 4-B: 선택 이유 수집 (mid / high, 커밋 직전)
+
+`DEPTH_MODEL`이 `haiku`(low)이면 이 Step을 건너뛰고 바로 커밋한다.
+
+커밋 실행 **직전**에 아래 조건을 확인한다:
+
+| 조건 | 처리 |
+|------|------|
+| 사용자 응답에 이미 이유가 포함됨 | `_workspace/04_pattern_reason.md`에 저장 후 질문 생략 |
+| `yes + 저장`과 함께 이유를 적음 | 동일 |
+| 위 해당 없음 | 선택 질문 1회 |
+
+```
+선택: 이번에 쓴 방식의 이유를 한 줄만 남길까요?
+(다음 스펙 추론·패턴 학습에 반영됩니다. 없으면 skip)
+```
+
+- **입력 있음** → `_workspace/04_pattern_reason.md`에 저장 + 커밋 메시지 body에 포함
+- **`skip` / 빈 입력** → 파일 생성 안 함, 커밋만 진행
+
+`04_pattern_reason.md` 형식:
+
+```markdown
+# 패턴 선택 이유
+
+- **기록 시각:** {ISO 날짜}
+- **source:** user_approved | qa_pass
+- **이유:** {사용자 입력 한 줄}
+```
 
 커밋 완료 직후 → **Phase 4.5** 실행.
 
@@ -322,6 +352,7 @@ Agent(
     - "user_approved"이면 → source: [user_approved, qa_pass], 신뢰도 HIGH, AUTO 우선
     - "qa_pass"이면 → source: [qa_pass], 기존 패턴과 일치할 때만 AUTO, 첫 등장은 FLAG
 
+    _workspace/04_pattern_reason.md 가 있으면 reason 필드 최우선으로 사용하라.
     AUTO 항목은 즉시 등록하고, SUGGEST 항목은 사용자에게 간결하게 제안하라.
   """
 )
@@ -341,7 +372,8 @@ Agent(
 | Implementer (2) | `_workspace/01_spec.md` + `_workspace/01_test_plan.md` + 테스트 파일 | 실제 파일 + `_workspace/02_implementation.md` |
 | QA Validator (3) | `_workspace/01_test_plan.md` + `_workspace/01_spec.md` + `_workspace/02_implementation.md` + 구현 파일 | `_workspace/03_qa_report.md` |
 | Implementer retry (3-B) | `_workspace/03_qa_report.md` | 수정된 실제 파일 + `_workspace/02_implementation.md` 업데이트 |
-| Pattern Extractor (4.5) | `_workspace/02_implementation.md` + 커밋된 파일 + `.harness/patterns/` | `.harness/patterns/*.yaml` 업데이트 + 제안 출력 |
+| 사용자 (4-B) | 선택 이유 입력 (mid/high) | `_workspace/04_pattern_reason.md` (있을 때만) |
+| Pattern Extractor (4.5) | `_workspace/02_implementation.md` + `_workspace/04_pattern_reason.md`(있으면) + 커밋된 파일 + `.harness/patterns/` | `.harness/patterns/*.yaml` 업데이트 + 제안 출력 |
 
 ---
 
