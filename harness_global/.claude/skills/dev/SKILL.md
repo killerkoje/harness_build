@@ -80,10 +80,13 @@ description: |
    cat harness.config.yaml 2>/dev/null | grep "^stack:"
    ```
    `DETECTED_STACK` 설정. `auto`이거나 없으면 code-analyzer가 Step 0에서 감지.
-3. `_workspace/` 상태 확인
-   - **존재 + 부분 수정** → 해당 에이전트만 재호출
-   - **존재 + 새 기능** → `_workspace/`를 `_workspace_prev/`로 이동
-   - **미존재** → 초기 실행
+3. `WORKSPACE_DIR` 결정
+   - 오늘 날짜(YYYY-MM-DD) + 요청에서 추출한 영문 슬러그(최대 20자, kebab-case)로 결정
+   - 예) `_workspace/2026-06-26_user-login`
+   - **슬러그 규칙:** 요청의 핵심 명사 1~3개를 영문으로 변환 (예: "로그인 페이지" → `login-page`)
+   - 해당 폴더 이미 존재 → 부분 재실행으로 판단, 기존 파일 재사용 + 해당 에이전트만 재호출
+   - 미존재 → 폴더 생성 후 초기 실행
+   - 이후 모든 파일 경로는 `{WORKSPACE_DIR}/`를 prefix로 사용
 
 ---
 
@@ -98,7 +101,7 @@ Agent(
   model: {DEPTH_MODEL},
   prompt: """
     기능 요청: [사용자 요청 원문]
-    기존 코드 패턴을 분석하고 TDD 스펙 초안을 _workspace/01_spec.md에 저장하라.
+    기존 코드 패턴을 분석하고 TDD 스펙 초안을 {WORKSPACE_DIR}/01_spec.md에 저장하라.
   """
 )
 ```
@@ -136,7 +139,7 @@ Code Analyzer가 생성한 스펙 초안을 바탕으로 아래 형식을 출력
 ```
 
 > 사용자가 내용을 수정하면 해당 항목을 반영하여 스펙을 업데이트한 뒤 다시 확인을 요청한다.
-> 최종 확정된 스펙을 `_workspace/01_spec.md`에 저장한다.
+> 최종 확정된 스펙을 `{WORKSPACE_DIR}/01_spec.md`에 저장한다.
 
 ---
 
@@ -154,10 +157,10 @@ Agent(
   agents_file: ".claude/agents/test-writer.md",
   model: {DEPTH_MODEL},
   prompt: """
-    _workspace/01_spec.md를 읽고 성공 조건을 기준으로 테스트 파일을 생성하라.
+    {WORKSPACE_DIR}/01_spec.md를 읽고 성공 조건을 기준으로 테스트 파일을 생성하라.
     - 테스트 환경(vitest/jest, msw 여부)을 먼저 감지하라.
     - 감지된 환경에 맞는 템플릿으로 실제 테스트 파일을 프로젝트에 작성하라.
-    - 생성 결과와 실행 명령어를 _workspace/01_test_plan.md에 저장하라.
+    - 생성 결과와 실행 명령어를 {WORKSPACE_DIR}/01_test_plan.md에 저장하라.
   """
 )
 ```
@@ -186,10 +189,10 @@ Agent(
   agents_file: ".claude/agents/implementer.md",
   model: {DEPTH_MODEL},
   prompt: """
-    _workspace/01_spec.md 를 읽고 확정된 스펙을 기준으로 스택별 레이어 순서로 구현하라.
-    _workspace/01_test_plan.md 가 존재하면 반드시 읽고, 생성된 테스트 파일들을 직접 열어
+    {WORKSPACE_DIR}/01_spec.md 를 읽고 확정된 스펙을 기준으로 스택별 레이어 순서로 구현하라.
+    {WORKSPACE_DIR}/01_test_plan.md 가 존재하면 반드시 읽고, 생성된 테스트 파일들을 직접 열어
     테스트 assertion 기준에 맞게 구현하라. 목표는 테스트가 PASS되는 코드다.
-    구현 결과를 _workspace/02_implementation.md 에 저장하라.
+    구현 결과를 {WORKSPACE_DIR}/02_implementation.md 에 저장하라.
   """
 )
 ```
@@ -221,18 +224,18 @@ Agent(
   model: {DEPTH_MODEL},
   prompt: """
     아래 순서로 검증하라:
-    1. _workspace/01_test_plan.md를 읽어 테스트 실행 여부를 확인하라.
+    1. {WORKSPACE_DIR}/01_test_plan.md를 읽어 테스트 실행 여부를 확인하라.
        RUN: true이면 명시된 명령어로 테스트를 실행하고 결과를 캡처하라.
-    2. _workspace/01_spec.md, _workspace/02_implementation.md를 읽고
+    2. {WORKSPACE_DIR}/01_spec.md, {WORKSPACE_DIR}/02_implementation.md를 읽고
        구현 파일을 직접 열어 스펙 달성 여부를 정적 검증하라.
-    3. 결과를 _workspace/03_qa_report.md에 저장하라.
+    3. 결과를 {WORKSPACE_DIR}/03_qa_report.md에 저장하라.
   """
 )
 ```
 
 #### 3-B: 결과 판정 + 분기
 
-`_workspace/03_qa_report.md`를 읽어 판정한다:
+`{WORKSPACE_DIR}/03_qa_report.md`를 읽어 판정한다:
 
 **→ PASS 또는 PASS_WITH_WARNINGS:**
 Phase 4로 진행.
@@ -247,10 +250,10 @@ Agent(
   agents_file: ".claude/agents/implementer.md",
   model: {DEPTH_MODEL},
   prompt: """
-    _workspace/03_qa_report.md의 FAIL 항목을 읽고 문제를 수정하라.
+    {WORKSPACE_DIR}/03_qa_report.md의 FAIL 항목을 읽고 문제를 수정하라.
     - 테스트 FAIL: 해당 테스트가 PASS되도록 구현을 수정하라.
     - 정적 분석 [치명] 항목: 코드를 직접 수정하라.
-    수정 완료 후 _workspace/02_implementation.md를 업데이트하라.
+    수정 완료 후 {WORKSPACE_DIR}/02_implementation.md를 업데이트하라.
   """
 )
 ```
@@ -289,7 +292,7 @@ Implementer 완료 후 3-A로 돌아가 재검증한다.
 
 ### Phase 4: 완료 보고 + 커밋 확인
 
-`_workspace/03_qa_report.md`를 읽어 보고 후 **항상 커밋 여부를 묻는다:**
+`{WORKSPACE_DIR}/03_qa_report.md`를 읽어 보고 후 **항상 커밋 여부를 묻는다:**
 
 ```
 ## 구현 완료
@@ -326,7 +329,7 @@ Implementer 완료 후 3-A로 돌아가 재검증한다.
 
 | 조건 | 처리 |
 |------|------|
-| 사용자 응답에 이미 이유가 포함됨 | `_workspace/04_pattern_reason.md`에 저장 후 질문 생략 |
+| 사용자 응답에 이미 이유가 포함됨 | `{WORKSPACE_DIR}/04_pattern_reason.md`에 저장 후 질문 생략 |
 | `yes + 저장`과 함께 이유를 적음 | 동일 |
 | 위 해당 없음 | 선택 질문 1회 |
 
@@ -335,7 +338,7 @@ Implementer 완료 후 3-A로 돌아가 재검증한다.
 (다음 스펙 추론·패턴 학습에 반영됩니다. 없으면 skip)
 ```
 
-- **입력 있음** → `_workspace/04_pattern_reason.md`에 저장 + 커밋 메시지 body에 포함
+- **입력 있음** → `{WORKSPACE_DIR}/04_pattern_reason.md`에 저장 + 커밋 메시지 body에 포함
 - **`skip` / 빈 입력** → 파일 생성 안 함, 커밋만 진행
 
 `04_pattern_reason.md` 형식:
@@ -363,14 +366,14 @@ Agent(
   model: "sonnet",
   prompt: """
     커밋이 완료되었다.
-    _workspace/02_implementation.md와 방금 커밋된 파일들을 읽고
+    {WORKSPACE_DIR}/02_implementation.md와 방금 커밋된 파일들을 읽고
     팀 패턴을 추출해 .harness/patterns/에 적재하라.
 
     source 컨텍스트: {SOURCE_CONTEXT}
     - "user_approved"이면 → source: [user_approved, qa_pass], 신뢰도 HIGH, AUTO 우선
     - "qa_pass"이면 → source: [qa_pass], 기존 패턴과 일치할 때만 AUTO, 첫 등장은 FLAG
 
-    _workspace/04_pattern_reason.md 가 있으면 reason 필드 최우선으로 사용하라.
+    {WORKSPACE_DIR}/04_pattern_reason.md 가 있으면 reason 필드 최우선으로 사용하라.
     AUTO 항목은 즉시 등록하고, SUGGEST 항목은 사용자에게 간결하게 제안하라.
   """
 )
@@ -384,14 +387,14 @@ Agent(
 
 | Phase | 입력 | 출력 |
 |-------|------|------|
-| Analyzer (1-A) | 사용자 요청 원문 | `_workspace/01_spec.md` (초안) |
-| 사용자 확인 (1-B) | 스펙 질문 출력 | 사용자 ok + `_workspace/01_spec.md` (확정) |
-| Test Writer (1.5) | `_workspace/01_spec.md` | 테스트 파일 (프로젝트) + `_workspace/01_test_plan.md` |
-| Implementer (2) | `_workspace/01_spec.md` + `_workspace/01_test_plan.md` + 테스트 파일 | 실제 파일 + `_workspace/02_implementation.md` |
-| QA Validator (3) | `_workspace/01_test_plan.md` + `_workspace/01_spec.md` + `_workspace/02_implementation.md` + 구현 파일 | `_workspace/03_qa_report.md` |
-| Implementer retry (3-B) | `_workspace/03_qa_report.md` | 수정된 실제 파일 + `_workspace/02_implementation.md` 업데이트 |
-| 사용자 (4-B) | 선택 이유 입력 (mid/high) | `_workspace/04_pattern_reason.md` (있을 때만) |
-| Pattern Extractor (4.5) | `_workspace/02_implementation.md` + `_workspace/04_pattern_reason.md`(있으면) + 커밋된 파일 + `.harness/patterns/` | `.harness/patterns/*.yaml` 업데이트 + 제안 출력 |
+| Analyzer (1-A) | 사용자 요청 원문 | `{WORKSPACE_DIR}/01_spec.md` (초안) |
+| 사용자 확인 (1-B) | 스펙 질문 출력 | 사용자 ok + `{WORKSPACE_DIR}/01_spec.md` (확정) |
+| Test Writer (1.5) | `{WORKSPACE_DIR}/01_spec.md` | 테스트 파일 (프로젝트) + `{WORKSPACE_DIR}/01_test_plan.md` |
+| Implementer (2) | `{WORKSPACE_DIR}/01_spec.md` + `{WORKSPACE_DIR}/01_test_plan.md` + 테스트 파일 | 실제 파일 + `{WORKSPACE_DIR}/02_implementation.md` |
+| QA Validator (3) | `{WORKSPACE_DIR}/01_test_plan.md` + `{WORKSPACE_DIR}/01_spec.md` + `{WORKSPACE_DIR}/02_implementation.md` + 구현 파일 | `{WORKSPACE_DIR}/03_qa_report.md` |
+| Implementer retry (3-B) | `{WORKSPACE_DIR}/03_qa_report.md` | 수정된 실제 파일 + `{WORKSPACE_DIR}/02_implementation.md` 업데이트 |
+| 사용자 (4-B) | 선택 이유 입력 (mid/high) | `{WORKSPACE_DIR}/04_pattern_reason.md` (있을 때만) |
+| Pattern Extractor (4.5) | `{WORKSPACE_DIR}/02_implementation.md` + `{WORKSPACE_DIR}/04_pattern_reason.md`(있으면) + 커밋된 파일 + `.harness/patterns/` | `.harness/patterns/*.yaml` 업데이트 + 제안 출력 |
 
 ---
 
