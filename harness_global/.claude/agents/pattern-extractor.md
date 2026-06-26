@@ -33,7 +33,12 @@ git diff HEAD~1 --name-only 2>/dev/null
 # 3. 기존 패턴 파일 읽기 (있으면)
 ls .harness/patterns/ 2>/dev/null
 cat .harness/patterns/*.yaml 2>/dev/null
+
+# 4. 커밋 메시지 읽기 (선택 이유 추출용)
+git log -1 --pretty=format:"%s%n%b" 2>/dev/null
 ```
+
+커밋 메시지 본문(body)에서 "왜 이 방식인가"를 추출한다. 없으면 빈값으로 둔다.
 
 ---
 
@@ -79,18 +84,24 @@ cat .harness/patterns/*.yaml 2>/dev/null
                   (명명·구조·설정값)        (공통 함수·아키텍처)
 
 신뢰도 높음  →   [AUTO] 자동 등록          [SUGGEST] 사용자 확인
-(3회+ 반복         + 완료 알림만             후 등록
- or QA PASS)
+(user_approved     + 완료 알림만             후 등록
+ or qa_pass+2회+)
 
 신뢰도 낮음  →   [FLAG] 후보로만           [MANUAL] 사람이
-(1~2회,            기록                     직접 판단
- QA 불안정)
+(repeated만,       기록                     직접 판단
+ 1~2회)
 ```
 
-**신뢰도 판단 기준:**
-- 동일 패턴이 이번 커밋 + `.harness/patterns/`에 이미 존재 → 높음
-- 이번 커밋에서 처음 등장 → 낮음
-- QA PASS로 커밋됨 → 신뢰도 +1
+**신뢰도 판단 기준 (`source` 우선순위):**
+
+| source | 의미 | 신뢰도 |
+|--------|------|--------|
+| `user_approved` | 사용자가 "저장" 옵션으로 명시 승인 | 항상 HIGH — AUTO 바로 가능 |
+| `qa_pass` + 2회+ 반복 | QA 통과 + 기존 패턴과 일치 | HIGH |
+| `qa_pass` + 첫 등장 | QA 통과했으나 한 번만 봄 | LOW → FLAG |
+| `repeated` 3회+ | 반복됐지만 사용자 승인 없음 | LOW → FLAG (나쁜 습관 방지) |
+
+> **핵심:** `repeated`만으로는 AUTO 불가. 반복이 많아도 사용자 승인(`user_approved`) 또는 QA 통과(`qa_pass`) 없이는 FLAG에만 기록한다. 나쁜 습관의 반복을 패턴으로 굳히지 않기 위함이다.
 
 **영향도 판단 기준:**
 - 텍스트 규칙 (네이밍, 구조 결정) → 낮음
@@ -117,15 +128,19 @@ patterns:
   - id: query-key-structure
     description: "queryKey는 [도메인, 액션] 2레벨 구조 사용"
     example: "['product', 'list']"
-    observed: 3      # 감지된 횟수
+    reason: "캐시 무효화 범위를 도메인 단위로 제어하기 위함"
+    observed: 3
     last_seen: "2026-06-24"
+    source: [user_approved, qa_pass]   # 어떤 경로로 신뢰도를 얻었는지
     confidence: high
 
   - id: stale-time-default
     description: "useQuery staleTime 기본값 5분"
     example: "staleTime: 1000 * 60 * 5"
+    reason: ""           # 이유 미확인 — 추후 user_approved 시 채움
     observed: 2
     last_seen: "2026-06-24"
+    source: [qa_pass]
     confidence: high
 ```
 
@@ -136,12 +151,16 @@ patterns:
   - id: service-function-naming
     description: "서비스 함수명은 fetch{Feature}{Action} 형식"
     example: "fetchProductList, fetchProductDetail"
+    reason: "동사+명사 구조로 API 호출 의도를 함수명에서 바로 파악 가능"
     observed: 4
+    source: [user_approved, qa_pass]
     confidence: high
 
   - id: hook-naming
     description: "훅 파일명은 use-{feature}.ts (kebab-case)"
     observed: 3
+    reason: ""
+    source: [qa_pass]
     confidence: high
 ```
 
@@ -152,9 +171,16 @@ patterns:
   - id: loading-state-pattern
     description: "로딩 상태는 Skeleton 컴포넌트 사용"
     example: "if (isLoading) return <Skeleton className='...' />"
+    reason: "레이아웃 시프트 없이 로딩 상태를 표현하기 위함"
     observed: 2
+    source: [user_approved]
     confidence: high
 ```
+
+**`reason` 작성 원칙:**
+- 커밋 메시지 body에서 추출 가능하면 그대로 사용
+- 추출 불가능하면 빈 문자열(`""`)로 두고 `source: [qa_pass]`만 기록
+- `reason`이 채워진 패턴 = 진짜 시니어 패턴. 없는 것은 단순 관찰 패턴으로 구분
 
 ### SUGGEST — 사용자 확인 후 등록
 

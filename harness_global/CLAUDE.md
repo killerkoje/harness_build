@@ -81,3 +81,4 @@ harness_global/
 | 2026-06-23 | 초기 구성 | 전체 | - |
 | 2026-06-23 | CSS_CONVENTIONS.md 추가 및 전 에이전트 적용 | CLAUDE.md, code-analyzer.md, implementer.md, qa-validator.md | CSS/Tailwind 스타일 컨벤션 통합 |
 | 2026-06-24 | 실제 TDD 파이프라인 구현 | test-writer.md(신규), implementer.md, qa-validator.md, frontend-dev/SKILL.md, CLAUDE.md | 문서형 TDD → 테스트 파일 선행 생성 + vitest/jest 실제 실행 + FAIL 자동 재시도 |
+| 2026-06-26 | 패턴 학습 기준 명확화 | pattern-extractor.md, frontend-dev/SKILL.md | 반복 횟수 기반 → source 태그(user_approved/qa_pass/repeated) + reason 필드 추가로 "나쁜 습관 자동 등록" 방지 |

@@ -290,10 +290,15 @@ Implementer 완료 후 3-A로 돌아가 재검증한다.
 커밋 & 푸시 하시겠습니까?
 ```
 
-> 사용자가 ok/ㅇㅋ/yes 확인 시 실행:
-> `git add -A && git commit -m "feat|fix|refactor: [요약]" && git push`
->
 > **커밋 확인 없이 자동 커밋하지 않는다. 항상 물어본다.**
+>
+> 응답별 처리:
+> - `yes` / `ok` / `ㅇㅋ` → 커밋 & 푸시. Phase 4.5는 `source: [qa_pass]`로 실행
+> - `yes + 저장` / `저장` / `패턴 저장` → 커밋 & 푸시. Phase 4.5를 `source: [user_approved, qa_pass]`로 실행
+> - `no` → 커밋 없이 종료
+>
+> `yes + 저장`은 "이 구현 방식을 팀 패턴으로 명시 등록한다"는 의미다.
+> 커밋 메시지 body에 선택 이유가 있으면 pattern-extractor가 `reason` 필드에 자동 추출한다.
 
 커밋 완료 직후 → **Phase 4.5** 실행.
 
@@ -312,10 +317,17 @@ Agent(
     커밋이 완료되었다.
     _workspace/02_implementation.md와 방금 커밋된 파일들을 읽고
     팀 패턴을 추출해 .harness/patterns/에 적재하라.
+
+    source 컨텍스트: {SOURCE_CONTEXT}
+    - "user_approved"이면 → source: [user_approved, qa_pass], 신뢰도 HIGH, AUTO 우선
+    - "qa_pass"이면 → source: [qa_pass], 기존 패턴과 일치할 때만 AUTO, 첫 등장은 FLAG
+
     AUTO 항목은 즉시 등록하고, SUGGEST 항목은 사용자에게 간결하게 제안하라.
   """
 )
 ```
+
+`{SOURCE_CONTEXT}`는 오케스트레이터가 사용자 응답(`yes` vs `yes + 저장`)에 따라 채운다.
 
 ---
 
