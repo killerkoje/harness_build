@@ -26,7 +26,7 @@ description: |
 
 # 기획-코드 리뷰어
 
-사용자가 제시한 기획 의도와 실제 React/Next.js 코드를 4단계로 검토한다.
+사용자가 제시한 기획 의도와 실제 코드를 4단계로 검토한다.
 **PR diff 리뷰** 요청 시에는 Phase 0에서 diff를 먼저 수집한 후 동일한 4단계를 적용한다.
 
 ---
@@ -114,7 +114,10 @@ git diff main...HEAD --name-only
 **탐색 순서:**
 1. 사용자가 언급한 파일/컴포넌트 직접 읽기
 2. 해당 파일을 import하거나 사용하는 상위 파일 탐색 (Grep)
-3. 훅 → 서비스 → 타입 계층 추적
+3. 스택별 레이어 계층 추적
+   - 프론트엔드: 훅 → 서비스 → 타입
+   - 백엔드: 컨트롤러/핸들러 → 서비스 → 레포지토리/모델
+   - 풀스택: 양방향 추적
 
 **체크 항목:**
 - 기획의 핵심 동작이 코드로 구현되어 있는가?
@@ -172,11 +175,13 @@ git diff main...HEAD --name-only
 코드를 읽으며 발견한 잠재적 문제를 진단한다.
 
 **진단 항목:**
-- 런타임 에러 가능성 (undefined 접근, 비동기 처리 누락, any 타입)
+- 런타임 에러 가능성 (null/nil/None 접근, 비동기 처리 누락, any 타입 남용)
 - 기획 엣지케이스의 조건 로직이 의도와 다르게 동작하는 경우
-- React Query queryKey 충돌 또는 잘못된 invalidateQueries 대상
-- 로딩/에러/빈 상태 처리 누락
-- Server/Client Component 경계 위반
+- 타입/스키마 경계면 불일치 (API 응답 ↔ 레이어 간)
+- 로딩/에러/빈 상태 처리 누락 (프론트엔드)
+- 에러 처리 누락 (백엔드 — status code, 예외 전파 등)
+- [next/react만] React Query queryKey 충돌 또는 잘못된 invalidateQueries 대상
+- [next/react만] Server/Client Component 경계 위반
 
 **심각도 기준:**
 - `[치명]` — 기능이 동작하지 않거나 데이터 손실 위험
