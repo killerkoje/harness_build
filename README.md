@@ -1,10 +1,12 @@
 # harness_build
 
-React / Next.js 프로젝트 전용 Claude 하네스.
+React / Next.js 프로젝트 전용 **Claude Code** 하네스.
 자연어 명령 한 줄로 **기획 확인 → 스펙 확정 → 테스트 선행 작성 → MVVM 구현 → 테스트 실행 검증 → 패턴 학습 → 커밋**까지 자동 실행된다.
 
-> **AX 플랫폼**: 팀이 만든 코드에서 패턴을 추출해 `.harness/patterns/`에 적재한다.
-> 다음 기획 시 그 데이터를 우선 참조하여 스펙 추론 정확도가 점점 높아진다.
+> **AX 플랫폼**: 커밋 승인된 코드에서 팀 패턴을 추출해 `.harness/patterns/`에 적재한다.
+> 다음 기획 시 `code-analyzer`가 이 데이터를 최우선 참조하고, `01_spec.md`의 `patterns_applied`로 감사 추적한다.
+
+**현재 버전:** `0.2.0` (`harness_global/VERSION`)
 
 ---
 
@@ -78,16 +80,16 @@ harness_build/
 ```
 팀이 기능을 완료할 때마다 컨텍스트가 쌓인다:
 
-  [구현 완료 + 커밋]
+  [구현 완료 + 커밋 승인]
           │
           ▼
   [pattern-extractor]  ← 신뢰도 × 영향도 매트릭스로 분류
           │              reason: 04_pattern_reason.md → 커밋 body 순
           │              deprecated / superseded_by 로 레거시 패턴 퇴화
           │
-          ├── AUTO   → .harness/patterns/*.yaml 즉시 등록
+          ├── AUTO    → .harness/patterns/*.yaml 즉시 등록
           ├── SUGGEST → candidates.md 제안 (사람이 승인)
-          └── FLAG   → 후보 기록만
+          └── FLAG    → 후보 기록만 (3회 반복만으로는 AUTO 안 함)
           │
           ▼
   [.harness/patterns/]
@@ -95,12 +97,35 @@ harness_build/
     naming.yaml       ← 파일명·함수명 패턴
     components.yaml   ← 로딩/에러/빈 상태 처리
     services.yaml     ← fetch 래퍼, 에러 처리 패턴
+    candidates.md     ← SUGGEST / FLAG / 충돌 후보
           │
           ▼
   [다음 기획 시 code-analyzer가 우선 참조]
   → 01_spec.md patterns_applied 섹션에 적용 id 기록 (AX 감사 추적)
+  → deprecated: true 패턴은 스펙 추론에서 제외
   → 스펙 추론 정확도 점점 상승
 ```
+
+#### 패턴 신뢰도 기준
+
+| source | 의미 | 등록 |
+|--------|------|------|
+| `user_approved` | 커밋 시 `ok + 저장` / `패턴 저장` | HIGH → AUTO 가능 |
+| `qa_pass` + 2회+ 반복 | QA 통과 + 기존 패턴과 일치 | HIGH → AUTO 가능 |
+| `qa_pass` + 첫 등장 | QA 통과, 한 번만 관찰 | LOW → FLAG |
+| `repeated` 3회+ only | 반복됐지만 승인·QA 없음 | LOW → FLAG (나쁜 습관 방지) |
+
+패턴 YAML 주요 필드: `id`, `description`, `example`, `reason`, `observed`, `source`, `confidence`, `deprecated`, `superseded_by`
+
+### `_workspace/` 산출물 (세션 작업 로그)
+
+| 파일 | Phase | 용도 |
+|------|-------|------|
+| `01_spec.md` | 1 | TDD 스펙 (확정). `patterns_applied` 포함 |
+| `01_test_plan.md` | 1.5 | 테스트 계획 (mid/high) |
+| `02_implementation.md` | 2 | 구현 보고 |
+| `03_qa_report.md` | 3 | QA / 테스트 실행 결과 |
+| `04_pattern_reason.md` | 4-B | 커밋 직전 선택 이유 (mid/high, optional) |
 
 ### MVVM 계층 구조
 
@@ -143,7 +168,18 @@ app/ | components/      ← View       page.tsx, React 컴포넌트
 패턴 학습 (mid / high만)
   Phase 4.5  커밋 승인 후 pattern-extractor 실행
              → .harness/patterns/ 업데이트 (다음 기획에 반영)
+             → ok + 저장 시 user_approved 태그로 우선 등록
 ```
+
+#### 커밋 응답 가이드
+
+| 사용자 입력 | 동작 |
+|------------|------|
+| `ok` / `yes` | 커밋 → Step 4-B(선택 이유) → 패턴 학습 (`qa_pass`) |
+| `ok + 저장` / `패턴 저장` | 커밋 → 패턴 명시 등록 (`user_approved`) |
+| `no` | 커밋·학습 없이 종료 |
+
+커밋 직전(mid/high): *"이번에 쓴 방식의 이유를 한 줄만 남길까요?"* → `skip` 가능 → `04_pattern_reason.md`
 
 ### code-review (리뷰)
 
@@ -268,7 +304,14 @@ your-project/
 ├── CSS_CONVENTIONS.md
 ├── CLAUDE.md
 ├── harness.config.yaml
-└── .harness-version               ← 설치된 버전 기록
+├── .harness-version               ← 설치된 버전 기록
+└── .harness/                      ← 런타임 생성 (첫 mid/high 커밋 후)
+    └── patterns/
+        ├── hooks.yaml
+        ├── naming.yaml
+        ├── components.yaml
+        ├── services.yaml
+        └── candidates.md
 ```
 
 Cursor IDE 사용 시 `.cursor/` 디렉토리가 있으면 자동으로 룰 파일도 복사된다:
@@ -386,4 +429,14 @@ PR #42 리뷰해줘        ← 특정 PR 번호 리뷰
 | 서버 상태 | TanStack Query v5 |
 | 테스트 | vitest + @testing-library/react + msw |
 | 아키텍처 | MVVM |
-| 컨벤션 기준 | Next.js 공식 문서 + Vercel Best Practices |
+| 컨벤션 기준 | Next.js / React / Tailwind 공식 문서 |
+| 실행 환경 | **Claude Code** (풀 파이프라인) + Cursor (룰만) |
+
+---
+
+## 변경 이력 (하네스)
+
+| 버전 | 주요 변경 |
+|------|----------|
+| 0.2.0 | TDD 실제 실행, core/stacks 분리, pattern-extractor, harness.config.yaml |
+| 0.2.0+ | Step 4-B 선택 이유, `patterns_applied` 감사 추적, 패턴 `deprecated` 스키마 |
