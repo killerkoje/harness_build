@@ -1,16 +1,26 @@
 # harness_build
 
-React / Next.js 프로젝트 전용 **Claude Code** 하네스.
-자연어 명령 한 줄로 **기획 확인 → 스펙 확정 → 테스트 선행 작성 → MVVM 구현 → 테스트 실행 검증 → 패턴 학습 → 커밋**까지 자동 실행된다.
+모든 스택 프로젝트를 위한 **Claude Code** 하네스.  
+자연어 명령 한 줄로 **기획 확인 → 스펙 확정 → 테스트 선행 작성 → 레이어 구현 → 테스트 실행 검증 → 패턴 학습 → 커밋**까지 자동 실행된다.
+
+지원 스택: **Next.js · React · Vue · Nuxt · Express · NestJS · FastAPI · Django · Flask · Go · Flutter · Android · iOS · 미지원 스택(fallback)**
 
 > **AX 플랫폼**: 커밋 승인된 코드에서 팀 패턴을 추출해 `.harness/patterns/`에 적재한다.
 > 다음 기획 시 `code-analyzer`가 이 데이터를 최우선 참조하고, `01_spec.md`의 `patterns_applied`로 감사 추적한다.
 
-**현재 버전:** `0.2.0` (`harness_global/VERSION`)
+**현재 버전:** `v0.3.0` (`harness_global/VERSION`)
 
 ---
 
 ## 아키텍처
+
+### 범용 코어 + 스택 플러그인
+
+```
+에이전트 → harness.config.yaml 읽기
+         → stacks/{stack}/ 있으면 → 해당 에이전트/컨벤션 로드 (고품질)
+         → 없으면 → 범용 에이전트로 동작 (fallback)
+```
 
 ### 전체 구조
 
@@ -18,30 +28,71 @@ React / Next.js 프로젝트 전용 **Claude Code** 하네스.
 harness_build/
 ├── install.sh                            ← 설치 스크립트 (프로젝트 / 글로벌)
 └── harness_global/
-    ├── VERSION                           ← 하네스 버전 (현재 0.2.0)
+    ├── VERSION                           ← 하네스 버전 (현재 v0.3.0)
     ├── CLAUDE.md                         ← 스킬 트리거 정의 (프로젝트 루트에 복사)
-    ├── harness.config.yaml               ← 프로젝트별 하네스 설정
+    ├── harness.config.yaml               ← 프로젝트별 하네스 설정 (stack: auto)
     ├── cursor/                           ← Cursor IDE 룰 파일 (자동 감지 시 복사)
     │   ├── react-next.mdc
     │   ├── css.mdc
     │   └── mvvm-tdd.mdc
-    ├── .claude/                          ← 스택 무관 공통 (core)
+    ├── .claude/                          ← 범용 코어 (모든 스택 fallback)
     │   ├── skills/
-    │   │   ├── frontend-dev/SKILL.md     ← 개발 파이프라인 오케스트레이터
-    │   │   ├── code-review/SKILL.md      ← 기획-코드 리뷰어
-    │   │   └── install-harness/SKILL.md  ← 자연어 설치 스킬
-    │   └── agents/                       ← 스택 무관 서브 에이전트
-    │       ├── test-writer.md            ← 테스트 선행 생성 (Phase 1.5)
-    │       ├── qa-validator.md           ← 테스트 실행 + 검증 (Phase 3)
+    │   │   ├── dev/SKILL.md              ← 개발 파이프라인 오케스트레이터 (범용)
+    │   │   ├── code-review/SKILL.md      ← 기획-코드 리뷰어 (범용)
+    │   │   └── install-harness/SKILL.md  ← 자연어 설치 스킬 (신규/기존 분기)
+    │   └── agents/                       ← 범용 서브 에이전트
+    │       ├── code-analyzer.md          ← 코드베이스 분석 + 스펙 초안 (Phase 1)
+    │       ├── implementer.md            ← 스택별 레이어 순서 구현 (Phase 2)
+    │       ├── test-writer.md            ← 테스트 파일 선행 생성 (Phase 1.5)
+    │       ├── qa-validator.md           ← 테스트 실행 + 정적 분석 (Phase 3)
     │       └── pattern-extractor.md      ← 패턴 추출 + 학습 적재 (Phase 4.5)
     └── stacks/
-        └── next/                         ← Next.js 전용 (stack: next)
+        └── next/                         ← Next.js 전용 플러그인 (고품질)
             ├── REACT_NEXT_CONVENTIONS.md ← Next.js 공식 문서 기반 컨벤션
             ├── CSS_CONVENTIONS.md        ← Tailwind/Pure CSS/Modules 스타일 규칙
             └── agents/
-                ├── code-analyzer.md      ← 코드베이스 분석 + 스펙 초안 (Phase 1)
-                └── implementer.md        ← MVVM 구현 (Phase 2)
+                ├── code-analyzer.md      ← Next.js 특화 분석 (범용 에이전트 override)
+                └── implementer.md        ← MVVM 구현 (범용 에이전트 override)
 ```
+
+### 스택 감지 순서
+
+```
+1순위: harness.config.yaml의 stack 필드 (명시 시 즉시 사용)
+
+2순위: 프로젝트 파일 자동 감지
+  package.json
+    → "next"                    → stack: next
+    → "react" (next 없음)       → stack: react
+    → "vue" / "nuxt"            → stack: vue / nuxt
+    → "express" / "fastify"     → stack: express
+    → "@nestjs/core"            → stack: nestjs
+
+  requirements.txt / pyproject.toml
+    → "fastapi"                 → stack: fastapi
+    → "django"                  → stack: django
+    → "flask"                   → stack: flask
+
+  go.mod                        → stack: go
+  pubspec.yaml                  → stack: flutter
+  build.gradle                  → stack: android
+  *.xcodeproj                   → stack: ios
+
+3순위: 감지 실패 → 사용자에게 직접 질문
+```
+
+### 스택별 레이어 순서
+
+| 스택 | 구현 레이어 순서 |
+|------|----------------|
+| Next.js / React | types → services → hooks → components → app |
+| Vue / Nuxt | types → services → composables → components → pages |
+| Express | types → models → services → controllers → routes |
+| NestJS | dto → entities → services → controllers → modules |
+| FastAPI / Django / Flask | schemas → services → routers (views) |
+| Go | models → repository → services → handlers |
+| Flutter | models → repository → providers → screens |
+| 미지원 스택 | 코드베이스 탐색 후 기존 패턴 추론 |
 
 ### 에이전트 역할 분리
 
@@ -49,9 +100,9 @@ harness_build/
 사용자 명령
     │
     ▼
-[Skill: frontend-dev]  ← 오케스트레이터. 에이전트를 순서대로 호출하고 사용자와 소통
+[Skill: dev]  ← 오케스트레이터. 에이전트를 순서대로 호출하고 사용자와 소통
     │
-    ├─ Phase 1   ──▶ [Agent: code-analyzer]     패턴 탐색 + TDD 스펙 초안 생성
+    ├─ Phase 1   ──▶ [Agent: code-analyzer]     스택 감지 → 패턴 탐색 → TDD 스펙 초안 생성
     │                        │                  (_workspace/01_spec.md)
     │               사용자 확인 대기 (중단점) ← 기획/디자인/성공조건 확인
     │                        │ (ok)
@@ -59,10 +110,10 @@ harness_build/
     ├─ Phase 1.5 ──▶ [Agent: test-writer]        확정 스펙 → 테스트 파일 선행 생성  ← mid/high만
     │                                            (_workspace/01_test_plan.md)
     │
-    ├─ Phase 2   ──▶ [Agent: implementer]        테스트 assertion 기준으로 MVVM 구현
-    │                                            types → service → hooks → view
+    ├─ Phase 2   ──▶ [Agent: implementer]        테스트 assertion 기준으로 레이어 구현
+    │                                            스택별 레이어 순서 자동 결정
     │
-    ├─ Phase 3   ──▶ [Agent: qa-validator]       vitest/jest 실제 실행
+    ├─ Phase 3   ──▶ [Agent: qa-validator]       스택별 테스트 실행 + 정적 분석
     │                        │                  FAIL → implementer 자동 재호출 (최대 2회)
     │                        │                  (_workspace/03_qa_report.md)
     │
@@ -74,6 +125,17 @@ harness_build/
                                                  (.harness/patterns/*.yaml)
                                                  low: 스킵 — 단순 수정은 패턴 추출 대상 아님
 ```
+
+### 정적 분석 (Phase 3, 스택별)
+
+| 스택 | 실행 명령 |
+|------|---------|
+| next / react | `tsc --noEmit`, `eslint` |
+| fastapi / django / flask | `mypy`, `ruff check` |
+| go | `go vet ./...`, `go build ./...` |
+| flutter | `flutter analyze` |
+| android | `./gradlew lint` |
+| 미지원 | 린터 자동 탐색 후 실행 |
 
 ### AX 학습 루프
 
@@ -93,10 +155,10 @@ harness_build/
           │
           ▼
   [.harness/patterns/]
-    hooks.yaml        ← queryKey 구조, staleTime 기본값
+    hooks.yaml        ← 스택별 데이터 페칭 패턴
     naming.yaml       ← 파일명·함수명 패턴
     components.yaml   ← 로딩/에러/빈 상태 처리
-    services.yaml     ← fetch 래퍼, 에러 처리 패턴
+    services.yaml     ← API 레이어, 에러 처리 패턴
     candidates.md     ← SUGGEST / FLAG / 충돌 후보
           │
           ▼
@@ -127,36 +189,27 @@ harness_build/
 | `03_qa_report.md` | 3 | QA / 테스트 실행 결과 |
 | `04_pattern_reason.md` | 4-B | 커밋 직전 선택 이유 (mid/high, optional) |
 
-### MVVM 계층 구조
-
-```
-types/                  ← Model      TypeScript 인터페이스, API 응답/요청 타입
-services/ | lib/api/    ← Model      fetch 함수, API 레이어
-hooks/                  ← ViewModel  TanStack Query (useQuery / useMutation)
-app/ | components/      ← View       page.tsx, React 컴포넌트
-```
-
 ---
 
 ## 파이프라인
 
-### frontend-dev (개발)
+### dev (개발)
 
 ```
 기획
-  Phase 1    .harness/patterns/ 우선 참조 → 코드 패턴 분석 → 스펙 초안 자동 생성
+  Phase 1    스택 감지 → .harness/patterns/ 우선 참조 → 코드 패턴 분석 → 스펙 초안 자동 생성
            ── 사용자 확인 대기 ──  ← 수정 가능, ok 전까지 절대 진행 안 함
 
 확정 후 테스트 선행 작성 (mid / high만)
-  Phase 1.5  확정 스펙 → vitest/jest 테스트 파일 생성 (TDD Red)
+  Phase 1.5  확정 스펙 → 스택별 테스트 파일 생성 (TDD Red)
              low: 레벨은 스킵
 
 구현
-  Phase 2    MVVM 구현 — 테스트 assertion 기준으로
-             types → service → hooks → page/components
+  Phase 2    스택별 레이어 순서로 구현
+             (next: types→services→hooks→components / fastapi: schemas→services→routers / 등)
 
 테스트
-  Phase 3    vitest / jest 실제 실행
+  Phase 3    스택별 테스트 실행 + 정적 분석
              FAIL → implementer 자동 재시도 (최대 2회)
              2회 초과 → 사용자에게 미해결 항목 보고
 
@@ -187,6 +240,7 @@ app/ | components/      ← View       page.tsx, React 컴포넌트
 Phase 0  타입 분기 — 파일 리뷰 vs PR diff 리뷰 자동 판별
 Phase 1  기획 의도 파악 (핵심 동작 / 데이터 흐름 / 엣지케이스)
 Phase 2  코드 절충 검토 (일치 / 불일치 / 코드에만 존재)
+           스택별 레이어 계층 추적 (프론트/백엔드/풀스택 자동 분기)
 Phase 3  연결 도메인 나열 (영향 판단은 사용자 몫)
 Phase 4  잠재적 에러 진단 [치명 / 주의 / 확인]
 ```
@@ -199,17 +253,26 @@ Phase 4  잠재적 에러 진단 [치명 / 주의 / 확인]
 
 ```yaml
 # harness.config.yaml
-stack: next          # next | react | vue (기본값: next)
-test_runner: auto    # auto | vitest | jest
-test_command: ""     # 빈 문자열이면 자동 감지 (예: "npx vitest run --reporter=verbose")
+# stack: auto = 자동 감지 (기본값)
+# 지원: next | react | vue | nuxt | express | nestjs | fastapi | django | flask | go | flutter | android | ios
+stack: auto
+
+# 테스트 러너 (auto = 자동 감지)
+# 지원: auto | vitest | jest | mocha | pytest | go-test | flutter-test
+test_runner: auto
+test_command: ""     # 빈 문자열이면 자동 감지
+
+# 스타일 (프론트엔드 스택에서만 사용)
 style_mode: auto     # auto | tailwind | pure-css | hybrid
-branch_prefix: feat  # 브랜치 이름 앞에 붙는 prefix
-commit_style: conventional  # conventional | simple
+
+# 커밋
+branch_prefix: feat
+commit_style: conventional
 ```
 
-- `style_mode: auto` → CSS_CONVENTIONS.md §1 감지 로직으로 자동 판별
-- `test_command` 지정 시 qa-validator가 그 명령으로 테스트 실행
-- `stack` 값이 명시되면 install.sh가 해당 스택 에이전트를 자동 선택
+- `stack: auto` → 프로젝트 파일(package.json, go.mod, requirements.txt 등) 자동 감지
+- `stack` 명시 시 → 해당 값을 즉시 사용 (감지 생략)
+- `stacks/{stack}/` 플러그인이 있으면 고품질 스택별 에이전트 사용, 없으면 범용 에이전트 fallback
 
 ---
 
@@ -225,7 +288,8 @@ commit_style: conventional  # conventional | simple
 하네스 적용해줘
 ```
 
-설치할 프로젝트 경로를 물어보면 입력하거나, 현재 디렉토리에 설치할 경우 `ok` 입력.
+신규 프로젝트면 빈 디렉토리를 감지해 스택 타입(웹 프론트 / 백엔드 API / 풀스택 / 모바일 앱)을 먼저 질문한다.
+기존 프로젝트면 파일을 스캔해 스택을 자동 감지하고 확인만 받는다.
 
 ---
 
@@ -263,7 +327,7 @@ bash install.sh --global
 ```
 
 > 스킬과 에이전트만 글로벌로 설치된다.
-> `REACT_NEXT_CONVENTIONS.md`, `CSS_CONVENTIONS.md`, `CLAUDE.md`는 프로젝트별로 별도 설치 필요:
+> `CLAUDE.md`, `harness.config.yaml`은 프로젝트별로 별도 설치 필요:
 > ```bash
 > bash install.sh /path/to/your-project
 > ```
@@ -291,21 +355,19 @@ bash install.sh /path/to/your-project
 your-project/
 ├── .claude/
 │   ├── skills/
-│   │   ├── frontend-dev/SKILL.md
+│   │   ├── dev/SKILL.md              ← 개발 파이프라인 (범용)
 │   │   ├── code-review/SKILL.md
 │   │   └── install-harness/SKILL.md
 │   └── agents/
-│       ├── code-analyzer.md       ← stack: next
+│       ├── code-analyzer.md          ← 범용 (next 스택이면 stacks/next/ override)
+│       ├── implementer.md            ← 범용 (next 스택이면 stacks/next/ override)
 │       ├── test-writer.md
-│       ├── implementer.md         ← stack: next
 │       ├── qa-validator.md
 │       └── pattern-extractor.md
-├── REACT_NEXT_CONVENTIONS.md
-├── CSS_CONVENTIONS.md
 ├── CLAUDE.md
-├── harness.config.yaml
-├── .harness-version               ← 설치된 버전 기록
-└── .harness/                      ← 런타임 생성 (첫 mid/high 커밋 후)
+├── harness.config.yaml               ← stack: auto (감지 후 자동 기록)
+├── .harness-version                  ← 설치된 버전 기록
+└── .harness/                         ← 런타임 생성 (첫 mid/high 커밋 후)
     └── patterns/
         ├── hooks.yaml
         ├── naming.yaml
@@ -314,8 +376,14 @@ your-project/
         └── candidates.md
 ```
 
-Cursor IDE 사용 시 `.cursor/` 디렉토리가 있으면 자동으로 룰 파일도 복사된다:
+Next.js 스택 추가 파일:
+```
+your-project/
+├── REACT_NEXT_CONVENTIONS.md
+└── CSS_CONVENTIONS.md
+```
 
+Cursor IDE 사용 시 `.cursor/` 디렉토리가 있으면 자동으로 룰 파일도 복사된다:
 ```
 your-project/.cursor/rules/
 ├── react-next.mdc
@@ -328,22 +396,22 @@ your-project/.cursor/rules/
 프로젝트에서 Claude Code 실행 후:
 
 ```
-mid: 테스트 버튼 컴포넌트 만들어줘
+mid: 로그인 기능 만들어줘
 ```
 
-TDD 스펙 질문 → ok → 테스트 파일 생성 → 구현 → vitest 실행 순으로 진행되면 정상 설치된 것.
+스택 감지 → TDD 스펙 질문 → ok → 테스트 파일 생성 → 구현 → 테스트 실행 순으로 진행되면 정상 설치된 것.
 
 ---
 
 ## 사용법
 
-### 개발 명령 (frontend-dev 트리거)
+### 개발 명령 (dev 트리거)
 
 #### 레벨 + 기능 명시 (권장)
 
 ```
 low: 버튼 텍스트 바꿔줘
-mid: 상품 목록 페이지 만들어줘
+mid: 상품 목록 API 만들어줘
 high: 결제 플로우 전체 만들어줘
 ```
 
@@ -351,22 +419,26 @@ high: 결제 플로우 전체 만들어줘
 
 ```
 mid: 장바구니 기능 추가해줘
-     - useCart 훅 필요
      - POST /api/cart 연동
      - CartIcon에 뱃지 표시
+
+mid: 유저 목록 엔드포인트 추가해줘
+     - GET /users (페이지네이션)
+     - FastAPI + SQLAlchemy
 ```
 
 #### 레벨 없이 (haiku 기본값, 테스트 생성 스킵)
 
 ```
 유저 카드 컴포넌트 만들어줘
-로그인 페이지 추가해줘
+로그인 라우터 추가해줘
+users 테이블 모델 만들어줘
 ```
 
 #### 버그 수정
 
 ```
-버그 고쳐줘 — UserCard에서 undefined 터져
+버그 고쳐줘 — UserCard에서 null 터져
 에러 수정해줘 — 로그인 후 리다이렉트 안 돼
 ```
 
@@ -376,7 +448,7 @@ mid: 장바구니 기능 추가해줘
 스펙 다시 정해줘           ← Phase 1부터 재실행
 테스트 다시 만들어줘        ← Phase 1.5만 재실행
 구현 수정해줘              ← Phase 2만 재실행
-QA 다시 해줘               ← Phase 3만 재실행 (retry_count 초기화)
+QA 다시 해줘               ← Phase 3만 재실행
 전체 다시 해줘             ← 전체 파이프라인
 ```
 
@@ -387,7 +459,6 @@ QA 다시 해줘               ← Phase 3만 재실행 (retry_count 초기화)
 코드 검토해줘
 기획이랑 맞는지 봐줘
 기획 의도랑 어긋난 거 있어?
-components/UserCard.tsx 확인해봐
 
 PR 리뷰해줘            ← 현재 브랜치 diff 전체 리뷰
 PR #42 리뷰해줘        ← 특정 PR 번호 리뷰
@@ -398,8 +469,8 @@ PR #42 리뷰해줘        ← 특정 PR 번호 리뷰
 | 레벨 | 모델 | 테스트 생성 | 패턴 학습 | 적합한 작업 |
 |------|------|-----------|---------|------------|
 | `low:` | haiku | 스킵 | 스킵 | 단일 파일 수정, 스타일 변경, 텍스트 수정 |
-| `mid:` | sonnet | 생성 | 실행 | 훅 + 서비스 + 컴포넌트 1~2개 |
-| `high:` | opus | 생성 | 실행 | 신규 페이지, 다수 컴포넌트, 모델 설계 포함 |
+| `mid:` | sonnet | 생성 | 실행 | 훅/서비스/컴포넌트/엔드포인트 1~2개 |
+| `high:` | opus | 생성 | 실행 | 신규 페이지·모듈, 다수 컴포넌트, 모델 설계 포함 |
 | (없음) | haiku | 스킵 | 스킵 | 기본값 |
 
 ---
@@ -419,24 +490,11 @@ PR #42 리뷰해줘        ← 특정 PR 번호 리뷰
 
 ---
 
-## 기술 스택
-
-| 영역 | 선택 |
-|------|------|
-| 프레임워크 | Next.js 15+ (App Router) |
-| 언어 | TypeScript strict |
-| 스타일 | Tailwind CSS + shadcn/ui / Pure CSS / CSS Modules |
-| 서버 상태 | TanStack Query v5 |
-| 테스트 | vitest + @testing-library/react + msw |
-| 아키텍처 | MVVM |
-| 컨벤션 기준 | Next.js / React / Tailwind 공식 문서 |
-| 실행 환경 | **Claude Code** (풀 파이프라인) + Cursor (룰만) |
-
----
-
 ## 변경 이력 (하네스)
 
 | 버전 | 주요 변경 |
 |------|----------|
+| 0.1.0 | 초기 구성 (Next.js 전용) |
 | 0.2.0 | TDD 실제 실행, core/stacks 분리, pattern-extractor, harness.config.yaml |
 | 0.2.0+ | Step 4-B 선택 이유, `patterns_applied` 감사 추적, 패턴 `deprecated` 스키마 |
+| **v0.3.0** | **범용 하네스 확장**: 모든 스택 지원 (Next.js·FastAPI·Go·Flutter 등 13개+), 범용 code-analyzer/implementer 신규 작성, frontend-dev → dev 스킬 범용화, 스택별 정적 분석, 신규/기존 프로젝트 설치 분기 |
