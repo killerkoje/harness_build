@@ -1,5 +1,5 @@
 ---
-name: frontend-dev
+name: dev
 description: |
   아래 조건 중 하나라도 해당하면 반드시 이 스킬을 사용하라. 예외 없음.
 
@@ -8,15 +8,22 @@ description: |
   수정해줘, 수정해, 고쳐줘, 고쳐, 바꿔줘, 바꿔, 변경해줘, 변경해,
   연결해줘, 연결해, 붙여줘, 붙여, 넣어줘, 넣어, 달아줘, 달아
 
-  [대상 명사 — 위 동사와 함께 쓰인 경우]
-  컴포넌트, 페이지, 훅, hook, 기능, API, 서비스, 타입, 타입스크립트,
-  폼, form, 버튼, 모달, 다이얼로그, 레이아웃, 헤더, 푸터, 사이드바,
-  리스트, 카드, 테이블, 차트, 필터, 검색, 인증, 로그인, 회원가입,
-  대시보드, 마이페이지, 설정 페이지, 상세 페이지
+  [대상 명사 — 프론트엔드]
+  컴포넌트, 페이지, 훅, hook, 폼, form, 버튼, 모달, 다이얼로그,
+  레이아웃, 헤더, 푸터, 사이드바, 리스트, 카드, 테이블, 차트,
+  필터, 검색, 대시보드, 마이페이지, 상세 페이지
+
+  [대상 명사 — 백엔드/API]
+  API, 엔드포인트, 라우터, 서비스, 모델, 스키마, 컨트롤러,
+  미들웨어, 핸들러, 리포지토리, 데이터베이스, DB, 쿼리
+
+  [대상 명사 — 공통]
+  기능, 타입, 타입스크립트, 테스트, 인증, 로그인, 회원가입,
+  설정 페이지, 화면, 뷰
 
   [버그/에러 수정]
-  버그, 에러, 오류, 안 돼, 안돼, 작동 안 해, 깨져, 터져, 안 나와, 안나와,
-  고쳐, 고쳐줘, 수정해줘, 왜 이래, 뭐가 문제야
+  버그, 에러, 오류, 안 돼, 안돼, 작동 안 해, 깨져, 터져,
+  안 나와, 안나와, 고쳐, 고쳐줘, 수정해줘, 왜 이래, 뭐가 문제야
 
   [재실행/반복 요청]
   다시 해줘, 다시 실행해줘, 다시 만들어줘, 이전 결과 수정해줘,
@@ -32,8 +39,8 @@ description: |
 
 # 기능 개발 오케스트레이터
 
-React / Next.js (App Router) + TypeScript + TanStack Query 기반 MVVM 프로젝트의 기능 개발을
-**기획 확인 → 스펙 확정 → 테스트 선행 작성 → MVVM 구현 → 테스트 실행 검증 → 커밋 확인** 파이프라인으로 조율한다.
+프로젝트의 스택(Next.js, FastAPI, Go, Flutter 등)에 맞는 레이어 순서로 기능을 개발한다.
+**기획 확인 → 스펙 확정 → 테스트 선행 작성 → 레이어 구현 → 테스트 실행 검증 → 커밋 확인** 파이프라인.
 
 ---
 
@@ -56,9 +63,9 @@ React / Next.js (App Router) + TypeScript + TanStack Query 기반 MVVM 프로젝
 
 | 에이전트 | Phase | 역할 |
 |---------|-------|------|
-| Code Analyzer | 1 | 기존 코드 패턴 탐색 + TDD 스펙 초안 생성 |
+| Code Analyzer | 1 | 스택 감지 + 코드 패턴 탐색 + TDD 스펙 초안 생성 |
 | Test Writer | 1.5 | 확정 스펙 기준 테스트 파일 선행 생성 (TDD Red) |
-| Implementer | 2 | 테스트 기준으로 MVVM 순서 구현 (TDD Green) |
+| Implementer | 2 | 스택별 레이어 순서로 구현 (TDD Green) |
 | QA Validator | 3 | 테스트 실행 + 스펙 달성 검증 + 위험 진단 |
 
 ---
@@ -68,7 +75,12 @@ React / Next.js (App Router) + TypeScript + TanStack Query 기반 MVVM 프로젝
 ### Phase 0: 컨텍스트 확인
 
 1. 레벨 키워드 감지 → `DEPTH_MODEL` 설정
-2. `_workspace/` 상태 확인
+2. **스택 감지**
+   ```bash
+   cat harness.config.yaml 2>/dev/null | grep "^stack:"
+   ```
+   `DETECTED_STACK` 설정. `auto`이거나 없으면 code-analyzer가 Step 0에서 감지.
+3. `_workspace/` 상태 확인
    - **존재 + 부분 수정** → 해당 에이전트만 재호출
    - **존재 + 새 기능** → `_workspace/`를 `_workspace_prev/`로 이동
    - **미존재** → 초기 실행
@@ -164,7 +176,7 @@ Agent(
 
 ---
 
-### Phase 2: MVVM 구현
+### Phase 2: 레이어 순서 구현
 
 Phase 1.5 완료 후 실행:
 
@@ -174,7 +186,7 @@ Agent(
   agents_file: ".claude/agents/implementer.md",
   model: {DEPTH_MODEL},
   prompt: """
-    _workspace/01_spec.md 를 읽고 확정된 스펙을 기준으로 MVVM 순서로 구현하라.
+    _workspace/01_spec.md 를 읽고 확정된 스펙을 기준으로 스택별 레이어 순서로 구현하라.
     _workspace/01_test_plan.md 가 존재하면 반드시 읽고, 생성된 테스트 파일들을 직접 열어
     테스트 assertion 기준에 맞게 구현하라. 목표는 테스트가 PASS되는 코드다.
     구현 결과를 _workspace/02_implementation.md 에 저장하라.
@@ -182,11 +194,17 @@ Agent(
 )
 ```
 
-**구현 순서 (MVVM 고정):**
-1. **Model** — `types/` TypeScript 인터페이스 & API 응답/요청 타입
-2. **Service** — `services/` 또는 `lib/api/` fetch 함수
-3. **ViewModel** — `hooks/` TanStack Query 훅
-4. **View** — `app/[feature]/page.tsx` + `components/`
+**스택별 레이어 순서:**
+
+| 스택 | 레이어 순서 |
+|------|------------|
+| next / react | types → services → hooks → components → app |
+| fastapi / django / flask | schemas → services → routers(views) |
+| express | types → models → services → controllers → routes |
+| nestjs | dto → entities → services → controllers → modules |
+| go | models → repository → services → handlers |
+| flutter | models → repository → providers → screens |
+| 미지원 | 코드베이스 탐색 후 기존 패턴 추론 |
 
 ---
 
