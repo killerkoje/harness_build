@@ -2,15 +2,17 @@
 # 프로젝트별 하네스 설정. 비워두면 에이전트가 자동 감지한다.
 
 # ─── 스택 ─────────────────────────────────────────────────
-stack: next           # next | react | vue | nuxt
+# auto: 프로젝트 파일(package.json, go.mod 등)로 자동 감지
+# 명시 가능한 값: next | react | vue | nuxt | express | nestjs |
+#                 fastapi | django | flask | go | flutter | android | ios
+stack: auto
 
 # ─── 테스트 ──────────────────────────────────────────────
-test_runner: auto     # vitest | jest | none | auto (자동 감지)
+test_runner: auto     # vitest | jest | pytest | go-test | flutter-test | none | auto
 test_command: ""      # 커스텀 테스트 명령어. 비워두면 자동 감지.
-                      # 예) "pnpm vitest run" / "npx jest --testPathPattern"
 
 # ─── 스타일 ──────────────────────────────────────────────
-style_mode: auto      # tailwind | pure-css | hybrid | auto (자동 감지)
+style_mode: auto      # tailwind | pure-css | hybrid | auto (프론트엔드 스택에서만 사용)
 
 # ─── 커밋 / 브랜치 ────────────────────────────────────────
 branch_prefix: feat   # feat | feature | dev
