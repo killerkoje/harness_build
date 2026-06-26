@@ -103,7 +103,9 @@ cat CSS_CONVENTIONS.md 2>/dev/null           # next/react 스택
 컨벤션 문서가 있으면 해당 문서의 QA 체크리스트 기준으로 검증한다.
 없으면 → 아래 범용 체크리스트 사용.
 
-## Step 2: 정적 분석 (스택별)
+---
+
+## Step 1: 정적 분석 (스택별)
 
 `harness.config.yaml`의 stack 기준으로 실행:
 
