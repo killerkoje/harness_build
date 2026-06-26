@@ -56,9 +56,11 @@ code-analyzer가 코드베이스 스캔 후 `01_spec.md`에 `INFERRED_LEVEL` 포
 
 | Phase 0 | Phase 1 | 처리 |
 |---------|---------|------|
-| mid | mid | 조용히 유지 (출력 없음) |
+| 동일 | 동일 | 조용히 유지 (출력 없음) |
 | mid | high | `[레벨 조정: mid → high \| 기존 auth 없음, 신규 레이어 3개]` 출력 후 레벨 변경 |
-| 질문으로 확정된 값 | 다른 값 | Phase 1 추론 무시 (사용자 명시 우선) |
+| high | mid | `[레벨 조정: high → mid \| {근거}]` 출력 후 레벨 변경 |
+| `LEVEL_USER_SPECIFIED: true` | 다른 값 | Phase 1 추론 무시 (사용자 명시 우선) |
+| Phase 1 `INFERRED_LEVEL` 없음 | — | Phase 0 값 유지 |
 
 ---
 
