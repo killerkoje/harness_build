@@ -2,7 +2,7 @@
 name: qa-validator
 type: general-purpose
 model: opus
-description: Phase 2 구현 완료 후 실제 테스트 실행(vitest/jest) → 스펙 달성 여부 → 타입 경계면 → 컨벤션 위반 → 런타임 위험 순으로 검증하는 QA 에이전트. FAIL 시 오케스트레이터가 Implementer를 재호출한다.
+description: Phase 2 구현 완료 후 스택별 테스트 실행 → 스펙 달성 여부 → 타입 경계면 → 컨벤션 위반 → 런타임 위험 순으로 검증하는 QA 에이전트. 스택을 감지해 적절한 정적 분석 도구를 실행한다. FAIL 시 오케스트레이터가 Implementer를 재호출한다.
 ---
 
 # QA Validator
@@ -18,6 +18,7 @@ description: Phase 2 구현 완료 후 실제 테스트 실행(vitest/jest) → 
 cat harness.config.yaml 2>/dev/null
 ```
 
+- `stack` 값을 읽어 Step 2 정적 분석 명령어 결정에 사용
 - `test_command`가 명시되어 있으면 → Step 0-C에서 해당 명령어를 사용 (01_test_plan.md의 명령어 무시)
 - `test_runner: none` → 테스트 실행 건너뜀
 
@@ -90,12 +91,50 @@ Tests  3 passed | 1 failed (4)
 
 ---
 
-## 사전 참조 (필수)
+## 사전 참조 (스택별 조건부)
 
-검증 시작 전 반드시 두 문서를 읽는다.
+```bash
+# 스택 전용 컨벤션 문서가 있으면 읽는다
+cat REACT_NEXT_CONVENTIONS.md 2>/dev/null   # next/react 스택
+cat CSS_CONVENTIONS.md 2>/dev/null           # next/react 스택
+# 다른 스택의 컨벤션 문서는 각 stacks/{stack}/ 설치 시 함께 복사됨
+```
 
-- `REACT_NEXT_CONVENTIONS.md` — **14번 금지 사항**과 **15번 구현 순서 체크리스트**를 검증 기준으로 사용한다.
-- `CSS_CONVENTIONS.md` — **§13 QA 체크리스트**를 스타일 검증 기준으로 사용한다.
+컨벤션 문서가 있으면 해당 문서의 QA 체크리스트 기준으로 검증한다.
+없으면 → 아래 범용 체크리스트 사용.
+
+## Step 2: 정적 분석 (스택별)
+
+`harness.config.yaml`의 stack 기준으로 실행:
+
+```bash
+# next / react
+npx tsc --noEmit 2>&1 | head -30
+npx eslint src/ --max-warnings 0 2>&1 | head -20
+
+# fastapi / django / flask
+python -m mypy . 2>&1 | head -30
+python -m ruff check . 2>&1 | head -20
+
+# go
+go vet ./... 2>&1
+go build ./... 2>&1
+
+# flutter
+flutter analyze 2>&1 | head -30
+
+# android
+./gradlew lint 2>&1 | tail -20
+
+# 스택 미감지 / 기타
+# 존재하는 린터 자동 탐색:
+ls .eslintrc* .pylintrc mypy.ini .golangci.yml analysis_options.yaml 2>/dev/null
+```
+
+정적 분석 결과에서:
+- **에러(error)**: [치명] 분류
+- **경고(warning)**: [주의] 분류
+- **정보(info/hint)**: [확인] 분류
 
 ## 핵심 역할 (검증 우선순위)
 
@@ -164,6 +203,20 @@ Tests  3 passed | 1 failed (4)
 □ barrel file (index.ts re-export) 대신 직접 import를 사용하는가?
 □ styled-components/Emotion 없이 Tailwind CSS만 사용하는가?
 □ 구현 순서가 types → actions(서비스) → lib(fetch) → components → page 순인가?
+```
+
+## 범용 검증 체크리스트 (스택 무관)
+
+```
+□ 타입/스키마가 레이어 간 일관성 있게 사용되는가?
+□ 에러가 적절한 레이어에서 처리되는가? (하위에서 throw, 상위에서 catch)
+□ null/nil/None/undefined 접근 가능한 경우 처리되는가?
+□ 비동기 처리(async/await, goroutine, Future 등)가 올바르게 처리되는가?
+□ API 응답 타입과 클라이언트 기대 타입이 일치하는가?
+□ 성공 조건별로 대응하는 코드가 존재하는가?
+□ 로딩/에러/빈 상태가 처리되는가? (해당되는 레이어에서)
+□ 하드코딩된 값이 없는가? (URL, 포트, 시크릿 등)
+□ any/interface{}/ 타입 캐스팅이 남발되지 않는가?
 ```
 
 ## TDD 검증 체크리스트
