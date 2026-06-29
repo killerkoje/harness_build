@@ -167,59 +167,46 @@ export default function PatternViewer({ categories }: Props) {
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="패턴 검색..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-52 bg-zinc-50 border border-zinc-200 rounded-lg pl-8 pr-3 py-1.5 text-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none focus:border-indigo-400 focus:bg-white transition-colors"
-              />
-            </div>
-            <span className="text-xs text-zinc-500 bg-zinc-100 border border-zinc-200 px-2 py-1 rounded-md font-medium">
-              {totalCount} patterns
-            </span>
-          </div>
+          <span className="text-xs text-zinc-500 bg-zinc-100 border border-zinc-200 px-2 py-1 rounded-md font-medium">
+            {totalCount} patterns
+          </span>
         </div>
       </nav>
 
       {/* Hero */}
       <div className="relative border-b border-zinc-100 overflow-hidden bg-gradient-to-br from-indigo-50/80 via-white to-violet-50/50">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-300/40 to-transparent" />
-        <div className="max-w-7xl mx-auto px-6 py-16">
+        <div className="max-w-7xl mx-auto px-6 pt-16">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-indigo-200 text-indigo-600 text-xs font-medium mb-6 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
               팀 공유 패턴 라이브러리
             </div>
-            <h1 className="text-4xl font-bold text-zinc-900 tracking-tight leading-tight mb-4">
-              팀이 검증한<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">
-                코드 패턴 모음
-              </span>
-            </h1>
             <p className="text-zinc-500 leading-relaxed mb-8">
               실제 프로젝트에서 QA를 통과하고 팀이 승인한 패턴만 수록됩니다.<br />
               다음 기획 시 code-analyzer가 우선 참조합니다.
             </p>
-            <div className="flex flex-wrap gap-4">
-              {categories.map((cat) => (
+
+            {/* Search bar — hero 중앙 */}
+            <div className="relative max-w-xl mb-10">
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="패턴 ID, 설명, 이유 검색..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-full bg-white border border-zinc-200 rounded-xl pl-11 pr-4 py-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 shadow-sm transition-all"
+              />
+              {query && (
                 <button
-                  key={cat.category}
-                  onClick={() => { setActiveTab(cat.category); setQuery('') }}
-                  className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-zinc-200 text-sm hover:border-indigo-300 hover:shadow-sm hover:shadow-indigo-50 transition-all group"
+                  onClick={() => setQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors text-lg leading-none"
                 >
-                  <span className="text-lg">{CATEGORY_ICONS[cat.category] ?? '◆'}</span>
-                  <div className="text-left">
-                    <div className="font-medium text-zinc-700 group-hover:text-indigo-600 transition-colors text-sm">{cat.label}</div>
-                    <div className="text-xs text-zinc-400">{cat.patterns.length}개 패턴</div>
-                  </div>
+                  ×
                 </button>
-              ))}
+              )}
             </div>
           </div>
         </div>
