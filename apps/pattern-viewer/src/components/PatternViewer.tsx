@@ -16,12 +16,12 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 function ConfidenceBadge({ confidence }: { confidence: Pattern['confidence'] }) {
   const styles = {
-    high: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-    medium: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
-    low: 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20',
+    high: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    medium: 'bg-amber-50 text-amber-700 border border-amber-200',
+    low: 'bg-zinc-100 text-zinc-500 border border-zinc-200',
   }
   return (
-    <span className={`px-2 py-0.5 rounded-md text-[11px] font-medium tracking-wide ${styles[confidence]}`}>
+    <span className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${styles[confidence]}`}>
       {confidence}
     </span>
   )
@@ -31,10 +31,10 @@ function SourceBadge({ source }: { source: string[] }) {
   const isUserApproved = source.includes('user_approved')
   return (
     <span
-      className={`px-2 py-0.5 rounded-md text-[11px] font-medium tracking-wide ${
+      className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${
         isUserApproved
-          ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
-          : 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
+          ? 'bg-violet-50 text-violet-700 border border-violet-200'
+          : 'bg-sky-50 text-sky-700 border border-sky-200'
       }`}
     >
       {isUserApproved ? '✓ approved' : 'qa_pass'}
@@ -49,8 +49,8 @@ function PatternCard({ pattern }: { pattern: Pattern }) {
     <div
       className={`rounded-xl border transition-all duration-200 overflow-hidden ${
         open
-          ? 'border-indigo-500/30 bg-gradient-to-b from-indigo-950/20 to-zinc-900/60'
-          : 'border-zinc-800/60 bg-zinc-900/40 hover:border-zinc-700/60 hover:bg-zinc-900/70'
+          ? 'border-indigo-200 bg-indigo-50/40 shadow-sm shadow-indigo-100'
+          : 'border-zinc-200 bg-white hover:border-indigo-200 hover:shadow-sm hover:shadow-zinc-100'
       }`}
     >
       <button
@@ -59,53 +59,55 @@ function PatternCard({ pattern }: { pattern: Pattern }) {
       >
         <div
           className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 text-xs transition-colors ${
-            open ? 'bg-indigo-500/20 text-indigo-400' : 'bg-zinc-800 text-zinc-500 group-hover:text-zinc-400'
+            open
+              ? 'bg-indigo-100 text-indigo-600'
+              : 'bg-zinc-100 text-zinc-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'
           }`}
         >
           {open ? '▾' : '▸'}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <span className="font-mono text-sm text-zinc-200 font-semibold tracking-tight">
+            <span className="font-mono text-sm text-zinc-800 font-semibold tracking-tight">
               {pattern.id}
             </span>
             <ConfidenceBadge confidence={pattern.confidence} />
             <SourceBadge source={pattern.source} />
             {pattern.deprecated && (
-              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-red-50 text-red-600 border border-red-200">
                 deprecated
               </span>
             )}
           </div>
-          <p className="text-sm text-zinc-400 leading-relaxed">{pattern.description}</p>
+          <p className="text-sm text-zinc-500 leading-relaxed">{pattern.description}</p>
         </div>
       </button>
 
       {open && (
-        <div className="border-t border-zinc-800/60 px-5 py-5 space-y-5">
+        <div className="border-t border-indigo-100 px-5 py-5 space-y-5 bg-white/60">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest">
+              <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">
                 Code Example
               </span>
-              <div className="flex-1 h-px bg-zinc-800" />
+              <div className="flex-1 h-px bg-zinc-100" />
             </div>
-            <pre className="bg-zinc-950 rounded-lg p-4 overflow-x-auto text-sm text-zinc-300 font-mono leading-relaxed border border-zinc-800/80">
+            <pre className="bg-zinc-900 rounded-xl p-4 overflow-x-auto text-sm text-zinc-200 font-mono leading-relaxed shadow-inner">
               <code>{pattern.example}</code>
             </pre>
           </div>
 
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest">
+              <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">
                 Why
               </span>
-              <div className="flex-1 h-px bg-zinc-800" />
+              <div className="flex-1 h-px bg-zinc-100" />
             </div>
-            <p className="text-sm text-zinc-400 leading-relaxed">{pattern.reason}</p>
+            <p className="text-sm text-zinc-500 leading-relaxed">{pattern.reason}</p>
           </div>
 
-          <div className="flex items-center gap-5 pt-1 text-xs text-zinc-600">
+          <div className="flex items-center gap-5 pt-1 text-xs text-zinc-400">
             <span>관찰 {pattern.observed}회</span>
             <span>·</span>
             <span>최근 {pattern.last_seen}</span>
@@ -146,25 +148,28 @@ export default function PatternViewer({ categories }: Props) {
 
   return (
     <div className="min-h-screen flex flex-col">
+
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 border-b border-zinc-800/60 bg-[#0a0a0f]/80 backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-zinc-200 bg-white/90 backdrop-blur-xl shadow-sm shadow-zinc-100">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
               P
             </div>
-            <span className="font-semibold text-sm text-zinc-100 tracking-tight">
+            <span className="font-semibold text-sm text-zinc-800 tracking-tight">
               Team Patterns
             </span>
-            <span className="text-zinc-700">/</span>
-            <span className="text-sm text-zinc-500">
-              {isSearching ? '검색 결과' : categories.find((c) => c.category === activeTab)?.label}
+            <span className="text-zinc-300">/</span>
+            <span className="text-sm text-zinc-400">
+              {isSearching
+                ? '검색 결과'
+                : categories.find((c) => c.category === activeTab)?.label}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -172,10 +177,10 @@ export default function PatternViewer({ categories }: Props) {
                 placeholder="패턴 검색..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-52 bg-zinc-900 border border-zinc-800 rounded-lg pl-8 pr-3 py-1.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 focus:bg-zinc-900 transition-colors"
+                className="w-52 bg-zinc-50 border border-zinc-200 rounded-lg pl-8 pr-3 py-1.5 text-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none focus:border-indigo-400 focus:bg-white transition-colors"
               />
             </div>
-            <span className="text-xs text-zinc-600 bg-zinc-900 border border-zinc-800 px-2 py-1 rounded-md">
+            <span className="text-xs text-zinc-500 bg-zinc-100 border border-zinc-200 px-2 py-1 rounded-md font-medium">
               {totalCount} patterns
             </span>
           </div>
@@ -183,38 +188,35 @@ export default function PatternViewer({ categories }: Props) {
       </nav>
 
       {/* Hero */}
-      <div className="relative border-b border-zinc-800/60 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/30 via-transparent to-violet-950/20 pointer-events-none" />
-        <div className="absolute top-0 left-1/4 w-96 h-px bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
+      <div className="relative border-b border-zinc-100 overflow-hidden bg-gradient-to-br from-indigo-50/80 via-white to-violet-50/50">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-300/40 to-transparent" />
         <div className="max-w-7xl mx-auto px-6 py-16">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-medium mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-indigo-200 text-indigo-600 text-xs font-medium mb-6 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
               팀 공유 패턴 라이브러리
             </div>
-            <h1 className="text-4xl font-bold text-zinc-100 tracking-tight leading-tight mb-4">
+            <h1 className="text-4xl font-bold text-zinc-900 tracking-tight leading-tight mb-4">
               팀이 검증한<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">
                 코드 패턴 모음
               </span>
             </h1>
-            <p className="text-zinc-400 leading-relaxed mb-8">
+            <p className="text-zinc-500 leading-relaxed mb-8">
               실제 프로젝트에서 QA를 통과하고 팀이 승인한 패턴만 수록됩니다.<br />
               다음 기획 시 code-analyzer가 우선 참조합니다.
             </p>
-            <div className="flex flex-wrap gap-6">
+            <div className="flex flex-wrap gap-4">
               {categories.map((cat) => (
                 <button
                   key={cat.category}
                   onClick={() => { setActiveTab(cat.category); setQuery('') }}
-                  className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors group"
+                  className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-zinc-200 text-sm hover:border-indigo-300 hover:shadow-sm hover:shadow-indigo-50 transition-all group"
                 >
-                  <span className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-base group-hover:border-indigo-500/40 transition-colors">
-                    {CATEGORY_ICONS[cat.category] ?? '◆'}
-                  </span>
+                  <span className="text-lg">{CATEGORY_ICONS[cat.category] ?? '◆'}</span>
                   <div className="text-left">
-                    <div className="font-medium text-zinc-300 group-hover:text-zinc-100 transition-colors text-sm">{cat.label}</div>
-                    <div className="text-xs text-zinc-600">{cat.patterns.length}개</div>
+                    <div className="font-medium text-zinc-700 group-hover:text-indigo-600 transition-colors text-sm">{cat.label}</div>
+                    <div className="text-xs text-zinc-400">{cat.patterns.length}개 패턴</div>
                   </div>
                 </button>
               ))}
@@ -223,12 +225,13 @@ export default function PatternViewer({ categories }: Props) {
         </div>
       </div>
 
-      {/* Body: Sidebar + Content */}
+      {/* Body */}
       <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-10 flex gap-10">
+
         {/* Sidebar */}
         <aside className="w-52 shrink-0 hidden md:block">
           <div className="sticky top-24 space-y-1">
-            <p className="text-[11px] font-semibold text-zinc-600 uppercase tracking-widest mb-3 px-3">
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-3 px-3">
               Categories
             </p>
             {categories.map((cat) => (
@@ -237,40 +240,40 @@ export default function PatternViewer({ categories }: Props) {
                 onClick={() => { setActiveTab(cat.category); setQuery('') }}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
                   activeTab === cat.category && !isSearching
-                    ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900'
+                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                    : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-50'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
                   <span className="text-base">{CATEGORY_ICONS[cat.category] ?? '◆'}</span>
                   <span className="font-medium">{cat.label}</span>
                 </div>
-                <span className={`text-xs px-1.5 py-0.5 rounded-md ${
+                <span className={`text-xs px-1.5 py-0.5 rounded-md font-medium ${
                   activeTab === cat.category && !isSearching
-                    ? 'bg-indigo-500/20 text-indigo-400'
-                    : 'bg-zinc-800 text-zinc-600'
+                    ? 'bg-indigo-100 text-indigo-600'
+                    : 'bg-zinc-100 text-zinc-500'
                 }`}>
                   {cat.patterns.length}
                 </span>
               </button>
             ))}
 
-            <div className="pt-4 mt-4 border-t border-zinc-800">
-              <p className="text-[11px] font-semibold text-zinc-600 uppercase tracking-widest mb-3 px-3">
+            <div className="pt-4 mt-4 border-t border-zinc-100">
+              <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-3 px-3">
                 Stats
               </p>
               <div className="px-3 space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span className="text-zinc-600">전체 패턴</span>
-                  <span className="text-zinc-300 font-medium">{totalCount}</span>
+                  <span className="text-zinc-400">전체 패턴</span>
+                  <span className="text-zinc-700 font-semibold">{totalCount}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-zinc-600">카테고리</span>
-                  <span className="text-zinc-300 font-medium">{categories.length}</span>
+                  <span className="text-zinc-400">카테고리</span>
+                  <span className="text-zinc-700 font-semibold">{categories.length}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-zinc-600">approved</span>
-                  <span className="text-emerald-400 font-medium">
+                  <span className="text-zinc-400">approved</span>
+                  <span className="text-emerald-600 font-semibold">
                     {allPatterns.filter(p => p.source.includes('user_approved')).length}
                   </span>
                 </div>
@@ -279,39 +282,35 @@ export default function PatternViewer({ categories }: Props) {
           </div>
         </aside>
 
-        {/* Main content */}
+        {/* Main */}
         <main className="flex-1 min-w-0">
-          {/* Content header */}
           <div className="flex items-center justify-between mb-6">
-            <div>
-              {isSearching ? (
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-zinc-100">검색 결과</h2>
-                  <span className="text-sm text-zinc-500">
-                    {filtered.length > 0 ? `${filtered.length}개` : '없음'}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{CATEGORY_ICONS[activeTab]}</span>
-                  <h2 className="text-lg font-semibold text-zinc-100">
-                    {categories.find((c) => c.category === activeTab)?.label}
-                  </h2>
-                  <span className="text-sm text-zinc-500">{currentPatterns.length}개</span>
-                </div>
-              )}
-            </div>
+            {isSearching ? (
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-zinc-800">검색 결과</h2>
+                <span className="text-sm text-zinc-400">
+                  {filtered.length > 0 ? `${filtered.length}개` : '없음'}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{CATEGORY_ICONS[activeTab]}</span>
+                <h2 className="text-lg font-semibold text-zinc-800">
+                  {categories.find((c) => c.category === activeTab)?.label}
+                </h2>
+                <span className="text-sm text-zinc-400">{currentPatterns.length}개</span>
+              </div>
+            )}
           </div>
 
-          {/* Pattern list */}
           <div className="space-y-3">
             {currentPatterns.map((pattern) => (
               <PatternCard key={pattern.id} pattern={pattern} />
             ))}
             {currentPatterns.length === 0 && (
-              <div className="text-center py-24 text-zinc-700">
+              <div className="text-center py-24 text-zinc-300">
                 <div className="text-4xl mb-3">◎</div>
-                <p className="text-sm">
+                <p className="text-sm text-zinc-400">
                   {isSearching ? '검색 결과가 없습니다' : '패턴이 없습니다'}
                 </p>
               </div>
@@ -321,10 +320,10 @@ export default function PatternViewer({ categories }: Props) {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-800/60 mt-auto">
+      <footer className="border-t border-zinc-100 bg-zinc-50 mt-auto">
         <div className="max-w-7xl mx-auto px-6 h-12 flex items-center justify-between">
-          <span className="text-xs text-zinc-700">Team Patterns · harness v0.3.2</span>
-          <span className="text-xs text-zinc-700">.harness/patterns/</span>
+          <span className="text-xs text-zinc-400">Team Patterns · harness v0.3.2</span>
+          <span className="text-xs text-zinc-400">.harness/patterns/</span>
         </div>
       </footer>
     </div>
