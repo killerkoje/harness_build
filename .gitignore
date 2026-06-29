@@ -1,0 +1,3 @@
+apps/pattern-viewer/node_modules/
+apps/pattern-viewer/.next/
+apps/pattern-viewer/.env.local

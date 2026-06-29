@@ -8,7 +8,7 @@
 > **AX 플랫폼**: 커밋 승인된 코드에서 팀 패턴을 추출해 `.harness/patterns/`에 적재한다.
 > 다음 기획 시 `code-analyzer`가 이 데이터를 최우선 참조하고, `01_spec.md`의 `patterns_applied`로 감사 추적한다.
 
-**현재 버전:** `v0.3.0` (`harness_global/VERSION`)
+**현재 버전:** `v0.3.1` (`harness_global/VERSION`)
 
 ---
 
@@ -27,6 +27,12 @@
 ```
 harness_build/
 ├── install.sh                            ← 설치 스크립트 (프로젝트 / 글로벌)
+├── apps/
+│   └── pattern-viewer/                   ← 팀 패턴 웹 뷰어 (Next.js)
+│       ├── src/app/                      ← 페이지 & 레이아웃
+│       ├── src/components/               ← PatternViewer 컴포넌트
+│       ├── src/lib/patterns.ts           ← YAML → 카테고리 파싱
+│       └── .env.local.example            ← PATTERNS_DIR 설정 예시
 └── harness_global/
     ├── VERSION                           ← 하네스 버전 (현재 v0.3.0)
     ├── CLAUDE.md                         ← 스킬 트리거 정의 (프로젝트 루트에 복사)
@@ -479,6 +485,39 @@ PR #42 리뷰해줘        ← 특정 PR 번호 리뷰
 
 ---
 
+## 패턴 뷰어 (apps/pattern-viewer)
+
+`.harness/patterns/` 에 쌓인 팀 패턴을 웹으로 시각화한다.
+
+### 실행
+
+```bash
+cd apps/pattern-viewer
+
+# .env.local 에 패턴 경로 설정
+cp .env.local.example .env.local
+# PATTERNS_DIR=/path/to/your/project/.harness/patterns 로 수정
+
+npm install
+npm run dev   # http://localhost:3000
+```
+
+### 기능
+
+- **카테고리 탭**: Hooks · Components · Services · Naming
+- **코드 예시 펼치기**: 클릭으로 example / reason / 메타데이터 확인
+- **전체 검색**: id·설명·이유 텍스트 검색
+- **신뢰도 배지**: high · medium · low (색상 구분)
+- **source 배지**: user_approved · qa_pass
+
+### 환경 변수
+
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `PATTERNS_DIR` | `../../.harness/patterns` | 패턴 YAML 폴더 절대 경로 |
+
+---
+
 ## Cursor IDE 지원
 
 `.cursor/` 디렉토리가 있는 프로젝트에 설치하면 Cursor 룰 파일이 자동으로 복사된다.
@@ -503,3 +542,4 @@ PR #42 리뷰해줘        ← 특정 PR 번호 리뷰
 | 0.2.0+ | Step 4-B 선택 이유, `patterns_applied` 감사 추적, 패턴 `deprecated` 스키마 |
 | **v0.3.0** | **범용 하네스 확장**: 모든 스택 지원 (Next.js·FastAPI·Go·Flutter 등 13개+), 범용 code-analyzer/implementer 신규 작성, frontend-dev → dev 스킬 범용화, 스택별 정적 분석, 신규/기존 프로젝트 설치 분기 |
 | **v0.3.1** | **레벨 자동 추론**: 키워드 없이 요청 텍스트만으로 레벨 자동 결정, Phase 1 code-analyzer 코드 스캔 후 보정, 애매한 경우만 질문 |
+| **v0.3.2** | **패턴 뷰어**: `.harness/patterns/` 웹 시각화 (`apps/pattern-viewer`) — 카테고리 탭, 코드 예시, 검색 기능 |
