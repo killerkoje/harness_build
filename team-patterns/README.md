@@ -40,8 +40,17 @@ bash scripts/sync-team-patterns.sh /path/to/project
 
 ## 팀 패턴 등록 (승격)
 
-1. 프로젝트에서 `ok + 저장`으로 `local/`에 패턴 축적
-2. 팀 리뷰 후 `team-patterns/patterns/*.yaml`에 PR
-3. 머지 후 팀원이 `git pull` → `install.sh --sync-patterns` 실행
+**자연어 (dev 스킬):** `팀에 올려줘`, `{id} 승격해줘` → Phase 5 `pattern-promoter` → draft PR
+
+**수동 / 스크립트:**
+
+```bash
+bash scripts/promote-pattern.sh --id api-error-throw --category services \
+  --from /path/to/project/.harness/patterns/local/services.yaml
+```
+
+1. 프로젝트에서 커밋 후 `패턴 저장해줘` → `local/` 축적
+2. `팀에 올려줘` 또는 `promote-pattern.sh` → `team-patterns/patterns/*.yaml`
+3. draft PR 리뷰 → 머지 → 팀원 `install.sh --sync-patterns`
 
 팀 패턴 `source`는 `[team]`을 사용합니다. 프로젝트 로컬은 `[user_approved]`입니다.

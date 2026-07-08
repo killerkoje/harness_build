@@ -11,8 +11,9 @@
 2. **Phase 1.5** — `SKIP_TESTS: false`일 때 테스트 선행 작성
 3. **Phase 2** — 스택별 레이어 순서로 구현
 4. **Phase 3** — 테스트 실행 + 정적 검증
-5. **Phase 4** — 완료 보고 → 커밋 확인 (`ok` / `ok + 저장`)
-6. **Phase 4.5** — `ok + 저장` 시 `.harness/patterns/local/`에만 패턴 등록 (`team/`은 중앙 sync)
+5. **Phase 4** — 완료 보고 → 커밋
+6. **Phase 4.5** — 커밋 **후** 질문 → 승인 시 `.harness/patterns/local/` 등록
+7. **Phase 5** — `팀에 올려줘` 요청 시 `team-patterns/` draft PR 승격
 
 **트리거:** 컴포넌트, 페이지, API, 엔드포인트, 훅, 서비스, 모델, 라우터, 컨트롤러 등 코드 작업 요청 시 `dev` 스킬을 사용하라. 단순 질문은 직접 응답 가능.
 
@@ -60,7 +61,8 @@ harness_global/
         ├── implementer.md             ← 레이어 순서 구현 전담 (범용, Phase 2)
         ├── test-writer.md             ← 테스트 파일 선행 생성 전담 (범용, Phase 1.5)
         ├── qa-validator.md            ← 테스트 실행 + 검증 전담 (범용, Phase 3)
-        └── pattern-extractor.md       ← 커밋 후 팀 패턴 학습 전담 (Phase 4.5)
+        ├── pattern-extractor.md       ← 로컬 패턴 저장 (Phase 4.5)
+        └── pattern-promoter.md        ← 팀 패턴 승격 draft PR (Phase 5)
 ```
 
 ## 사용법
@@ -83,3 +85,4 @@ harness_global/
 | 2026-07-08 | 파이프라인 단순화 v0.4.0 | dev/SKILL.md, pattern-extractor, code-analyzer | 레벨 제거, SKIP_TESTS, ok+저장 시만 패턴 |
 | 2026-07-08 | Lighthouse CLI 제거 | dev/SKILL.md, harness.config.yaml, install.sh | Phase 3.5·performance-validator·스크립트 삭제 |
 | 2026-07-08 | 팀 패턴 중앙 레포 v0.5.0 | team-patterns/, sync-team-patterns.sh | team/local 분리, --sync-patterns |
+| 2026-07-08 | 패턴 UX v0.5.1 | dev/SKILL.md, pattern-promoter | 커밋→로컬저장 분리, Phase 5 승격 |

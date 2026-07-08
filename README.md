@@ -5,10 +5,9 @@
 
 지원 스택: **Next.js · React · Vue · Nuxt · Express · NestJS · FastAPI · Django · Flask · Go · Flutter · Android · iOS · 미지원 스택(fallback)**
 
-> **AX 플랫폼**: `team-patterns/` 중앙 레포의 팀 공통 패턴 + 프로젝트 `local/` 패턴을 에이전트가 참조한다.
-> `ok + 저장` 시 프로젝트 로컬에만 축적되며, 팀 승격은 `team-patterns/` PR로 한다.
+> **AX 플랫폼**: 커밋 후 "패턴 저장할까요?" → `local/`. 팀 승격은 `팀에 올려줘` (Phase 5).
 
-**현재 버전:** `v0.5.0` (`harness_global/VERSION`)
+**현재 버전:** `v0.5.1` (`harness_global/VERSION`)
 
 ---
 
@@ -111,11 +110,14 @@ harness_build/
     ├─ Phase 3   ──▶ [Agent: qa-validator]       테스트 실행 + 정적 분석
     │                        │                  FAIL → implementer 재호출 (최대 2회)
     │
-    ├─ Phase 4             완료 보고 → 커밋 확인
-    │               ok        → 커밋만
-    │               ok + 저장 → 커밋 + 패턴 이유 → Phase 4.5
-    │
-    └─ Phase 4.5 ──▶ [Agent: pattern-extractor]  ok + 저장 시 .harness/patterns/local/ 등록
+    ├─ Phase 4             커밋 & 푸시
+    │                        │
+    │               Step 4-A  "로컬 패턴 저장할까요?"
+    │                        │ (예)
+    └─ Phase 4.5 ──▶ [Agent: pattern-extractor]  → .harness/patterns/local/
+
+[별도 요청]
+    Phase 5  ──▶ [Agent: pattern-promoter]  "팀에 올려줘" → team-patterns/ draft PR
 ```
 
 ### 정적 분석 (Phase 3, 스택별)
@@ -129,37 +131,36 @@ harness_build/
 | android | `./gradlew lint` |
 | 미지원 | 린터 자동 탐색 후 실행 |
 
-### AX 학습 루프 (명시 저장형)
+### AX 학습 루프 (커밋 → 로컬 저장 → 승격 분리)
 
 ```
-[구현 완료 + 커밋 확인]
-          │
-          ├── ok          → 커밋만 (패턴 X)
-          │
-          └── ok + 저장   → Step 4-B 이유(선택) → pattern-extractor
-                    │
-                    ▼
-          [.harness/patterns/*.yaml]
-            hooks / components / services / naming   ← 프론트
-            schemas / routers / services / naming    ← 백엔드
-            candidates.md                            ← 충돌 기록만
-                    │
-                    ▼
-          [다음 기획 시 code-analyzer가 우선 참조]
-            - deprecated: true 제외
-            - 파일당 max_active_per_file(기본 30)개, observed 내림차순
-            - 01_spec.md patterns_applied 감사 추적
+[구현 완료]
+      ↓
+  Phase 4  커밋 & 푸시
+      ↓
+  Step 4-A "로컬 패턴 저장할까요?"
+      │ (예 / 저장해줘)
+      ↓
+  Phase 4.5  pattern-extractor → .harness/patterns/local/*.yaml
+      │
+      ▼
+[다음 기획] code-analyzer: local/ > team/ 우선 참조
+
+[별도 요청] Phase 5  pattern-promoter → team-patterns/ draft PR
 ```
 
 #### 패턴 등록 기준
 
 | 조건 | 동작 |
 |------|------|
-| `ok + 저장` / `패턴 저장` | `source: [user_approved]`로 YAML 등록 |
-| `ok`만 | 패턴 추출 **실행 안 함** |
-| 충돌 감지 | YAML 등록 안 함 → `candidates.md` |
+| 커밋 후 `저장` / `패턴 저장` / `저장해줘` | `local/`에 `source: [user_approved]` 등록 |
+| 커밋만 (`ok` / `커밋해줘`) | 패턴 추출 **실행 안 함** → Step 4-A에서 다시 질문 |
+| `팀에 올려줘` / `승격해줘` | Phase 5 — `team-patterns/` draft PR (자동 머지 X) |
+| 충돌 감지 | YAML 등록 안 함 → `local/candidates.md` |
 
 패턴 YAML 필드: `id`, `description`, `example`, `reason`, `observed`, `source`, `confidence`, `deprecated`, `superseded_by`
+
+`example`에는 **코드 스니펫만** 저장 (전체 파일 X).
 
 ### `_workspace/` 산출물 (세션 작업 로그)
 
@@ -169,7 +170,7 @@ harness_build/
 | `01_test_plan.md` | 1.5 | 테스트 계획 (`SKIP_TESTS: false`일 때) |
 | `02_implementation.md` | 2 | 구현 보고 |
 | `03_qa_report.md` | 3 | QA 결과 |
-| `04_pattern_reason.md` | 4-B | 패턴 저장 시 이유 (`ok + 저장`) |
+| `04_pattern_reason.md` | 4-B | 패턴 저장 시 이유 (선택) |
 
 ---
 
@@ -193,17 +194,42 @@ harness_build/
   Phase 3    테스트 실행 + 정적 분석
 
 구현 완료
-  Phase 4    커밋 확인
-           ok        → 커밋만
-           ok + 저장 → 이유(선택) + 패턴 YAML 등록 (Phase 4.5)
+  Phase 4    커밋
+           → "로컬 패턴 저장할까요?" (예) → Phase 4.5 local/
+
+별도 요청
+  Phase 5    "팀에 올려줘" → team-patterns/ draft PR
+```
+
+#### 커밋·패턴 자연어 명령
+
+| 시점 | 말하면 | 동작 |
+|------|--------|------|
+| 구현 후 | `커밋해줘` / `ok` / `ㅇㅋ` | 커밋 & 푸시 → "로컬 패턴 저장할까요?" |
+| 커밋 직후 | `저장해줘` / `패턴 저장` / `저장` | `local/*.yaml` 등록 (Phase 4.5) |
+| 커밋 직후 | `아니오` / `skip` | 종료 |
+| 아무때나 | `local 패턴 보여줘` / `패턴 목록` | `local/` + `team/` 조회 |
+| local 쌓인 후 | `팀에 올려줘` / `승격해줘` | `team-patterns/` draft PR (Phase 5) |
+| 팀 머지 후 | `팀 패턴 sync 해줘` / `패턴 동기화` | `install.sh --sync-patterns` |
+
+예시:
+
+```
+(커밋 후) 저장해줘 — queryKey는 도메인별로
+local 패턴 보여줘
+api-error-throw 팀에 올려줘
+팀 패턴 sync 해줘
 ```
 
 #### 커밋 응답 가이드
 
 | 사용자 입력 | 동작 |
 |------------|------|
-| `ok` / `yes` | 커밋 & 푸시만 (**패턴 추출 안 함**) |
-| `ok + 저장` / `패턴 저장` | 이유 한 줄(선택) → 커밋 → `.harness/patterns/local/` 등록 |
+| `ok` / `yes` / `커밋해줘` | 커밋 & 푸시 → Step 4-A |
+| `저장` / `패턴 저장` / `저장해줘` (커밋 후) | 이유(선택) → `.harness/patterns/local/` |
+| `팀에 올려줘` / `승격해줘` | Phase 5 draft PR |
+| `local 패턴 보여줘` | 패턴 목록 출력 |
+| `팀 패턴 sync 해줘` | `team/` 동기화 |
 | `no` | 종료 |
 
 ### code-review (리뷰)
@@ -249,7 +275,7 @@ patterns:
 ```
 
 - `team_dir` — `team-patterns/`에서 `install` / `--sync-patterns`로 갱신 (git 커밋 안 함)
-- `local_dir` — `ok + 저장` 시 이 프로젝트에만 등록 (git 커밋)
+- `local_dir` — 커밋 후 `저장해줘` 시 이 프로젝트에만 등록 (git 커밋)
 - `patterns.max_active_per_file` → code-analyzer 참조 상한, 초과 시 deprecated 처리
 
 ---
@@ -262,7 +288,7 @@ team-patterns/ (중앙 Git)          프로젝트
         │  install / --sync-patterns   │
         └──────────▶ .harness/patterns/team/  ← 읽기 전용
                                        │
-                          ok+저장 ─────┴──▶ .harness/patterns/local/  ← 커밋
+                          저장해줘 ──┴──▶ .harness/patterns/local/  ← 커밋
 ```
 
 **팀원 일상:**
@@ -272,7 +298,7 @@ git pull                                    # harness_build 또는 team-patterns
 bash install.sh --sync-patterns .           # 팀 패턴만 프로젝트에 반영
 ```
 
-**팀 패턴 승격:** 프로젝트 `local/`에서 검증된 패턴 → `team-patterns/patterns/*.yaml` PR → 머지 후 팀 전체 sync.
+**팀 패턴 승격:** `팀에 올려줘` (Phase 5) 또는 `scripts/promote-pattern.sh` → PR → 머지 → `팀 패턴 sync 해줘`
 
 자세한 내용: [team-patterns/README.md](team-patterns/README.md)
 
@@ -372,7 +398,7 @@ your-project/
 └── .harness/
     └── patterns/
         ├── team/          ← team-patterns/ sync (커밋 안 함)
-        └── local/         ← ok+저장 축적 (커밋)
+        └── local/         ← 저장해줘 시 축적 (커밋)
 ```
 
 Next.js 스택 추가 파일:
@@ -420,6 +446,9 @@ your-project/.cursor/rules/
 테스트 다시 만들어줘        ← Phase 1.5만 재실행
 구현 수정해줘              ← Phase 2만 재실행
 QA 다시 해줘               ← Phase 3만 재실행
+패턴 저장해줘              ← Phase 4.5 (커밋된 작업 기준)
+팀에 올려줘                ← Phase 5 승격
+팀 패턴 sync 해줘          ← team/ 동기화
 전체 다시 해줘             ← 전체 파이프라인
 ```
 
@@ -441,8 +470,10 @@ PR #42 리뷰해줘        ← 특정 PR 번호 리뷰
 |------|------|
 | 테스트 생성 (Phase 1.5) | `01_spec.md`의 `SKIP_TESTS: false` (신규 파일·API 등) |
 | 테스트 스킵 | `SKIP_TESTS: true` (단일 파일·스타일·텍스트 수정) |
-| 패턴 저장 (Phase 4.5) | 커밋 시 `ok + 저장` / `패턴 저장`만 |
-| 패턴 미저장 | `ok`만 → 커밋만 |
+| 로컬 패턴 저장 (Phase 4.5) | 커밋 후 `저장해줘` / `패턴 저장` |
+| 팀 승격 (Phase 5) | `팀에 올려줘` / `승격해줘` |
+| 패턴 조회 | `local 패턴 보여줘` |
+| 팀 패턴 갱신 | `팀 패턴 sync 해줘` |
 
 ---
 
@@ -509,3 +540,4 @@ npm run dev   # http://localhost:3000
 | **v0.4.0** | **파이프라인 단순화**: low/mid/high 제거 → `SKIP_TESTS`. 패턴은 `ok + 저장` 시에만 YAML 등록 |
 | **v0.4.1** | **Lighthouse CLI 제거**: Phase 3.5, performance-validator, harness-performance-check.mjs 삭제 |
 | **v0.5.0** | **팀 패턴 중앙 레포**: `team-patterns/` + `team/`/`local/` 분리, `--sync-patterns` |
+| **v0.5.1** | **패턴 자연어 UX**: 커밋→로컬저장 분리, Phase 5 승격 (`pattern-promoter`) |

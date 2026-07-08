@@ -29,6 +29,15 @@ description: |
   다시 해줘, 다시 실행해줘, 다시 만들어줘, 이전 결과 수정해줘,
   아까 거 수정해줘, 방금 거 바꿔줘
 
+  [패턴 — 로컬 저장]
+  패턴 저장해줘, 저장해줘, 로컬 패턴 저장, 패턴 남겨줘
+
+  [패턴 — 팀 승격]
+  팀에 올려줘, 승격해줘, team-patterns에 올려줘, 팀 패턴으로 올려줘
+
+  [패턴 — 조회/sync]
+  local 패턴 보여줘, 패턴 목록, 팀 패턴 sync 해줘, 패턴 동기화
+
   [제외 — 이 스킬을 쓰지 않는 경우]
   파일 읽어줘 / 코드 설명해줘 / 이게 뭐야 / 어떻게 동작해
   → 단순 질문·설명 요청은 직접 응답한다.
@@ -61,7 +70,8 @@ description: |
 | Test Writer | 1.5 | 확정 스펙 기준 테스트 파일 선행 생성 (TDD Red) |
 | Implementer | 2 | 스택별 레이어 순서로 구현 (TDD Green) |
 | QA Validator | 3 | 테스트 실행 + 스펙 달성 검증 + 위험 진단 |
-| Pattern Extractor | 4.5 | **사용자가 `ok + 저장` 시에만** 팀 패턴 YAML 등록 |
+| Pattern Extractor | 4.5 | 커밋 **후** 사용자 승인 시 `local/` 패턴 등록 |
+| Pattern Promoter | 5 | 사용자 요청 시 `team-patterns/` draft PR 승격 |
 
 ---
 
@@ -182,7 +192,7 @@ FAIL + `RETRY_COUNT < MAX_RETRIES` → Implementer 재호출 (최대 2회).
 
 ---
 
-### Phase 4: 완료 보고 + 커밋 확인
+### Phase 4: 완료 보고 + 커밋
 
 ```
 ## 구현 완료
@@ -192,33 +202,46 @@ FAIL + `RETRY_COUNT < MAX_RETRIES` → Implementer 재호출 (최대 2회).
 
 ---
 커밋 & 푸시 하시겠습니까?
-팀 패턴으로 남기려면: ok + 저장
 ```
 
 > **커밋 확인 없이 자동 커밋하지 않는다.**
 
 | 사용자 응답 | 처리 |
 |------------|------|
-| `ok` / `yes` / `ㅇㅋ` | 커밋 & 푸시만. **Phase 4.5 실행 안 함** |
-| `ok + 저장` / `저장` / `패턴 저장` | Step 4-B(이유) → 커밋 → **Phase 4.5 실행** |
-| `no` | 종료 |
+| `ok` / `yes` / `ㅇㅋ` / `커밋해줘` | 커밋 & 푸시 → **Step 4-A로 진행** |
+| `no` / `아니오` | 종료 |
 
-#### Step 4-B: 패턴 저장 이유 (저장 응답 시에만)
+> `ok + 저장` 레거시: 커밋 후 Step 4-A에서 저장으로 이어짐 (하위 호환).
 
-`ok + 저장` 응답 시, 커밋 직전에 한 줄 질문:
+#### Step 4-A: 로컬 패턴 저장 질문 (커밋 성공 후 필수)
+
+커밋·푸시가 끝난 뒤 **반드시** 한 번만 질문한다. 커밋과 동시에 묻지 않는다.
 
 ```
-이번에 쓴 방식을 팀 패턴으로 남깁니다. 이유를 한 줄 적어주세요. (없으면 skip)
+커밋됐어요.
+이번 구현 방식을 이 프로젝트 패턴(.harness/patterns/local/)에 저장할까요?
+```
+
+| 사용자 응답 | 처리 |
+|------------|------|
+| `예` / `저장` / `저장해줘` / `ㅇㅇ` / `패턴 저장` | Step 4-B → Phase 4.5 |
+| `아니오` / `skip` / `안 함` | 종료. **팀 승격 질문하지 않음** |
+| `뭐가 저장돼?` | 추출 예정 패턴 미리보기 후 다시 질문 |
+
+#### Step 4-B: 패턴 저장 이유 (저장 응답 시만)
+
+```
+이유를 한 줄 적어주세요. (없으면 skip)
 ```
 
 - 입력 있음 → `{WORKSPACE_DIR}/04_pattern_reason.md` 저장
-- `skip` / 빈 입력 → reason 없이 진행
+- `skip` / 빈 입력 → reason 없이 Phase 4.5 진행
 
 ---
 
-### Phase 4.5: 패턴 학습 (`ok + 저장` 시에만)
+### Phase 4.5: 로컬 패턴 저장
 
-**`ok`만으로는 실행하지 않는다.** 사용자가 명시적으로 저장을 요청한 경우에만:
+커밋 완료 + Step 4-A에서 저장 승인한 경우에만:
 
 ```
 Agent(
@@ -226,13 +249,46 @@ Agent(
   agents_file: ".claude/agents/pattern-extractor.md",
   model: "sonnet",
   prompt: """
-    사용자가 팀 패턴 저장을 승인했다 (user_approved).
-    {WORKSPACE_DIR}/02_implementation.md와 커밋된 파일에서 패턴을 추출해
+    사용자가 프로젝트 로컬 패턴 저장을 승인했다 (user_approved).
+    {WORKSPACE_DIR}/02_implementation.md와 방금 커밋된 파일에서 패턴을 추출해
     .harness/patterns/local/*.yaml에만 등록하라. team/은 읽기 전용이다.
     {WORKSPACE_DIR}/04_pattern_reason.md 가 있으면 reason 필드에 반영하라.
   """
 )
 ```
+
+완료 후 한 줄:
+
+```
+local에 N개 저장했어요. 다음 기능부터 이 프로젝트에서 자동 참조됩니다.
+팀 공통으로 올리려면 나중에 "팀에 올려줘"라고 하세요.
+```
+
+---
+
+### Phase 5: 팀 패턴 승격 (별도 요청 시만)
+
+**커밋·로컬 저장 직후 자동 실행 금지.** 사용자가 명시 요청할 때만:
+
+트리거: `팀에 올려줘`, `승격해줘`, `{id} 팀 패턴으로 올려줘`, `local 패턴 보여줘`
+
+```
+Agent(
+  subagent_type: "general-purpose",
+  agents_file: ".claude/agents/pattern-promoter.md",
+  model: "sonnet",
+  prompt: """
+    사용자 승격 요청: [사용자 원문]
+    .harness/patterns/local/ 후보를 보여주고, 선택된 패턴을 team-patterns/에 draft PR로 승격하라.
+    scripts/promote-pattern.sh 를 사용할 수 있으면 사용하라.
+  """
+)
+```
+
+| 요청 | 처리 |
+|------|------|
+| `local 패턴 보여줘` | local vs team 목록·충돌만 출력 |
+| `팀 패턴 sync 해줘` | `bash install.sh --sync-patterns .` 또는 sync-team-patterns.sh 실행 |
 
 ---
 
@@ -244,4 +300,7 @@ Agent(
 | "테스트 다시 만들어줘" | Phase 1.5 |
 | "구현 수정해줘" | Implementer |
 | "QA 다시 해줘" | QA Validator |
+| "패턴 저장해줘" | Phase 4.5 (커밋된 작업 기준) |
+| "팀에 올려줘" / "승격해줘" | Phase 5 |
+| "팀 패턴 sync 해줘" | sync-team-patterns.sh |
 | "전체 다시 해줘" | 전체 파이프라인 |
