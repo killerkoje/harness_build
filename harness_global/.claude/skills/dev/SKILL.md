@@ -228,7 +228,7 @@ Agent(
   prompt: """
     사용자가 팀 패턴 저장을 승인했다 (user_approved).
     {WORKSPACE_DIR}/02_implementation.md와 커밋된 파일에서 패턴을 추출해
-    .harness/patterns/*.yaml에 등록하라.
+    .harness/patterns/local/*.yaml에만 등록하라. team/은 읽기 전용이다.
     {WORKSPACE_DIR}/04_pattern_reason.md 가 있으면 reason 필드에 반영하라.
   """
 )

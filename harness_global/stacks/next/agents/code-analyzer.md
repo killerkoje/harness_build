@@ -9,12 +9,17 @@ description: 기존 코드 패턴을 분석하고 TDD 스펙 초안을 생성하
 
 ## 사전 참조 (필수)
 
-### .harness/patterns/ 읽기 (팀 학습 데이터)
+### .harness/patterns/ 읽기 (팀 + 프로젝트 패턴)
 
 ```bash
-ls .harness/patterns/ 2>/dev/null
+ls .harness/patterns/team/ 2>/dev/null
+cat .harness/patterns/team/*.yaml 2>/dev/null
+ls .harness/patterns/local/ 2>/dev/null
+cat .harness/patterns/local/*.yaml 2>/dev/null
 cat .harness/patterns/*.yaml 2>/dev/null
 ```
+
+**우선순위:** `local/` > `team/` > 레거시 flat.
 
 파일이 존재하면 스펙 초안 작성 시 **CONVENTIONS.md보다 우선 참조**한다.
 이 팀이 실제로 만든 코드에서 추출된 패턴이므로 추론 정확도가 더 높다.
@@ -22,7 +27,7 @@ cat .harness/patterns/*.yaml 2>/dev/null
 **활성 패턴만 사용:** `deprecated: true`인 항목은 스펙 추론에 쓰지 않는다.
 `superseded_by`가 있으면 대체 패턴 id를 참조한다.
 
-**패턴 참조:** `.harness/patterns/*.yaml`에서 `deprecated: false`만 사용. 파일당 `patterns.max_active_per_file`(기본 30)개, `observed` 내림차순.
+**패턴 참조:** `team/` + `local/` (+ 레거시 flat). `deprecated: false`만 사용. 파일당 `patterns.max_active_per_file`(기본 30)개, `observed` 내림차순. local이 team과 충돌 시 local 우선.
 
 **충돌 시 선택 우선순위** (동일 관심사에 활성 패턴이 여러 개일 때):
 1. `observed` 높은 순

@@ -18,7 +18,10 @@ style_mode: auto      # tailwind | pure-css | hybrid | auto (프론트엔드 스
 branch_prefix: feat   # feat | feature | dev
 commit_style: conventional  # conventional | simple
 
-# ─── 패턴 학습 (.harness/patterns/) ───────────────────────
-# ok + 저장 시에만 pattern-extractor 실행
+# ─── 패턴 (.harness/patterns/) ────────────────────────────
+# team/ — team-patterns/ 중앙 레포 (install --sync-patterns로 갱신, 커밋 안 함)
+# local/ — ok+저장 시 pattern-extractor가 이 프로젝트에만 등록 (커밋함)
 patterns:
+  team_dir: .harness/patterns/team
+  local_dir: .harness/patterns/local
   max_active_per_file: 30    # YAML 파일당 활성 패턴 상한 (observed 순 유지)

@@ -59,20 +59,31 @@ cat requirements.txt 2>/dev/null | head -5
 
 ---
 
-## Step 2: .harness/patterns/ 읽기 (팀 학습 데이터)
+## Step 2: .harness/patterns/ 읽기 (팀 + 프로젝트 패턴)
 
 ```bash
-ls .harness/patterns/ 2>/dev/null
+# 1) 팀 공통 — team-patterns/ 중앙 레포 (install · --sync-patterns)
+ls .harness/patterns/team/ 2>/dev/null
+cat .harness/patterns/team/*.yaml 2>/dev/null
+
+# 2) 프로젝트 로컬 — ok+저장으로 이 레포에만 축적
+ls .harness/patterns/local/ 2>/dev/null
+cat .harness/patterns/local/*.yaml 2>/dev/null
+
+# 3) 레거시 flat (마이그레이션 호환)
 cat .harness/patterns/*.yaml 2>/dev/null
 ```
+
+**우선순위:** `local/` > `team/` > 레거시 flat. 동일 `id` 충돌 시 local이 team을 덮는다.
 
 `deprecated: true`인 패턴은 제외. `superseded_by`가 있으면 대체 패턴 참조.
 
 **활성 패턴 선택 우선순위** (동일 관심사에 여러 패턴):
-1. `user_approved` source 있음
-2. `observed` 높은 순
-3. `confidence: high`
-4. `last_seen` 최신 순
+1. `local/` 출처 우선
+2. `user_approved` source 있음
+3. `observed` 높은 순
+4. `confidence: high`
+5. `last_seen` 최신 순
 
 ---
 
@@ -101,7 +112,7 @@ Step 1에서 결정한 탐색 순서로 기존 코드를 읽는다.
 | 신규 파일·엔드포인트·훅·서비스·스키마 추가 | `false` |
 | 버그 수정이지만 여러 파일·테스트 영향 | `false` |
 
-**패턴 참조:** `.harness/patterns/*.yaml`에서 `deprecated: false`만 사용. 파일당 `patterns.max_active_per_file`(기본 30)개, `observed` 내림차순.
+**패턴 참조:** `team/` + `local/` (+ 레거시 flat). `deprecated: false`만 사용. 파일당 `patterns.max_active_per_file`(기본 30)개, `observed` 내림차순. local이 team과 충돌 시 local 우선.
 
 ```markdown
 # TDD 스펙 초안
@@ -158,5 +169,5 @@ Step 1에서 결정한 탐색 순서로 기존 코드를 읽는다.
 | 상황 | 처리 |
 |------|------|
 | 스택 감지 실패 | 코드베이스 탐색 후 발견된 구조 기반으로 추론, `[확인 필요]` 표시 |
-| .harness/patterns/ 없음 | 건너뜀 (첫 기능 개발 시 정상) |
+| .harness/patterns/ 없음 | team/local 모두 없으면 건너뜀 (첫 기능 개발 시 정상) |
 | 기존 코드 없음 (빈 프로젝트) | 스택 기본 레이어 순서 기반으로 스펙 초안 작성 |

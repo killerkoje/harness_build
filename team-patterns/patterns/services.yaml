@@ -1,0 +1,14 @@
+version: 1
+patterns:
+  - id: api-error-throw
+    description: API 레이어는 실패 시 Error를 throw하고 UI/라우터에서 처리한다.
+    example: |
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`)
+      }
+    reason: 에러 처리 일관성
+    observed: 1
+    last_seen: "2026-07-08"
+    source: [team]
+    confidence: high
+    deprecated: false

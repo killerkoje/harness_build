@@ -4,12 +4,22 @@
 # 사용법:
 #   bash install.sh                  ← 현재 디렉토리에 설치 (프로젝트용)
 #   bash install.sh /path/to/project ← 지정 경로에 설치 (프로젝트용)
+#   bash install.sh --sync-patterns [/path] ← 팀 패턴만 동기화
 #   bash install.sh --global         ← ~/.claude/ 에 설치 (모든 프로젝트에서 사용)
 
 set -e
 
 HARNESS_ROOT="$(cd "$(dirname "$0")" && pwd)"
 GLOBAL_MODE=false
+SYNC_PATTERNS_ONLY=false
+
+# --sync-patterns 플래그 처리
+if [ "$1" = "--sync-patterns" ]; then
+  SYNC_PATTERNS_ONLY=true
+  TARGET="${2:-$(pwd)}"
+  bash "$HARNESS_ROOT/scripts/sync-team-patterns.sh" "$TARGET"
+  exit 0
+fi
 
 # --global 플래그 처리
 if [ "$1" = "--global" ]; then
@@ -136,6 +146,27 @@ fi
 HARNESS_VERSION=$(cat "$HARNESS_ROOT/harness_global/VERSION" 2>/dev/null || echo "unknown")
 echo "→ .harness-version 기록 중... ($HARNESS_VERSION)"
 echo "$HARNESS_VERSION" > "$TARGET/.harness-version"
+
+# 5-1. 팀 공통 패턴 (team-patterns/ 중앙 레포)
+echo "→ team-patterns 동기화 중..."
+bash "$HARNESS_ROOT/scripts/sync-team-patterns.sh" "$TARGET"
+
+# 5-2. 프로젝트 .gitignore 패턴 힌트 (없을 때만 append)
+GITIGNORE_PATTERNS="
+# harness — 팀 패턴은 sync로 갱신, 로컬 패턴만 커밋
+.harness/*
+!.harness/patterns/
+.harness/patterns/team/
+!.harness/patterns/local/"
+if [ -f "$TARGET/.gitignore" ]; then
+  if ! grep -q ".harness/patterns/team/" "$TARGET/.gitignore" 2>/dev/null; then
+    echo "$GITIGNORE_PATTERNS" >> "$TARGET/.gitignore"
+    echo "→ .gitignore에 harness 패턴 규칙 추가"
+  fi
+else
+  echo "$GITIGNORE_PATTERNS" > "$TARGET/.gitignore"
+  echo "→ .gitignore 생성 (harness 패턴 규칙)"
+fi
 
 # 6. Cursor 통합 (자동 감지)
 if [ -d "$TARGET/.cursor" ]; then

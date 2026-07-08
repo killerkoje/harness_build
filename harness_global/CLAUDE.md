@@ -12,7 +12,7 @@
 3. **Phase 2** — 스택별 레이어 순서로 구현
 4. **Phase 3** — 테스트 실행 + 정적 검증
 5. **Phase 4** — 완료 보고 → 커밋 확인 (`ok` / `ok + 저장`)
-6. **Phase 4.5** — `ok + 저장` 시에만 패턴 YAML 등록
+6. **Phase 4.5** — `ok + 저장` 시 `.harness/patterns/local/`에만 패턴 등록 (`team/`은 중앙 sync)
 
 **트리거:** 컴포넌트, 페이지, API, 엔드포인트, 훅, 서비스, 모델, 라우터, 컨트롤러 등 코드 작업 요청 시 `dev` 스킬을 사용하라. 단순 질문은 직접 응답 가능.
 
@@ -82,3 +82,4 @@ harness_global/
 | 2026-06-26 | 범용 하네스 확장 | 전체 | Next.js 전용 → 모든 스택 지원 (범용 코어 + 스택 플러그인) |
 | 2026-07-08 | 파이프라인 단순화 v0.4.0 | dev/SKILL.md, pattern-extractor, code-analyzer | 레벨 제거, SKIP_TESTS, ok+저장 시만 패턴 |
 | 2026-07-08 | Lighthouse CLI 제거 | dev/SKILL.md, harness.config.yaml, install.sh | Phase 3.5·performance-validator·스크립트 삭제 |
+| 2026-07-08 | 팀 패턴 중앙 레포 v0.5.0 | team-patterns/, sync-team-patterns.sh | team/local 분리, --sync-patterns |

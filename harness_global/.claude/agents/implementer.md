@@ -25,6 +25,8 @@ stacks/{stack}/agents/implementer.md가 설치되어 현재 파일이 이미 스
 ```bash
 cat _workspace/01_spec.md
 cat _workspace/01_test_plan.md 2>/dev/null
+cat .harness/patterns/team/*.yaml 2>/dev/null
+cat .harness/patterns/local/*.yaml 2>/dev/null
 cat .harness/patterns/*.yaml 2>/dev/null
 ```
 

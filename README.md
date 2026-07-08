@@ -5,10 +5,10 @@
 
 지원 스택: **Next.js · React · Vue · Nuxt · Express · NestJS · FastAPI · Django · Flask · Go · Flutter · Android · iOS · 미지원 스택(fallback)**
 
-> **AX 플랫폼**: 커밋 승인된 코드에서 팀 패턴을 추출해 `.harness/patterns/`에 적재한다.
-> 다음 기획 시 `code-analyzer`가 이 데이터를 최우선 참조하고, `01_spec.md`의 `patterns_applied`로 감사 추적한다.
+> **AX 플랫폼**: `team-patterns/` 중앙 레포의 팀 공통 패턴 + 프로젝트 `local/` 패턴을 에이전트가 참조한다.
+> `ok + 저장` 시 프로젝트 로컬에만 축적되며, 팀 승격은 `team-patterns/` PR로 한다.
 
-**현재 버전:** `v0.4.1` (`harness_global/VERSION`)
+**현재 버전:** `v0.5.0` (`harness_global/VERSION`)
 
 ---
 
@@ -26,7 +26,11 @@
 
 ```
 harness_build/
-├── install.sh                            ← 설치 스크립트 (프로젝트 / 글로벌)
+├── install.sh                            ← 설치 / --sync-patterns
+├── scripts/sync-team-patterns.sh         ← 팀 패턴만 동기화
+├── team-patterns/                        ← AX 팀 공통 패턴 중앙 레포
+│   ├── VERSION
+│   └── patterns/*.yaml
 ├── apps/
 │   └── pattern-viewer/                   ← 팀 패턴 웹 뷰어 (Next.js)
 │       ├── src/app/                      ← 페이지 & 레이아웃
@@ -111,7 +115,7 @@ harness_build/
     │               ok        → 커밋만
     │               ok + 저장 → 커밋 + 패턴 이유 → Phase 4.5
     │
-    └─ Phase 4.5 ──▶ [Agent: pattern-extractor]  ok + 저장 시에만 .harness/patterns/ 등록
+    └─ Phase 4.5 ──▶ [Agent: pattern-extractor]  ok + 저장 시 .harness/patterns/local/ 등록
 ```
 
 ### 정적 분석 (Phase 3, 스택별)
@@ -199,7 +203,7 @@ harness_build/
 | 사용자 입력 | 동작 |
 |------------|------|
 | `ok` / `yes` | 커밋 & 푸시만 (**패턴 추출 안 함**) |
-| `ok + 저장` / `패턴 저장` | 이유 한 줄(선택) → 커밋 → `.harness/patterns/` 등록 |
+| `ok + 저장` / `패턴 저장` | 이유 한 줄(선택) → 커밋 → `.harness/patterns/local/` 등록 |
 | `no` | 종료 |
 
 ### code-review (리뷰)
@@ -237,12 +241,40 @@ style_mode: auto     # auto | tailwind | pure-css | hybrid
 branch_prefix: feat
 commit_style: conventional
 
-# 패턴 학습 (ok + 저장 시에만)
+# 패턴 (team/ 중앙 sync + local/ 프로젝트 축적)
 patterns:
+  team_dir: .harness/patterns/team
+  local_dir: .harness/patterns/local
   max_active_per_file: 30   # YAML당 활성 패턴 상한
 ```
 
+- `team_dir` — `team-patterns/`에서 `install` / `--sync-patterns`로 갱신 (git 커밋 안 함)
+- `local_dir` — `ok + 저장` 시 이 프로젝트에만 등록 (git 커밋)
 - `patterns.max_active_per_file` → code-analyzer 참조 상한, 초과 시 deprecated 처리
+
+---
+
+## AX 팀 패턴 워크플로
+
+```
+team-patterns/ (중앙 Git)          프로젝트
+        │                              │
+        │  install / --sync-patterns   │
+        └──────────▶ .harness/patterns/team/  ← 읽기 전용
+                                       │
+                          ok+저장 ─────┴──▶ .harness/patterns/local/  ← 커밋
+```
+
+**팀원 일상:**
+
+```bash
+git pull                                    # harness_build 또는 team-patterns 최신화
+bash install.sh --sync-patterns .           # 팀 패턴만 프로젝트에 반영
+```
+
+**팀 패턴 승격:** 프로젝트 `local/`에서 검증된 패턴 → `team-patterns/patterns/*.yaml` PR → 머지 후 팀 전체 sync.
+
+자세한 내용: [team-patterns/README.md](team-patterns/README.md)
 
 ---
 
@@ -337,13 +369,10 @@ your-project/
 ├── CLAUDE.md
 ├── harness.config.yaml               ← stack: auto (감지 후 자동 기록)
 ├── .harness-version                  ← 설치된 버전 기록
-└── .harness/                         ← 런타임 생성 (첫 mid/high 커밋 후)
+└── .harness/
     └── patterns/
-        ├── hooks.yaml
-        ├── naming.yaml
-        ├── components.yaml
-        ├── services.yaml
-        └── candidates.md
+        ├── team/          ← team-patterns/ sync (커밋 안 함)
+        └── local/         ← ok+저장 축적 (커밋)
 ```
 
 Next.js 스택 추가 파일:
@@ -479,3 +508,4 @@ npm run dev   # http://localhost:3000
 | **v0.3.4** | **백엔드 컨벤션 문서**: FastAPI·NestJS·Express·Django·Flask·Go `{STACK}_CONVENTIONS.md` + 에이전트 override |
 | **v0.4.0** | **파이프라인 단순화**: low/mid/high 제거 → `SKIP_TESTS`. 패턴은 `ok + 저장` 시에만 YAML 등록 |
 | **v0.4.1** | **Lighthouse CLI 제거**: Phase 3.5, performance-validator, harness-performance-check.mjs 삭제 |
+| **v0.5.0** | **팀 패턴 중앙 레포**: `team-patterns/` + `team/`/`local/` 분리, `--sync-patterns` |

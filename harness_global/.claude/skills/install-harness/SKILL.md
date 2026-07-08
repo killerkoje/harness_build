@@ -213,6 +213,14 @@ sed -i '' "s/^stack: auto/stack: {DETECTED_STACK}/" {TARGET_PATH}/harness.config
 cat {HARNESS_ROOT}/harness_global/VERSION > {TARGET_PATH}/.harness-version
 ```
 
+### 4-6b: 팀 공통 패턴 동기화
+
+```bash
+bash {HARNESS_ROOT}/scripts/sync-team-patterns.sh {TARGET_PATH}
+```
+
+`team-patterns/` → `.harness/patterns/team/` (읽기 전용). 프로젝트 로컬은 `.harness/patterns/local/`.
+
 ### 4-7: Cursor 룰 복사 (.cursor/ 있는 경우만)
 
 ```bash

@@ -1,0 +1,14 @@
+version: 1
+patterns:
+  - id: kebab-case-files
+    description: 소스 파일명은 kebab-case를 사용한다.
+    example: |
+      user-card.tsx
+      cart-service.ts
+      auth-router.py
+    reason: 팀 네이밍 컨벤션
+    observed: 1
+    last_seen: "2026-07-08"
+    source: [team]
+    confidence: high
+    deprecated: false

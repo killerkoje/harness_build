@@ -27,17 +27,18 @@ function ConfidenceBadge({ confidence }: { confidence: Pattern['confidence'] }) 
   )
 }
 
-function SourceBadge({ source }: { source: string[] }) {
+function SourceBadge({ source, origin }: { source: string[]; origin?: Pattern['origin'] }) {
   const isUserApproved = source.includes('user_approved')
+  const isTeam = source.includes('team') || origin === 'team'
+  const label = isUserApproved ? '✓ approved' : isTeam ? 'team' : 'qa_pass'
+  const style = isUserApproved
+    ? 'bg-violet-50 text-violet-700 border border-violet-200'
+    : isTeam
+      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+      : 'bg-sky-50 text-sky-700 border border-sky-200'
   return (
-    <span
-      className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${
-        isUserApproved
-          ? 'bg-violet-50 text-violet-700 border border-violet-200'
-          : 'bg-sky-50 text-sky-700 border border-sky-200'
-      }`}
-    >
-      {isUserApproved ? '✓ approved' : 'qa_pass'}
+    <span className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${style}`}>
+      {label}
     </span>
   )
 }
@@ -72,7 +73,7 @@ function PatternCard({ pattern }: { pattern: Pattern }) {
               {pattern.id}
             </span>
             <ConfidenceBadge confidence={pattern.confidence} />
-            <SourceBadge source={pattern.source} />
+            <SourceBadge source={pattern.source} origin={pattern.origin} />
             {pattern.deprecated && (
               <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-red-50 text-red-600 border border-red-200">
                 deprecated
