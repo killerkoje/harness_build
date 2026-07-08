@@ -213,13 +213,6 @@ sed -i '' "s/^stack: auto/stack: {DETECTED_STACK}/" {TARGET_PATH}/harness.config
 cat {HARNESS_ROOT}/harness_global/VERSION > {TARGET_PATH}/.harness-version
 ```
 
-### 4-6b: 성능 측정 CLI (Phase 3.5)
-
-```bash
-mkdir -p {TARGET_PATH}/.harness/scripts
-cp {HARNESS_ROOT}/harness_global/scripts/harness-performance-check.mjs {TARGET_PATH}/.harness/scripts/
-```
-
 ### 4-7: Cursor 룰 복사 (.cursor/ 있는 경우만)
 
 ```bash

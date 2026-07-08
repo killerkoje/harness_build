@@ -8,7 +8,7 @@
 > **AX 플랫폼**: 커밋 승인된 코드에서 팀 패턴을 추출해 `.harness/patterns/`에 적재한다.
 > 다음 기획 시 `code-analyzer`가 이 데이터를 최우선 참조하고, `01_spec.md`의 `patterns_applied`로 감사 추적한다.
 
-**현재 버전:** `v0.4.0` (`harness_global/VERSION`)
+**현재 버전:** `v0.4.1` (`harness_global/VERSION`)
 
 ---
 
@@ -34,34 +34,17 @@ harness_build/
 │       ├── src/lib/patterns.ts           ← YAML → 카테고리 파싱
 │       └── .env.local.example            ← PATTERNS_DIR 설정 예시
 └── harness_global/
-    ├── VERSION                           ← 하네스 버전 (현재 v0.3.3)
+    ├── VERSION                           ← 하네스 버전
     ├── CLAUDE.md                         ← 스킬 트리거 정의 (프로젝트 루트에 복사)
     ├── harness.config.yaml               ← 프로젝트별 하네스 설정 (stack: auto)
-    ├── cursor/                           ← Cursor IDE 룰 파일 (자동 감지 시 복사)
-    │   ├── react-next.mdc
-    │   ├── css.mdc
-    │   └── mvvm-tdd.mdc
-    ├── .claude/                          ← 범용 코어 (모든 스택 fallback)
-    │   ├── skills/
-    │   │   ├── dev/SKILL.md              ← 개발 파이프라인 오케스트레이터 (범용)
-    │   │   ├── code-review/SKILL.md      ← 기획-코드 리뷰어 (범용)
-    │   │   └── install-harness/SKILL.md  ← 자연어 설치 스킬 (신규/기존 분기)
-    │   └── agents/                       ← 범용 서브 에이전트
-    │       ├── code-analyzer.md          ← 코드베이스 분석 + 스펙 초안 (Phase 1)
-    │       ├── implementer.md            ← 스택별 레이어 순서 구현 (Phase 2)
-    │       ├── test-writer.md            ← 테스트 파일 선행 생성 (Phase 1.5)
-    │       ├── qa-validator.md           ← 테스트 실행 + 정적 분석 (Phase 3)
-    │       ├── performance-validator.md  ← Lighthouse CLI 성능 측정 (Phase 3.5)
-    │       └── pattern-extractor.md      ← 패턴 추출 + 학습 적재 (Phase 4.5)
-    ├── scripts/
-    │   └── harness-performance-check.mjs ← web-vital-kit Lighthouse CLI 러너
-    └── stacks/
-        └── next/                         ← Next.js 전용 플러그인 (고품질)
-            ├── REACT_NEXT_CONVENTIONS.md ← Next.js 공식 문서 기반 컨벤션
-            ├── CSS_CONVENTIONS.md        ← Tailwind/Pure CSS/Modules 스타일 규칙
+    ├── cursor/                           ← Cursor IDE 룰 파일
+    ├── .claude/
+    │   ├── skills/                       ← dev, code-review, install-harness
+    │   └── agents/                       ← code-analyzer, implementer, test-writer, qa-validator, pattern-extractor
+    └── stacks/                           ← 스택 플러그인 (next, fastapi, nestjs, …)
+        └── {stack}/
+            ├── {STACK}_CONVENTIONS.md
             └── agents/
-                ├── code-analyzer.md      ← Next.js 특화 분석 (범용 에이전트 override)
-                └── implementer.md        ← MVVM 구현 (범용 에이전트 override)
 ```
 
 ### 스택 감지 순서
@@ -124,8 +107,6 @@ harness_build/
     ├─ Phase 3   ──▶ [Agent: qa-validator]       테스트 실행 + 정적 분석
     │                        │                  FAIL → implementer 재호출 (최대 2회)
     │
-    ├─ Phase 3.5 ──▶ [Agent: performance-validator]  Lighthouse CLI  ← 프론트 + SKIP_TESTS=false
-    │
     ├─ Phase 4             완료 보고 → 커밋 확인
     │               ok        → 커밋만
     │               ok + 저장 → 커밋 + 패턴 이유 → Phase 4.5
@@ -184,7 +165,6 @@ harness_build/
 | `01_test_plan.md` | 1.5 | 테스트 계획 (`SKIP_TESTS: false`일 때) |
 | `02_implementation.md` | 2 | 구현 보고 |
 | `03_qa_report.md` | 3 | QA 결과 |
-| `03b_performance_report.md` | 3.5 | Lighthouse (프론트, 비사소 작업) |
 | `04_pattern_reason.md` | 4-B | 패턴 저장 시 이유 (`ok + 저장`) |
 
 ---
@@ -206,10 +186,7 @@ harness_build/
   Phase 2    스택별 레이어 순서로 구현
 
 검증
-  Phase 3    테스트 실행 + 정적 분석 (FAIL → implementer 재시도 최대 2회)
-
-성능 (프론트 + SKIP_TESTS=false)
-  Phase 3.5  Lighthouse CLI
+  Phase 3    테스트 실행 + 정적 분석
 
 구현 완료
   Phase 4    커밋 확인
@@ -260,21 +237,11 @@ style_mode: auto     # auto | tailwind | pure-css | hybrid
 branch_prefix: feat
 commit_style: conventional
 
-# 성능 (Phase 3.5 — web-vital-kit Lighthouse CLI)
-performance:
-  enabled: true
-  profiles: slow4g, fast4g
-  port: 3000
-  measure_path: /
-  gate_mode: warn      # warn | block
-  auto_init: false
-
 # 패턴 학습 (ok + 저장 시에만)
 patterns:
   max_active_per_file: 30   # YAML당 활성 패턴 상한
 ```
 
-- `performance.enabled` → 프론트 스택 + `SKIP_TESTS: false`일 때 Phase 3.5
 - `patterns.max_active_per_file` → code-analyzer 참조 상한, 초과 시 deprecated 처리
 
 ---
@@ -424,7 +391,6 @@ your-project/.cursor/rules/
 테스트 다시 만들어줘        ← Phase 1.5만 재실행
 구현 수정해줘              ← Phase 2만 재실행
 QA 다시 해줘               ← Phase 3만 재실행
-성능 다시 측정해줘          ← Phase 3.5만 재실행
 전체 다시 해줘             ← 전체 파이프라인
 ```
 
@@ -511,4 +477,5 @@ npm run dev   # http://localhost:3000
 | **v0.3.2** | **패턴 뷰어**: `.harness/patterns/` 웹 시각화 (`apps/pattern-viewer`) — 카테고리 탭, 코드 예시, 검색 기능 |
 | **v0.3.3** | **Lighthouse CLI 성능 게이트**: Phase 3.5 `performance-validator` + `harness-performance-check.mjs` (web-vital-kit CLI 연동) |
 | **v0.3.4** | **백엔드 컨벤션 문서**: FastAPI·NestJS·Express·Django·Flask·Go `{STACK}_CONVENTIONS.md` + 에이전트 override |
-| **v0.4.0** | **파이프라인 단순화**: low/mid/high 제거 → `SKIP_TESTS`. 패턴은 `ok + 저장` 시에만 YAML 등록. 백엔드 패턴 카테고리(schemas/routers) |
+| **v0.4.0** | **파이프라인 단순화**: low/mid/high 제거 → `SKIP_TESTS`. 패턴은 `ok + 저장` 시에만 YAML 등록 |
+| **v0.4.1** | **Lighthouse CLI 제거**: Phase 3.5, performance-validator, harness-performance-check.mjs 삭제 |

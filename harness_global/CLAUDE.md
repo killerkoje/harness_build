@@ -11,9 +11,8 @@
 2. **Phase 1.5** — `SKIP_TESTS: false`일 때 테스트 선행 작성
 3. **Phase 2** — 스택별 레이어 순서로 구현
 4. **Phase 3** — 테스트 실행 + 정적 검증
-5. **Phase 3.5** — Lighthouse CLI (프론트 + `SKIP_TESTS: false`)
-6. **Phase 4** — 완료 보고 → 커밋 확인 (`ok` / `ok + 저장`)
-7. **Phase 4.5** — `ok + 저장` 시에만 패턴 YAML 등록
+5. **Phase 4** — 완료 보고 → 커밋 확인 (`ok` / `ok + 저장`)
+6. **Phase 4.5** — `ok + 저장` 시에만 패턴 YAML 등록
 
 **트리거:** 컴포넌트, 페이지, API, 엔드포인트, 훅, 서비스, 모델, 라우터, 컨트롤러 등 코드 작업 요청 시 `dev` 스킬을 사용하라. 단순 질문은 직접 응답 가능.
 
@@ -61,10 +60,7 @@ harness_global/
         ├── implementer.md             ← 레이어 순서 구현 전담 (범용, Phase 2)
         ├── test-writer.md             ← 테스트 파일 선행 생성 전담 (범용, Phase 1.5)
         ├── qa-validator.md            ← 테스트 실행 + 검증 전담 (범용, Phase 3)
-        ├── performance-validator.md   ← Lighthouse CLI 성능 측정 (Phase 3.5, 프론트)
         └── pattern-extractor.md       ← 커밋 후 팀 패턴 학습 전담 (Phase 4.5)
-    └── scripts/
-        └── harness-performance-check.mjs  ← web-vital-kit Lighthouse CLI 러너
 ```
 
 ## 사용법
@@ -84,6 +80,5 @@ harness_global/
 | 2026-06-26 | 패턴 학습 기준 명확화 | pattern-extractor.md, dev/SKILL.md | 반복 횟수 기반 → source 태그(user_approved/qa_pass/repeated) + reason 필드 추가로 "나쁜 습관 자동 등록" 방지 |
 | 2026-06-08 | 패턴 학습·스펙 추적 강화 | pattern-extractor.md, dev/SKILL.md, code-analyzer.md | Step 4-B 선택 이유, deprecated/superseded_by 스키마, patterns_applied 감사 추적 |
 | 2026-06-26 | 범용 하네스 확장 | 전체 | Next.js 전용 → 모든 스택 지원 (범용 코어 + 스택 플러그인) |
-| 2026-07-08 | Lighthouse CLI 성능 게이트 | performance-validator.md, dev/SKILL.md, harness.config.yaml, scripts/ | Phase 3.5 web-vital-kit CLI 연동 |
-| 2026-07-08 | 백엔드 스택 컨벤션 문서 | stacks/* | FASTAPI/NESTJS/… CONVENTIONS.md |
 | 2026-07-08 | 파이프라인 단순화 v0.4.0 | dev/SKILL.md, pattern-extractor, code-analyzer | 레벨 제거, SKIP_TESTS, ok+저장 시만 패턴 |
+| 2026-07-08 | Lighthouse CLI 제거 | dev/SKILL.md, harness.config.yaml, install.sh | Phase 3.5·performance-validator·스크립트 삭제 |

@@ -18,16 +18,6 @@ style_mode: auto      # tailwind | pure-css | hybrid | auto (프론트엔드 스
 branch_prefix: feat   # feat | feature | dev
 commit_style: conventional  # conventional | simple
 
-# ─── 성능 (Web Vitals / Lighthouse CLI) ─────────────────
-# Phase 3.5 — QA PASS 후 web-vital-kit Lighthouse CLI 자동 측정
-performance:
-  enabled: true
-  profiles: slow4g, fast4g   # slow4g | fast4g | none (쉼표 구분)
-  port: 3000
-  measure_path: /            # 측정 URL 경로 (예: /player/work)
-  gate_mode: warn            # warn = 경고만 | block = FAIL 시 Phase 4 전 중단
-  auto_init: false           # true면 web-vital-kit 미설치 시 init 시도
-
 # ─── 패턴 학습 (.harness/patterns/) ───────────────────────
 # ok + 저장 시에만 pattern-extractor 실행
 patterns:

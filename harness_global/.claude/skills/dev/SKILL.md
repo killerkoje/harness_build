@@ -49,7 +49,6 @@ description: |
 | Test Writer | sonnet |
 | Implementer | opus |
 | QA Validator | sonnet |
-| Performance Validator | sonnet |
 | Pattern Extractor | sonnet |
 
 ---
@@ -62,7 +61,6 @@ description: |
 | Test Writer | 1.5 | 확정 스펙 기준 테스트 파일 선행 생성 (TDD Red) |
 | Implementer | 2 | 스택별 레이어 순서로 구현 (TDD Green) |
 | QA Validator | 3 | 테스트 실행 + 스펙 달성 검증 + 위험 진단 |
-| Performance Validator | 3.5 | web-vital-kit Lighthouse CLI 성능 측정 (프론트, 비사소 작업) |
 | Pattern Extractor | 4.5 | **사용자가 `ok + 저장` 시에만** 팀 패턴 YAML 등록 |
 
 ---
@@ -184,27 +182,6 @@ FAIL + `RETRY_COUNT < MAX_RETRIES` → Implementer 재호출 (최대 2회).
 
 ---
 
-### Phase 3.5: Lighthouse CLI 성능 측정 (조건부)
-
-아래 **모두** 만족할 때만 실행:
-
-| 조건 | 확인 |
-|------|------|
-| `performance.enabled: true` | harness.config.yaml |
-| `SKIP_TESTS: false` | 01_spec.md (사소 수정 제외) |
-| `DETECTED_STACK` ∈ next \| react \| vue \| nuxt | |
-
-```
-Agent(
-  subagent_type: "general-purpose",
-  agents_file: ".claude/agents/performance-validator.md",
-  model: "sonnet",
-  prompt: "WORKSPACE_DIR: {WORKSPACE_DIR}, DETECTED_STACK: {DETECTED_STACK}"
-)
-```
-
----
-
 ### Phase 4: 완료 보고 + 커밋 확인
 
 ```
@@ -267,5 +244,4 @@ Agent(
 | "테스트 다시 만들어줘" | Phase 1.5 |
 | "구현 수정해줘" | Implementer |
 | "QA 다시 해줘" | QA Validator |
-| "성능 다시 측정해줘" | Performance Validator |
 | "전체 다시 해줘" | 전체 파이프라인 |
