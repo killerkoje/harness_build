@@ -7,7 +7,7 @@
 
 > **AX 플랫폼**: 커밋 후 `저장해줘` → `local/`. 팀 공유는 `팀에 올려줘` → `team-patterns/` PR → `install.sh --sync-patterns`.
 
-**현재 버전:** `v0.5.3` (`harness_global/VERSION`)
+**현재 버전:** `v0.5.4` (`harness_global/VERSION`)
 
 ---
 
@@ -77,20 +77,106 @@ PR #42 리뷰해줘
 
 ## 파이프라인
 
+### dev — 에이전트 흐름
+
 ```
-Phase 1     code-analyzer     스펙 초안 → 사용자 확인 (중단점)
-Phase 1.5   test-writer       SKIP_TESTS=false 일 때만
-Phase 2     implementer       레이어 구현
-Phase 3     qa-validator      테스트 + 정적 분석 (FAIL 시 재시도 ≤2)
-Phase 4     커밋 & 푸시
-            → "로컬 패턴 저장할까요?"
-Phase 4.5   pattern-extractor → .harness/patterns/local/
-Phase 5     pattern-promoter  "팀에 올려줘" 시 draft PR (별도 요청)
+사용자 명령
+    │
+    ▼
+[Skill: dev]  ← 오케스트레이터
+    │
+    ├─ Phase 1   ──▶ [code-analyzer]     스택 감지 → local/team 패턴 → 스펙 초안
+    │                        │            (_workspace/01_spec.md)
+    │               사용자 확인 (중단점) ← ok 전까지 Phase 2 금지
+    │
+    ├─ Phase 1.5 ──▶ [test-writer]        SKIP_TESTS=false 일 때만
+    │                                    (_workspace/01_test_plan.md)
+    │
+    ├─ Phase 2   ──▶ [implementer]        레이어 순서 구현
+    │
+    ├─ Phase 3   ──▶ [qa-validator]       테스트 + 정적 분석
+    │                        │            FAIL → implementer 재호출 (≤2회)
+    │
+    ├─ Phase 4             커밋 & 푸시
+    │               Step 4-A  "로컬 패턴 저장할까요?"
+    │
+    └─ Phase 4.5 ──▶ [pattern-extractor]  → .harness/patterns/local/
+
+[별도 요청]
+    Phase 5  ──▶ [pattern-promoter]  "팀에 올려줘" → team-patterns/ draft PR
 ```
 
-**SKIP_TESTS:** 단순 수정·스타일 → `true` / 신규 파일·API → `false` (`01_spec.md`에서 결정)
+### dev — Phase 상세
 
-**패턴 참조 우선순위:** `local/` > `team/` > 스택 컨벤션 문서
+```
+기획
+  Phase 1    local/ > team/ 패턴 참조 → 코드 분석 → 01_spec.md
+           ── 사용자 확인 대기 ──
+
+테스트 (SKIP_TESTS=false)
+  Phase 1.5  테스트 파일 선행 작성 (TDD Red)
+
+구현
+  Phase 2    스택별 레이어 순서로 구현 → 02_implementation.md
+
+검증
+  Phase 3    테스트 실행 + 정적 분석 → 03_qa_report.md
+
+완료
+  Phase 4    커밋 & 푸시 → "로컬 패턴 저장할까요?"
+  Phase 4.5  저장 승인 시 local/*.yaml 등록
+
+승격 (별도)
+  Phase 5    team-patterns/ draft PR
+```
+
+**SKIP_TESTS:** 단순 수정·스타일 → `true` / 신규 파일·API → `false` (`01_spec.md`)
+
+**패턴 참조:** `local/` > `team/` > 스택 컨벤션 문서
+
+### 스택별 레이어 순서 (Phase 2)
+
+| 스택 | 구현 순서 |
+|------|----------|
+| Next.js / React | types → services → hooks → components → app |
+| Vue / Nuxt | types → services → composables → components → pages |
+| Express | types → models → services → controllers → routes |
+| NestJS | dto → entities → services → controllers → modules |
+| FastAPI / Django / Flask | schemas → services → routers (views) |
+| Go | models → repository → services → handlers |
+| Flutter | models → repository → providers → screens |
+| 미지원 | 코드베이스 탐색 후 추론 |
+
+### 정적 분석 (Phase 3)
+
+| 스택 | 실행 명령 |
+|------|---------|
+| next / react | `tsc --noEmit`, `eslint` |
+| fastapi / django / flask | `mypy`, `ruff check` |
+| go | `go vet ./...`, `go build ./...` |
+| flutter | `flutter analyze` |
+| android | `./gradlew lint` |
+| 미지원 | 린터 자동 탐색 |
+
+### `_workspace/` 산출물
+
+| 파일 | Phase | 용도 |
+|------|-------|------|
+| `01_spec.md` | 1 | TDD 스펙, `SKIP_TESTS`, `patterns_applied` |
+| `01_test_plan.md` | 1.5 | 테스트 계획 |
+| `02_implementation.md` | 2 | 구현 보고 |
+| `03_qa_report.md` | 3 | QA 결과 |
+| `04_pattern_reason.md` | 4-B | 패턴 저장 이유 (선택) |
+
+### code-review (리뷰)
+
+```
+Phase 0  파일 리뷰 vs PR diff 자동 판별
+Phase 1  기획 의도 (동작 / 데이터 흐름 / 엣지케이스)
+Phase 2  코드 절충 (일치 / 불일치 / 코드에만 존재)
+Phase 3  연결 도메인 나열 (영향 판단은 사용자)
+Phase 4  잠재 에러 [치명 / 주의 / 확인]
+```
 
 ---
 
@@ -209,5 +295,6 @@ npm install && npm run dev
 | **v0.5.1** | 커밋→로컬저장 분리, Phase 5 승격 |
 | **v0.5.2** | Cursor `team-patterns.mdc` alwaysApply |
 | **v0.5.3** | README 슬림화 (중복·구식 내용 정리) |
+| **v0.5.4** | README 파이프라인 섹션 상세 복원 |
 
 이전 버전(0.1~0.3.x)은 git history 참조.
