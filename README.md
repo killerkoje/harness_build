@@ -294,7 +294,5 @@ npm install && npm run dev
 | **v0.5.0** | `team-patterns/` + team/local 분리, `--sync-patterns` |
 | **v0.5.1** | 커밋→로컬저장 분리, Phase 5 승격 |
 | **v0.5.2** | Cursor `team-patterns.mdc` alwaysApply |
-| **v0.5.3** | README 슬림화 (중복·구식 내용 정리) |
-| **v0.5.4** | README 파이프라인 섹션 상세 복원 |
 
 이전 버전(0.1~0.3.x)은 git history 참조.
