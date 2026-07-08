@@ -7,12 +7,13 @@
 **목표:** 기획 확인 → 테스트 선행 작성 → 레이어 구현 → 실제 테스트 실행 검증 → 커밋 파이프라인으로 기능을 일관성 있게 개발한다.
 
 **파이프라인:**
-1. **Phase 1** — 기획 레벨 결정 + 코드 분석 + 기획 의도 정리 → **사용자 확인 필수**
-2. **Phase 1.5** — 확정 스펙 기준으로 테스트 파일 선행 생성 (TDD Red 단계)
-3. **Phase 2** — 스택별 레이어 순서로 구현 (MVVM / MVC / Repository 등)
-4. **Phase 3** — 테스트 실제 실행 + 정적 검증 + FAIL 시 자동 재시도(최대 2회)
-5. **Phase 3.5** — web-vital-kit Lighthouse CLI 성능 측정 (프론트 + mid/high, `performance.enabled`)
-6. **Phase 4** — 구현 완료 보고 → **커밋 & 푸시 여부 사용자 확인**
+1. **Phase 1** — 코드 분석 + 기획 의도 정리 → **사용자 확인 필수**
+2. **Phase 1.5** — `SKIP_TESTS: false`일 때 테스트 선행 작성
+3. **Phase 2** — 스택별 레이어 순서로 구현
+4. **Phase 3** — 테스트 실행 + 정적 검증
+5. **Phase 3.5** — Lighthouse CLI (프론트 + `SKIP_TESTS: false`)
+6. **Phase 4** — 완료 보고 → 커밋 확인 (`ok` / `ok + 저장`)
+7. **Phase 4.5** — `ok + 저장` 시에만 패턴 YAML 등록
 
 **트리거:** 컴포넌트, 페이지, API, 엔드포인트, 훅, 서비스, 모델, 라우터, 컨트롤러 등 코드 작업 요청 시 `dev` 스킬을 사용하라. 단순 질문은 직접 응답 가능.
 
@@ -84,3 +85,5 @@ harness_global/
 | 2026-06-08 | 패턴 학습·스펙 추적 강화 | pattern-extractor.md, dev/SKILL.md, code-analyzer.md | Step 4-B 선택 이유, deprecated/superseded_by 스키마, patterns_applied 감사 추적 |
 | 2026-06-26 | 범용 하네스 확장 | 전체 | Next.js 전용 → 모든 스택 지원 (범용 코어 + 스택 플러그인) |
 | 2026-07-08 | Lighthouse CLI 성능 게이트 | performance-validator.md, dev/SKILL.md, harness.config.yaml, scripts/ | Phase 3.5 web-vital-kit CLI 연동 |
+| 2026-07-08 | 백엔드 스택 컨벤션 문서 | stacks/* | FASTAPI/NESTJS/… CONVENTIONS.md |
+| 2026-07-08 | 파이프라인 단순화 v0.4.0 | dev/SKILL.md, pattern-extractor, code-analyzer | 레벨 제거, SKIP_TESTS, ok+저장 시만 패턴 |

@@ -30,6 +30,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   components: 'Components',
   services: 'Services',
   naming: 'Naming',
+  schemas: 'Schemas',
+  routers: 'Routers',
+  dto: 'DTO',
 }
 
 export function loadPatterns(patternsDir: string): CategoryPatterns[] {
@@ -50,7 +53,7 @@ export function loadPatterns(patternsDir: string): CategoryPatterns[] {
       }
     })
     .sort((a, b) => {
-      const order = ['hooks', 'components', 'services', 'naming']
+      const order = ['hooks', 'components', 'services', 'schemas', 'routers', 'dto', 'naming']
       return order.indexOf(a.category) - order.indexOf(b.category)
     })
 }

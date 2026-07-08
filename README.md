@@ -8,7 +8,7 @@
 > **AX 플랫폼**: 커밋 승인된 코드에서 팀 패턴을 추출해 `.harness/patterns/`에 적재한다.
 > 다음 기획 시 `code-analyzer`가 이 데이터를 최우선 참조하고, `01_spec.md`의 `patterns_applied`로 감사 추적한다.
 
-**현재 버전:** `v0.3.3` (`harness_global/VERSION`)
+**현재 버전:** `v0.4.0` (`harness_global/VERSION`)
 
 ---
 
@@ -116,27 +116,21 @@ harness_build/
     │               사용자 확인 대기 (중단점) ← 기획/디자인/성공조건 확인
     │                        │ (ok)
     │
-    ├─ Phase 1.5 ──▶ [Agent: test-writer]        확정 스펙 → 테스트 파일 선행 생성  ← mid/high만
+    ├─ Phase 1.5 ──▶ [Agent: test-writer]        확정 스펙 → 테스트 선행 생성  ← SKIP_TESTS=false
     │                                            (_workspace/01_test_plan.md)
     │
     ├─ Phase 2   ──▶ [Agent: implementer]        테스트 assertion 기준으로 레이어 구현
-    │                                            스택별 레이어 순서 자동 결정
     │
-    ├─ Phase 3   ──▶ [Agent: qa-validator]       스택별 테스트 실행 + 정적 분석
-    │                        │                  FAIL → implementer 자동 재호출 (최대 2회)
-    │                        │                  (_workspace/03_qa_report.md)
+    ├─ Phase 3   ──▶ [Agent: qa-validator]       테스트 실행 + 정적 분석
+    │                        │                  FAIL → implementer 재호출 (최대 2회)
     │
-    ├─ Phase 3.5 ──▶ [Agent: performance-validator]  web-vital-kit Lighthouse CLI  ← 프론트 + mid/high
-    │                        │                  (_workspace/03b_performance_report.md)
-    │                        │                  gate_mode: warn (기본) | block
+    ├─ Phase 3.5 ──▶ [Agent: performance-validator]  Lighthouse CLI  ← 프론트 + SKIP_TESTS=false
     │
-    ├─ Phase 4             완료 보고
-    │               ── 커밋&푸시 여부 항상 확인 ──  ← ok 없으면 커밋 안 함
-    │               Step 4-B: 선택 이유 한 줄 (mid/high, skip 가능)
+    ├─ Phase 4             완료 보고 → 커밋 확인
+    │               ok        → 커밋만
+    │               ok + 저장 → 커밋 + 패턴 이유 → Phase 4.5
     │
-    └─ Phase 4.5 ──▶ [Agent: pattern-extractor]  커밋 승인 후 패턴 추출 + 학습 적재  ← mid/high만
-                                                 (.harness/patterns/*.yaml)
-                                                 low: 스킵 — 단순 수정은 패턴 추출 대상 아님
+    └─ Phase 4.5 ──▶ [Agent: pattern-extractor]  ok + 저장 시에만 .harness/patterns/ 등록
 ```
 
 ### 정적 분석 (Phase 3, 스택별)
@@ -150,58 +144,48 @@ harness_build/
 | android | `./gradlew lint` |
 | 미지원 | 린터 자동 탐색 후 실행 |
 
-### AX 학습 루프
+### AX 학습 루프 (명시 저장형)
 
 ```
-팀이 기능을 완료할 때마다 컨텍스트가 쌓인다:
-
-  [구현 완료 + 커밋 승인]
+[구현 완료 + 커밋 확인]
           │
-          ▼
-  [pattern-extractor]  ← 신뢰도 × 영향도 매트릭스로 분류
-          │              reason: 04_pattern_reason.md → 커밋 body 순
-          │              deprecated / superseded_by 로 레거시 패턴 퇴화
+          ├── ok          → 커밋만 (패턴 X)
           │
-          ├── AUTO    → .harness/patterns/*.yaml 즉시 등록
-          ├── SUGGEST → candidates.md 제안 (사람이 승인)
-          └── FLAG    → 후보 기록만 (3회 반복만으로는 AUTO 안 함)
-          │
-          ▼
-  [.harness/patterns/]
-    hooks.yaml        ← 스택별 데이터 페칭 패턴
-    naming.yaml       ← 파일명·함수명 패턴
-    components.yaml   ← 로딩/에러/빈 상태 처리
-    services.yaml     ← API 레이어, 에러 처리 패턴
-    candidates.md     ← SUGGEST / FLAG / 충돌 후보
-          │
-          ▼
-  [다음 기획 시 code-analyzer가 우선 참조]
-  → 01_spec.md patterns_applied 섹션에 적용 id 기록 (AX 감사 추적)
-  → deprecated: true 패턴은 스펙 추론에서 제외
-  → 스펙 추론 정확도 점점 상승
+          └── ok + 저장   → Step 4-B 이유(선택) → pattern-extractor
+                    │
+                    ▼
+          [.harness/patterns/*.yaml]
+            hooks / components / services / naming   ← 프론트
+            schemas / routers / services / naming    ← 백엔드
+            candidates.md                            ← 충돌 기록만
+                    │
+                    ▼
+          [다음 기획 시 code-analyzer가 우선 참조]
+            - deprecated: true 제외
+            - 파일당 max_active_per_file(기본 30)개, observed 내림차순
+            - 01_spec.md patterns_applied 감사 추적
 ```
 
-#### 패턴 신뢰도 기준
+#### 패턴 등록 기준
 
-| source | 의미 | 등록 |
-|--------|------|------|
-| `user_approved` | 커밋 시 `ok + 저장` / `패턴 저장` | HIGH → AUTO 가능 |
-| `qa_pass` + 2회+ 반복 | QA 통과 + 기존 패턴과 일치 | HIGH → AUTO 가능 |
-| `qa_pass` + 첫 등장 | QA 통과, 한 번만 관찰 | LOW → FLAG |
-| `repeated` 3회+ only | 반복됐지만 승인·QA 없음 | LOW → FLAG (나쁜 습관 방지) |
+| 조건 | 동작 |
+|------|------|
+| `ok + 저장` / `패턴 저장` | `source: [user_approved]`로 YAML 등록 |
+| `ok`만 | 패턴 추출 **실행 안 함** |
+| 충돌 감지 | YAML 등록 안 함 → `candidates.md` |
 
-패턴 YAML 주요 필드: `id`, `description`, `example`, `reason`, `observed`, `source`, `confidence`, `deprecated`, `superseded_by`
+패턴 YAML 필드: `id`, `description`, `example`, `reason`, `observed`, `source`, `confidence`, `deprecated`, `superseded_by`
 
 ### `_workspace/` 산출물 (세션 작업 로그)
 
 | 파일 | Phase | 용도 |
 |------|-------|------|
-| `01_spec.md` | 1 | TDD 스펙 (확정). `patterns_applied` 포함 |
-| `01_test_plan.md` | 1.5 | 테스트 계획 (mid/high) |
+| `01_spec.md` | 1 | TDD 스펙. `SKIP_TESTS`, `patterns_applied` 포함 |
+| `01_test_plan.md` | 1.5 | 테스트 계획 (`SKIP_TESTS: false`일 때) |
 | `02_implementation.md` | 2 | 구현 보고 |
-| `03_qa_report.md` | 3 | QA / 테스트 실행 결과 |
-| `03b_performance_report.md` | 3.5 | Lighthouse CLI 성능 측정 (프론트 + mid/high) |
-| `04_pattern_reason.md` | 4-B | 커밋 직전 선택 이유 (mid/high, optional) |
+| `03_qa_report.md` | 3 | QA 결과 |
+| `03b_performance_report.md` | 3.5 | Lighthouse (프론트, 비사소 작업) |
+| `04_pattern_reason.md` | 4-B | 패턴 저장 시 이유 (`ok + 저장`) |
 
 ---
 
@@ -214,44 +198,32 @@ harness_build/
   Phase 1    스택 감지 → .harness/patterns/ 우선 참조 → 코드 패턴 분석 → 스펙 초안 자동 생성
            ── 사용자 확인 대기 ──  ← 수정 가능, ok 전까지 절대 진행 안 함
 
-확정 후 테스트 선행 작성 (mid / high만)
-  Phase 1.5  확정 스펙 → 스택별 테스트 파일 생성 (TDD Red)
-             low: 레벨은 스킵
+확정 후 테스트 (SKIP_TESTS=false)
+  Phase 1.5  테스트 파일 선행 생성 (TDD Red)
+             SKIP_TESTS=true → 스킵 (단순 수정)
 
 구현
   Phase 2    스택별 레이어 순서로 구현
-             (next: types→services→hooks→components / fastapi: schemas→services→routers / 등)
 
-테스트
-  Phase 3    스택별 테스트 실행 + 정적 분석
-             FAIL → implementer 자동 재시도 (최대 2회)
-             2회 초과 → 사용자에게 미해결 항목 보고
+검증
+  Phase 3    테스트 실행 + 정적 분석 (FAIL → implementer 재시도 최대 2회)
 
-성능 (프론트 + mid/high, performance.enabled)
-  Phase 3.5  web-vital-kit Lighthouse CLI (Slow/Fast 4G)
-             node .harness/scripts/harness-performance-check.mjs
-             → 03b_performance_report.md (PASS | WARN | SKIP | ERROR)
+성능 (프론트 + SKIP_TESTS=false)
+  Phase 3.5  Lighthouse CLI
 
 구현 완료
-  Phase 4    완료 보고
-           ── 커밋&푸시 여부 항상 확인 ──  ← ok 없으면 커밋 안 함
-           Step 4-B: 선택 이유 한 줄 (mid/high, skip 가능) → 04_pattern_reason.md
-
-패턴 학습 (mid / high만)
-  Phase 4.5  커밋 승인 후 pattern-extractor 실행
-             → .harness/patterns/ 업데이트 (다음 기획에 반영)
-             → ok + 저장 시 user_approved 태그로 우선 등록
+  Phase 4    커밋 확인
+           ok        → 커밋만
+           ok + 저장 → 이유(선택) + 패턴 YAML 등록 (Phase 4.5)
 ```
 
 #### 커밋 응답 가이드
 
 | 사용자 입력 | 동작 |
 |------------|------|
-| `ok` / `yes` | 커밋 → Step 4-B(선택 이유) → 패턴 학습 (`qa_pass`) |
-| `ok + 저장` / `패턴 저장` | 커밋 → 패턴 명시 등록 (`user_approved`) |
-| `no` | 커밋·학습 없이 종료 |
-
-커밋 직전(mid/high): *"이번에 쓴 방식의 이유를 한 줄만 남길까요?"* → `skip` 가능 → `04_pattern_reason.md`
+| `ok` / `yes` | 커밋 & 푸시만 (**패턴 추출 안 함**) |
+| `ok + 저장` / `패턴 저장` | 이유 한 줄(선택) → 커밋 → `.harness/patterns/` 등록 |
+| `no` | 종료 |
 
 ### code-review (리뷰)
 
@@ -295,14 +267,15 @@ performance:
   port: 3000
   measure_path: /
   gate_mode: warn      # warn | block
-  auto_init: false     # true면 web-vital-kit 미설치 시 init 시도
+  auto_init: false
+
+# 패턴 학습 (ok + 저장 시에만)
+patterns:
+  max_active_per_file: 30   # YAML당 활성 패턴 상한
 ```
 
-- `stack: auto` → 프로젝트 파일(package.json, go.mod, requirements.txt 등) 자동 감지
-- `stack` 명시 시 → 해당 값을 즉시 사용 (감지 생략)
-- `stacks/{stack}/` 플러그인이 있으면 고품질 스택별 에이전트 사용, 없으면 범용 에이전트 fallback
-- `performance.enabled` → 프론트 스택(next/react/vue/nuxt) + mid/high에서 Phase 3.5 실행
-- 대상 프로젝트에 [web-vital-kit](https://github.com/LEEHEEWON123/web-vital-cheking) 설치 필요: `npx github:LEEHEEWON123/web-vital-cheking init`
+- `performance.enabled` → 프론트 스택 + `SKIP_TESTS: false`일 때 Phase 3.5
+- `patterns.max_active_per_file` → code-analyzer 참조 상한, 초과 시 deprecated 처리
 
 ---
 
@@ -426,10 +399,10 @@ your-project/.cursor/rules/
 프로젝트에서 Claude Code 실행 후:
 
 ```
-mid: 로그인 기능 만들어줘
+로그인 기능 만들어줘
 ```
 
-스택 감지 → TDD 스펙 질문 → ok → 테스트 파일 생성 → 구현 → 테스트 실행 순으로 진행되면 정상 설치된 것.
+스택 감지 → TDD 스펙 질문 → ok → 구현 → QA 순으로 진행되면 정상.
 
 ---
 
@@ -437,39 +410,11 @@ mid: 로그인 기능 만들어줘
 
 ### 개발 명령 (dev 트리거)
 
-#### 레벨 + 기능 명시 (권장)
-
 ```
-low: 버튼 텍스트 바꿔줘
-mid: 상품 목록 API 만들어줘
-high: 결제 플로우 전체 만들어줘
-```
-
-#### 상세 설명 포함
-
-```
-mid: 장바구니 기능 추가해줘
-     - POST /api/cart 연동
-     - CartIcon에 뱃지 표시
-
-mid: 유저 목록 엔드포인트 추가해줘
-     - GET /users (페이지네이션)
-     - FastAPI + SQLAlchemy
-```
-
-#### 레벨 없이 (haiku 기본값, 테스트 생성 스킵)
-
-```
+상품 목록 API 만들어줘
+장바구니 기능 추가해줘 — POST /api/cart, CartIcon 뱃지
 유저 카드 컴포넌트 만들어줘
-로그인 라우터 추가해줘
-users 테이블 모델 만들어줘
-```
-
-#### 버그 수정
-
-```
 버그 고쳐줘 — UserCard에서 null 터져
-에러 수정해줘 — 로그인 후 리다이렉트 안 돼
 ```
 
 #### 부분 재실행
@@ -495,18 +440,14 @@ PR 리뷰해줘            ← 현재 브랜치 diff 전체 리뷰
 PR #42 리뷰해줘        ← 특정 PR 번호 리뷰
 ```
 
-### 기획 레벨 기준
+### 테스트·패턴 동작
 
-| 레벨 | 모델 | 테스트 생성 | 패턴 학습 | 적합한 작업 |
-|------|------|-----------|---------|------------|
-| `low:` | haiku | 스킵 | 스킵 | 단일 파일 수정, 스타일 변경, 텍스트 수정 |
-| `mid:` | sonnet | 생성 | 실행 | 훅/서비스/컴포넌트/엔드포인트 1~2개 |
-| `high:` | opus | 생성 | 실행 | 신규 페이지·모듈, 다수 컴포넌트, 모델 설계 포함 |
-| (없음) | **자동 추론** | 추론 결과 따름 | 추론 결과 따름 | 텍스트 분석 → 명확하면 자동 결정, 애매하면 질문 |
-
-> **레벨 자동 추론 (v0.3.1):** 키워드 없이 요청해도 텍스트 분석으로 레벨을 자동 결정한다.
-> Phase 1에서 code-analyzer가 코드 스캔 후 레벨을 재추론해 보정까지 한다.
-> 애매한 경우(`"버그 고쳐줘"`, 범위 불명확)에만 사용자에게 질문한다.
+| 항목 | 조건 |
+|------|------|
+| 테스트 생성 (Phase 1.5) | `01_spec.md`의 `SKIP_TESTS: false` (신규 파일·API 등) |
+| 테스트 스킵 | `SKIP_TESTS: true` (단일 파일·스타일·텍스트 수정) |
+| 패턴 저장 (Phase 4.5) | 커밋 시 `ok + 저장` / `패턴 저장`만 |
+| 패턴 미저장 | `ok`만 → 커밋만 |
 
 ---
 
@@ -569,3 +510,5 @@ npm run dev   # http://localhost:3000
 | **v0.3.1** | **레벨 자동 추론**: 키워드 없이 요청 텍스트만으로 레벨 자동 결정, Phase 1 code-analyzer 코드 스캔 후 보정, 애매한 경우만 질문 |
 | **v0.3.2** | **패턴 뷰어**: `.harness/patterns/` 웹 시각화 (`apps/pattern-viewer`) — 카테고리 탭, 코드 예시, 검색 기능 |
 | **v0.3.3** | **Lighthouse CLI 성능 게이트**: Phase 3.5 `performance-validator` + `harness-performance-check.mjs` (web-vital-kit CLI 연동) |
+| **v0.3.4** | **백엔드 컨벤션 문서**: FastAPI·NestJS·Express·Django·Flask·Go `{STACK}_CONVENTIONS.md` + 에이전트 override |
+| **v0.4.0** | **파이프라인 단순화**: low/mid/high 제거 → `SKIP_TESTS`. 패턴은 `ok + 저장` 시에만 YAML 등록. 백엔드 패턴 카테고리(schemas/routers) |

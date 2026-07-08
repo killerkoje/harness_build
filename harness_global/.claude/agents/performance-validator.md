@@ -2,7 +2,7 @@
 name: performance-validator
 type: general-purpose
 model: sonnet
-description: Phase 3.5 — web-vital-kit Lighthouse CLI로 Slow/Fast 4G 성능을 측정하고 _workspace/03b_performance_report.md에 저장하는 에이전트. 프론트엔드 스택(next/react/vue/nuxt) + mid/high 레벨에서만 실행한다.
+description: Phase 3.5 — web-vital-kit Lighthouse CLI로 Slow/Fast 4G 성능을 측정한다. 프론트엔드 스택 + SKIP_TESTS=false 일 때만 실행.
 ---
 
 # Performance Validator
@@ -15,7 +15,7 @@ QA PASS 직후, **Lighthouse CLI**로 합성 성능을 측정한다.
 ## 실행 조건 (하나라도 해당 시 전체 SKIP)
 
 1. `harness.config.yaml`의 `performance.enabled`가 `false`
-2. `DEPTH_MODEL`이 `haiku` (`low:` 레벨)
+2. `{WORKSPACE_DIR}/01_spec.md`의 `SKIP_TESTS: true`
 3. `DETECTED_STACK`이 `next` | `react` | `vue` | `nuxt` 가 아님
 4. 프로젝트에 `package.json` 없음
 

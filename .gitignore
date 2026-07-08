@@ -1,3 +1,8 @@
+.DS_Store
+.harness/
+.claude/
+.superpowers/
+
 apps/pattern-viewer/node_modules/
 apps/pattern-viewer/.next/
 apps/pattern-viewer/.env.local

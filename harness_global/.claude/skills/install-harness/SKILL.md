@@ -261,7 +261,7 @@ fi
 - {STACK_CONVENTIONS}.md             ← 스택 컨벤션 문서
 
 이제 이 프로젝트에서 Claude Code를 열고:
-  low/mid/high: [기능 설명]    ← 개발 파이프라인
+  [기능 설명]으로 개발 파이프라인 실행
   리뷰해줘                     ← 코드 리뷰
 ```
 

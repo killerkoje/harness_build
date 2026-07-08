@@ -22,6 +22,8 @@ cat .harness/patterns/*.yaml 2>/dev/null
 **활성 패턴만 사용:** `deprecated: true`인 항목은 스펙 추론에 쓰지 않는다.
 `superseded_by`가 있으면 대체 패턴 id를 참조한다.
 
+**패턴 참조:** `.harness/patterns/*.yaml`에서 `deprecated: false`만 사용. 파일당 `patterns.max_active_per_file`(기본 30)개, `observed` 내림차순.
+
 **충돌 시 선택 우선순위** (동일 관심사에 활성 패턴이 여러 개일 때):
 1. `observed` 높은 순
 2. `confidence: high` 우선
@@ -83,13 +85,12 @@ cat harness.config.yaml 2>/dev/null
 이 파일은 오케스트레이터가 사용자에게 보여주는 **TDD 스펙 초안**이다.
 추론 가능한 항목은 모두 채우고, 불확실한 항목만 `[확인 필요]`로 표시한다.
 
-`INFERRED_LEVEL` 결정 기준 (코드 스캔 결과 기반, Next.js 특화):
+`SKIP_TESTS` 결정 기준 (코드 스캔 결과 기반, Next.js 특화):
 
-| 상황 | INFERRED_LEVEL |
-|------|---------------|
-| 기존 컴포넌트·스타일·텍스트 수정, 단일 파일 변경 | `low` |
-| 기존 훅·서비스 있음 + 신규 컴포넌트 1~2개, 신규 파일 1~3개 | `mid` |
-| 기존 관련 코드 없음, types/services/hooks 전체 신규, 신규 페이지 생성 | `high` |
+| 상황 | SKIP_TESTS |
+|------|------------|
+| 단일 파일 수정, 텍스트/스타일/오타만 변경 | `true` |
+| 신규 파일·엔드포인트·훅·서비스·스키마 추가 | `false` |
 
 ```markdown
 # TDD 스펙 초안
@@ -152,9 +153,9 @@ cat harness.config.yaml 2>/dev/null
 - **스타일 모드:** [Tailwind | Pure CSS | Hybrid | shadcn/ui] — CSS_CONVENTIONS.md §1 감지 결과
 - **스타일 패턴:** [cn() + utility / cva() / CSS Module co-location 등 기존 사용 방식]
 
-## 추론 레벨
-- INFERRED_LEVEL: {low | mid | high}
-- 근거: {1줄 — 신규 필요 레이어 수, 기존 코드 유무, 예상 파일 수 등}
+## 테스트 전략
+- SKIP_TESTS: {true | false}
+- 근거: {1줄}
 
 ## 주의사항
 - [타입 경계면 불일치 위험]

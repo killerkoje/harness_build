@@ -27,3 +27,8 @@ performance:
   measure_path: /            # 측정 URL 경로 (예: /player/work)
   gate_mode: warn            # warn = 경고만 | block = FAIL 시 Phase 4 전 중단
   auto_init: false           # true면 web-vital-kit 미설치 시 init 시도
+
+# ─── 패턴 학습 (.harness/patterns/) ───────────────────────
+# ok + 저장 시에만 pattern-extractor 실행
+patterns:
+  max_active_per_file: 30    # YAML 파일당 활성 패턴 상한 (observed 순 유지)
