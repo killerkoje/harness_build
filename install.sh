@@ -137,6 +137,11 @@ HARNESS_VERSION=$(cat "$HARNESS_ROOT/harness_global/VERSION" 2>/dev/null || echo
 echo "→ .harness-version 기록 중... ($HARNESS_VERSION)"
 echo "$HARNESS_VERSION" > "$TARGET/.harness-version"
 
+# 5-1. 성능 측정 CLI 스크립트 (Phase 3.5)
+echo "→ .harness/scripts/ 복사 중..."
+mkdir -p "$TARGET/.harness/scripts"
+cp "$HARNESS_ROOT/harness_global/scripts/harness-performance-check.mjs" "$TARGET/.harness/scripts/"
+
 # 6. Cursor 통합 (자동 감지)
 if [ -d "$TARGET/.cursor" ]; then
   echo "→ .cursor/ 감지됨 — Cursor 룰 파일 복사 중..."

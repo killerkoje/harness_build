@@ -102,6 +102,7 @@ low (단순 수정) / mid (기능 1~2개) / high (신규 페이지·모듈)?
 | Test Writer | 1.5 | 확정 스펙 기준 테스트 파일 선행 생성 (TDD Red) |
 | Implementer | 2 | 스택별 레이어 순서로 구현 (TDD Green) |
 | QA Validator | 3 | 테스트 실행 + 스펙 달성 검증 + 위험 진단 |
+| Performance Validator | 3.5 | web-vital-kit Lighthouse CLI 성능 측정 (프론트 + mid/high) |
 
 ---
 
@@ -287,7 +288,47 @@ Agent(
 `{WORKSPACE_DIR}/03_qa_report.md`를 읽어 판정한다:
 
 **→ PASS 또는 PASS_WITH_WARNINGS:**
-Phase 4로 진행.
+Phase 3.5 조건 확인 후 Phase 3.5 또는 Phase 4로 진행.
+
+---
+
+### Phase 3.5: Lighthouse CLI 성능 측정 (조건부)
+
+QA PASS 직후, 아래 **모든 조건**을 만족할 때만 실행한다:
+
+| 조건 | 확인 |
+|------|------|
+| `harness.config.yaml` → `performance.enabled: true` | |
+| `DEPTH_MODEL` ≠ `haiku` (low 스킵) | |
+| `DETECTED_STACK` ∈ `next` \| `react` \| `vue` \| `nuxt` | |
+
+조건 미충족 시 Phase 3.5를 건너뛰고 Phase 4로 진행한다 (출력 없음).
+
+```
+Agent(
+  subagent_type: "general-purpose",
+  agents_file: ".claude/agents/performance-validator.md",
+  model: "sonnet",
+  prompt: """
+    WORKSPACE_DIR: {WORKSPACE_DIR}
+    DETECTED_STACK: {DETECTED_STACK}
+    DEPTH_MODEL: {DEPTH_MODEL}
+
+    web-vital-kit Lighthouse CLI로 성능을 측정하라.
+    1. 프로덕션 빌드 후 서버 기동 (또는 dev fallback)
+    2. node .harness/scripts/harness-performance-check.mjs 실행
+    3. {WORKSPACE_DIR}/03b_performance_report.md 저장
+  """
+)
+```
+
+완료 후 한 줄 출력 (측정한 경우만):
+```
+[성능 측정] STATUS=PASS|WARN|SKIP|ERROR | Slow4G Perf=96 FCP=2239ms
+```
+
+`03b_performance_report.md`의 `STATUS: FAIL`이고 `gate_mode: block`이면 사용자에게 보고 후 Phase 4 진행 여부를 묻는다.
+`gate_mode: warn`(기본)이면 WARN이어도 Phase 4로 진행한다.
 
 **→ FAIL이고 `RETRY_COUNT < MAX_RETRIES`:**
 
@@ -352,6 +393,10 @@ Implementer 완료 후 3-A로 돌아가 재검증한다.
 
 ## QA 결과: PASS | FAIL | PASS_WITH_WARNINGS
 [핵심 내용]
+
+## 성능 (Lighthouse CLI)
+[03b_performance_report.md 있으면: STATUS + Slow4G Perf/FCP/LCP 한 줄 요약]
+[없으면: 생략]
 
 ## 주의사항
 [FAIL / WARNING 내용 — 있을 경우만]
@@ -442,6 +487,7 @@ Agent(
 | Implementer (2) | `{WORKSPACE_DIR}/01_spec.md` + `{WORKSPACE_DIR}/01_test_plan.md` + 테스트 파일 | 실제 파일 + `{WORKSPACE_DIR}/02_implementation.md` |
 | QA Validator (3) | `{WORKSPACE_DIR}/01_test_plan.md` + `{WORKSPACE_DIR}/01_spec.md` + `{WORKSPACE_DIR}/02_implementation.md` + 구현 파일 | `{WORKSPACE_DIR}/03_qa_report.md` |
 | Implementer retry (3-B) | `{WORKSPACE_DIR}/03_qa_report.md` | 수정된 실제 파일 + `{WORKSPACE_DIR}/02_implementation.md` 업데이트 |
+| Performance Validator (3.5) | `harness.config.yaml` + 실행 중인 dev server + web-vital-kit CLI | `{WORKSPACE_DIR}/03b_performance_report.md` |
 | 사용자 (4-B) | 선택 이유 입력 (mid/high) | `{WORKSPACE_DIR}/04_pattern_reason.md` (있을 때만) |
 | Pattern Extractor (4.5) | `{WORKSPACE_DIR}/02_implementation.md` + `{WORKSPACE_DIR}/04_pattern_reason.md`(있으면) + 커밋된 파일 + `.harness/patterns/` | `.harness/patterns/*.yaml` 업데이트 + 제안 출력 |
 
@@ -463,4 +509,5 @@ Agent(
 | "테스트 다시 만들어줘" | Phase 1.5 재실행 | 01_spec.md 재사용 |
 | "구현 수정해줘" | Implementer만 (01_spec.md + 01_test_plan.md 재사용) | |
 | "QA 다시 해줘" | QA Validator만 (retry_count 초기화) | |
+| "성능 다시 측정해줘" | Performance Validator만 (03b 재생성) | |
 | "전체 다시 해줘" | 전체 파이프라인 | |

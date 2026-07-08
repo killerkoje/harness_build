@@ -8,7 +8,7 @@
 > **AX 플랫폼**: 커밋 승인된 코드에서 팀 패턴을 추출해 `.harness/patterns/`에 적재한다.
 > 다음 기획 시 `code-analyzer`가 이 데이터를 최우선 참조하고, `01_spec.md`의 `patterns_applied`로 감사 추적한다.
 
-**현재 버전:** `v0.3.1` (`harness_global/VERSION`)
+**현재 버전:** `v0.3.3` (`harness_global/VERSION`)
 
 ---
 
@@ -34,7 +34,7 @@ harness_build/
 │       ├── src/lib/patterns.ts           ← YAML → 카테고리 파싱
 │       └── .env.local.example            ← PATTERNS_DIR 설정 예시
 └── harness_global/
-    ├── VERSION                           ← 하네스 버전 (현재 v0.3.0)
+    ├── VERSION                           ← 하네스 버전 (현재 v0.3.3)
     ├── CLAUDE.md                         ← 스킬 트리거 정의 (프로젝트 루트에 복사)
     ├── harness.config.yaml               ← 프로젝트별 하네스 설정 (stack: auto)
     ├── cursor/                           ← Cursor IDE 룰 파일 (자동 감지 시 복사)
@@ -51,7 +51,10 @@ harness_build/
     │       ├── implementer.md            ← 스택별 레이어 순서 구현 (Phase 2)
     │       ├── test-writer.md            ← 테스트 파일 선행 생성 (Phase 1.5)
     │       ├── qa-validator.md           ← 테스트 실행 + 정적 분석 (Phase 3)
+    │       ├── performance-validator.md  ← Lighthouse CLI 성능 측정 (Phase 3.5)
     │       └── pattern-extractor.md      ← 패턴 추출 + 학습 적재 (Phase 4.5)
+    ├── scripts/
+    │   └── harness-performance-check.mjs ← web-vital-kit Lighthouse CLI 러너
     └── stacks/
         └── next/                         ← Next.js 전용 플러그인 (고품질)
             ├── REACT_NEXT_CONVENTIONS.md ← Next.js 공식 문서 기반 컨벤션
@@ -123,6 +126,10 @@ harness_build/
     │                        │                  FAIL → implementer 자동 재호출 (최대 2회)
     │                        │                  (_workspace/03_qa_report.md)
     │
+    ├─ Phase 3.5 ──▶ [Agent: performance-validator]  web-vital-kit Lighthouse CLI  ← 프론트 + mid/high
+    │                        │                  (_workspace/03b_performance_report.md)
+    │                        │                  gate_mode: warn (기본) | block
+    │
     ├─ Phase 4             완료 보고
     │               ── 커밋&푸시 여부 항상 확인 ──  ← ok 없으면 커밋 안 함
     │               Step 4-B: 선택 이유 한 줄 (mid/high, skip 가능)
@@ -193,6 +200,7 @@ harness_build/
 | `01_test_plan.md` | 1.5 | 테스트 계획 (mid/high) |
 | `02_implementation.md` | 2 | 구현 보고 |
 | `03_qa_report.md` | 3 | QA / 테스트 실행 결과 |
+| `03b_performance_report.md` | 3.5 | Lighthouse CLI 성능 측정 (프론트 + mid/high) |
 | `04_pattern_reason.md` | 4-B | 커밋 직전 선택 이유 (mid/high, optional) |
 
 ---
@@ -218,6 +226,11 @@ harness_build/
   Phase 3    스택별 테스트 실행 + 정적 분석
              FAIL → implementer 자동 재시도 (최대 2회)
              2회 초과 → 사용자에게 미해결 항목 보고
+
+성능 (프론트 + mid/high, performance.enabled)
+  Phase 3.5  web-vital-kit Lighthouse CLI (Slow/Fast 4G)
+             node .harness/scripts/harness-performance-check.mjs
+             → 03b_performance_report.md (PASS | WARN | SKIP | ERROR)
 
 구현 완료
   Phase 4    완료 보고
@@ -274,11 +287,22 @@ style_mode: auto     # auto | tailwind | pure-css | hybrid
 # 커밋
 branch_prefix: feat
 commit_style: conventional
+
+# 성능 (Phase 3.5 — web-vital-kit Lighthouse CLI)
+performance:
+  enabled: true
+  profiles: slow4g, fast4g
+  port: 3000
+  measure_path: /
+  gate_mode: warn      # warn | block
+  auto_init: false     # true면 web-vital-kit 미설치 시 init 시도
 ```
 
 - `stack: auto` → 프로젝트 파일(package.json, go.mod, requirements.txt 등) 자동 감지
 - `stack` 명시 시 → 해당 값을 즉시 사용 (감지 생략)
 - `stacks/{stack}/` 플러그인이 있으면 고품질 스택별 에이전트 사용, 없으면 범용 에이전트 fallback
+- `performance.enabled` → 프론트 스택(next/react/vue/nuxt) + mid/high에서 Phase 3.5 실행
+- 대상 프로젝트에 [web-vital-kit](https://github.com/LEEHEEWON123/web-vital-cheking) 설치 필요: `npx github:LEEHEEWON123/web-vital-cheking init`
 
 ---
 
@@ -455,6 +479,7 @@ users 테이블 모델 만들어줘
 테스트 다시 만들어줘        ← Phase 1.5만 재실행
 구현 수정해줘              ← Phase 2만 재실행
 QA 다시 해줘               ← Phase 3만 재실행
+성능 다시 측정해줘          ← Phase 3.5만 재실행
 전체 다시 해줘             ← 전체 파이프라인
 ```
 
@@ -543,3 +568,4 @@ npm run dev   # http://localhost:3000
 | **v0.3.0** | **범용 하네스 확장**: 모든 스택 지원 (Next.js·FastAPI·Go·Flutter 등 13개+), 범용 code-analyzer/implementer 신규 작성, frontend-dev → dev 스킬 범용화, 스택별 정적 분석, 신규/기존 프로젝트 설치 분기 |
 | **v0.3.1** | **레벨 자동 추론**: 키워드 없이 요청 텍스트만으로 레벨 자동 결정, Phase 1 code-analyzer 코드 스캔 후 보정, 애매한 경우만 질문 |
 | **v0.3.2** | **패턴 뷰어**: `.harness/patterns/` 웹 시각화 (`apps/pattern-viewer`) — 카테고리 탭, 코드 예시, 검색 기능 |
+| **v0.3.3** | **Lighthouse CLI 성능 게이트**: Phase 3.5 `performance-validator` + `harness-performance-check.mjs` (web-vital-kit CLI 연동) |
