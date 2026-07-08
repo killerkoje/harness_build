@@ -7,7 +7,7 @@
 
 > **AX 플랫폼**: 커밋 후 "패턴 저장할까요?" → `local/`. 팀 승격은 `팀에 올려줘` (Phase 5).
 
-**현재 버전:** `v0.5.1` (`harness_global/VERSION`)
+**현재 버전:** `v0.5.2` (`harness_global/VERSION`)
 
 ---
 
@@ -408,9 +408,10 @@ your-project/
 └── CSS_CONVENTIONS.md
 ```
 
-Cursor IDE 사용 시 `.cursor/` 디렉토리가 있으면 자동으로 룰 파일도 복사된다:
+Cursor IDE 사용 시 install이 `.cursor/rules/`를 자동 생성한다:
 ```
 your-project/.cursor/rules/
+├── team-patterns.mdc   ← AX 팀·로컬 패턴 필수 참조 (alwaysApply)
 ├── react-next.mdc
 ├── css.mdc
 └── mvvm-tdd.mdc
@@ -512,16 +513,17 @@ npm run dev   # http://localhost:3000
 
 ## Cursor IDE 지원
 
-`.cursor/` 디렉토리가 있는 프로젝트에 설치하면 Cursor 룰 파일이 자동으로 복사된다.
+`install.sh` 시 `.cursor/rules/`가 **항상** 생성·복사된다.
 
 | 파일 | 역할 |
 |------|------|
+| `team-patterns.mdc` | `.harness/patterns/team/` + `local/` **필수 참조** (`alwaysApply: true`) |
 | `react-next.mdc` | Next.js App Router 규칙 (Server/Client Component, 라우팅) |
 | `css.mdc` | CSS/Tailwind 스타일 규칙 |
 | `mvvm-tdd.mdc` | MVVM 계층 구조 + TDD 원칙 |
 
-> Cursor에서는 컨벤션 룰 적용만 지원한다.
-> 풀 파이프라인(Phase 1~4.5)은 Claude Code에서만 동작한다.
+> Cursor: `team-patterns.mdc`로 패턴 참조 + 스택별 컨벤션 룰 적용.
+> 풀 dev 파이프라인(Phase 1~5)은 Claude Code `dev` 스킬에서 동작.
 
 ---
 
@@ -541,3 +543,4 @@ npm run dev   # http://localhost:3000
 | **v0.4.1** | **Lighthouse CLI 제거**: Phase 3.5, performance-validator, harness-performance-check.mjs 삭제 |
 | **v0.5.0** | **팀 패턴 중앙 레포**: `team-patterns/` + `team/`/`local/` 분리, `--sync-patterns` |
 | **v0.5.1** | **패턴 자연어 UX**: 커밋→로컬저장 분리, Phase 5 승격 (`pattern-promoter`) |
+| **v0.5.2** | **Cursor `team-patterns.mdc`**: alwaysApply, install 시 `.cursor/rules/` 항상 복사 |

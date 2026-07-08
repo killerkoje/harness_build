@@ -1,0 +1,50 @@
+---
+description: AX 팀·프로젝트 코드 패턴. 코드 작성·수정·리뷰·기획 전에 .harness/patterns/를 반드시 참조한다.
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# AX 팀 패턴 (필수 참조)
+
+코드 생성·수정·리뷰·리팩토링 **전에** 아래 패턴 YAML을 읽고 따른다.
+스택 컨벤션 문서보다 **패턴 YAML이 우선**한다 (단, `local/`이 `team/`보다 우선).
+
+## 읽기 순서 (매 세션·기능 작업 시작 시)
+
+```bash
+ls .harness/patterns/local/ 2>/dev/null
+cat .harness/patterns/local/*.yaml 2>/dev/null
+ls .harness/patterns/team/ 2>/dev/null
+cat .harness/patterns/team/*.yaml 2>/dev/null
+cat .harness/patterns/*.yaml 2>/dev/null
+```
+
+1. `.harness/patterns/local/` — 이 프로젝트 승인 패턴 (최우선)
+2. `.harness/patterns/team/` — AX 팀 공통 패턴 (sync 필수)
+3. 레거시 `.harness/patterns/*.yaml` — flat 구조 호환
+
+`team/`이 비어 있으면: `bash install.sh --sync-patterns .` 안내.
+
+## 적용 규칙
+
+- `deprecated: true` 패턴은 사용하지 않는다
+- 동일 관심사에 여러 패턴 → `local` > `team`, `observed` 높은 순
+- 구현 시 패턴 `id`를 주석 또는 PR 설명에 명시 (예: `// pattern: api-error-throw`)
+- 패턴과 충돌하는 코드는 패턴을 따르거나, 사용자에게 확인한다
+
+## 카테고리
+
+| 파일 | 내용 |
+|------|------|
+| `hooks.yaml` | queryKey, staleTime, 훅 구조 |
+| `services.yaml` | fetch, 에러 처리 |
+| `components.yaml` | 로딩/에러/빈 상태 |
+| `schemas.yaml` | DTO/Pydantic |
+| `routers.yaml` | API 라우트 prefix, tags |
+| `naming.yaml` | 파일·함수명 |
+
+## 패턴 저장 (하네스 dev)
+
+- 커밋 후: `저장해줘` / `패턴 저장` → `local/`
+- 팀 승격: `팀에 올려줘` → `team-patterns/` draft PR
+- 갱신: `팀 패턴 sync 해줘`

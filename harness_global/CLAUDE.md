@@ -86,3 +86,4 @@ harness_global/
 | 2026-07-08 | Lighthouse CLI 제거 | dev/SKILL.md, harness.config.yaml, install.sh | Phase 3.5·performance-validator·스크립트 삭제 |
 | 2026-07-08 | 팀 패턴 중앙 레포 v0.5.0 | team-patterns/, sync-team-patterns.sh | team/local 분리, --sync-patterns |
 | 2026-07-08 | 패턴 UX v0.5.1 | dev/SKILL.md, pattern-promoter | 커밋→로컬저장 분리, Phase 5 승격 |
+| 2026-07-08 | Cursor team-patterns v0.5.2 | cursor/team-patterns.mdc, install.sh | alwaysApply 팀·로컬 패턴 참조 |

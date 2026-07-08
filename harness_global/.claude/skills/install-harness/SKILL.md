@@ -221,18 +221,14 @@ bash {HARNESS_ROOT}/scripts/sync-team-patterns.sh {TARGET_PATH}
 
 `team-patterns/` → `.harness/patterns/team/` (읽기 전용). 프로젝트 로컬은 `.harness/patterns/local/`.
 
-### 4-7: Cursor 룰 복사 (.cursor/ 있는 경우만)
+### 4-7: Cursor 룰 복사 (항상)
 
 ```bash
-if [ -d "{TARGET_PATH}/.cursor" ]; then
-  mkdir -p {TARGET_PATH}/.cursor/rules/
-  if [ -d "{HARNESS_ROOT}/harness_global/stacks/{DETECTED_STACK}/cursor" ]; then
-    cp -r {HARNESS_ROOT}/harness_global/stacks/{DETECTED_STACK}/cursor/* {TARGET_PATH}/.cursor/rules/
-  elif [ -d "{HARNESS_ROOT}/harness_global/cursor" ]; then
-    cp -r {HARNESS_ROOT}/harness_global/cursor/* {TARGET_PATH}/.cursor/rules/
-  fi
-fi
+mkdir -p {TARGET_PATH}/.cursor/rules/
+cp -r {HARNESS_ROOT}/harness_global/cursor/* {TARGET_PATH}/.cursor/rules/
 ```
+
+`team-patterns.mdc`는 `alwaysApply: true` — Cursor에서 팀·로컬 패턴 필수 참조.
 
 ---
 

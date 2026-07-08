@@ -168,12 +168,10 @@ else
   echo "→ .gitignore 생성 (harness 패턴 규칙)"
 fi
 
-# 6. Cursor 통합 (자동 감지)
-if [ -d "$TARGET/.cursor" ]; then
-  echo "→ .cursor/ 감지됨 — Cursor 룰 파일 복사 중..."
-  mkdir -p "$TARGET/.cursor/rules"
-  cp -r "$HARNESS_ROOT/harness_global/cursor/"* "$TARGET/.cursor/rules/"
-fi
+# 6. Cursor 룰 (team-patterns 포함, 항상 설치)
+echo "→ .cursor/rules/ 복사 중..."
+mkdir -p "$TARGET/.cursor/rules"
+cp -r "$HARNESS_ROOT/harness_global/cursor/"* "$TARGET/.cursor/rules/"
 
 echo ""
 echo "─────────────────────────────────"
