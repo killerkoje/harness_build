@@ -7,7 +7,7 @@
 
 > **AX 플랫폼**: 커밋 후 `저장해줘` → `local/`. 팀 공유는 `팀에 올려줘` → `team-patterns/` PR → `install.sh --sync-patterns`.
 
-**현재 버전:** `v0.5.4` (`harness_global/VERSION`)
+**현재 버전:** `v0.6.0` (`harness_global/VERSION`)
 
 ---
 
@@ -54,6 +54,7 @@ bash /path/to/harness_build/install.sh --sync-patterns .
 | 패턴 저장해줘 | 4.5 |
 | 팀에 올려줘 / 승격해줘 | 5 |
 | 팀 패턴 sync 해줘 | team/ 동기화 |
+| 구현 완료 / QA 돌려줘 | Claude Phase 3 복귀 (Cursor 구현 후) |
 | 전체 다시 해줘 | 전체 |
 
 ### 리뷰 (code-review)
@@ -90,11 +91,11 @@ PR #42 리뷰해줘
     │               사용자 확인 (중단점) ← ok 전까지 Phase 2 금지
     │
     ├─ Phase 1.5 ──▶ [test-writer]        SKIP_TESTS=false 일 때만
-    │                                    (_workspace/01_test_plan.md)
     │
-    ├─ Phase 2   ──▶ [implementer]        레이어 순서 구현
+    ├─ Phase 2   ──▶ [Cursor]             HANDOFF.md → 구현 → 02_implementation.md
+    │                        │            (Claude 중단, 복귀 시 Phase 3)
     │
-    ├─ Phase 3   ──▶ [qa-validator]       테스트 + 정적 분석
+    ├─ Phase 3   ──▶ [qa-validator]       테스트 + 정적 분석 (Claude)
     │                        │            FAIL → implementer 재호출 (≤2회)
     │
     ├─ Phase 4             커밋 & 푸시
@@ -116,10 +117,11 @@ PR #42 리뷰해줘
 테스트 (SKIP_TESTS=false)
   Phase 1.5  테스트 파일 선행 작성 (TDD Red)
 
-구현
-  Phase 2    스택별 레이어 순서로 구현 → 02_implementation.md
+구현 — Cursor HANDOFF
+  Phase 2    01_spec.md 기준 구현 → 02_implementation.md
+           "QA 돌려줘"로 Claude 복귀
 
-검증
+검증 — Claude
   Phase 3    테스트 실행 + 정적 분석 → 03_qa_report.md
 
 완료
@@ -133,6 +135,21 @@ PR #42 리뷰해줘
 **SKIP_TESTS:** 단순 수정·스타일 → `true` / 신규 파일·API → `false` (`01_spec.md`)
 
 **패턴 참조:** `local/` > `team/` > 스택 컨벤션 문서
+
+### Claude ↔ Cursor 핸드오프
+
+| 시점 | 도구 | 산출물 |
+|------|------|--------|
+| 스펙 ok 후 | → **Cursor** | `HANDOFF.md`, `01_spec.md` [, `01_test_plan.md`] |
+| 구현 완료 후 | → **Claude** | `02_implementation.md` → Phase 3 QA |
+
+```
+Claude  Phase 1 → 1.5 → HANDOFF.md
+Cursor  Phase 2 (구현)
+Claude  "QA 돌려줘" → Phase 3 → 4 → 4.5
+```
+
+예외: `Cursor 없이 구현해줘` → Claude `implementer` 사용
 
 ### 스택별 레이어 순서 (Phase 2)
 
@@ -164,6 +181,7 @@ PR #42 리뷰해줘
 |------|-------|------|
 | `01_spec.md` | 1 | TDD 스펙, `SKIP_TESTS`, `patterns_applied` |
 | `01_test_plan.md` | 1.5 | 테스트 계획 |
+| `HANDOFF.md` | 2 | Cursor 핸드오프 (`status: pending` → `done`) |
 | `02_implementation.md` | 2 | 구현 보고 |
 | `03_qa_report.md` | 3 | QA 결과 |
 | `04_pattern_reason.md` | 4-B | 패턴 저장 이유 (선택) |
@@ -277,6 +295,7 @@ npm install && npm run dev
 | 룰 | 역할 |
 |----|------|
 | `team-patterns.mdc` | team + local 패턴 **필수 참조** (`alwaysApply`) |
+| `phase2-implement.mdc` | Phase 2 Cursor 구현 (`HANDOFF.md` 기준) |
 | `react-next.mdc` | Next.js App Router |
 | `css.mdc` | Tailwind / CSS |
 | `mvvm-tdd.mdc` | MVVM + TDD |
@@ -294,5 +313,6 @@ npm install && npm run dev
 | **v0.5.0** | `team-patterns/` + team/local 분리, `--sync-patterns` |
 | **v0.5.1** | 커밋→로컬저장 분리, Phase 5 승격 |
 | **v0.5.2** | Cursor `team-patterns.mdc` alwaysApply |
+| **v0.6.0** | Phase 2 Cursor 핸드오프 (`HANDOFF.md`, `phase2-implement.mdc`) |
 
 이전 버전(0.1~0.3.x)은 git history 참조.

@@ -38,6 +38,9 @@ description: |
   [패턴 — 조회/sync]
   local 패턴 보여줘, 패턴 목록, 팀 패턴 sync 해줘, 패턴 동기화
 
+  [핸드오프 — Cursor 구현 후 복귀]
+  구현 완료, QA 돌려줘, Phase 3 해줘, 테스트 검증해줘
+
   [제외 — 이 스킬을 쓰지 않는 경우]
   파일 읽어줘 / 코드 설명해줘 / 이게 뭐야 / 어떻게 동작해
   → 단순 질문·설명 요청은 직접 응답한다.
@@ -46,7 +49,17 @@ description: |
 # 기능 개발 오케스트레이터
 
 프로젝트 스택에 맞는 레이어 순서로 기능을 개발한다.
-**기획 확인 → 스펙 확정 → 테스트 선행 작성 → 레이어 구현 → 테스트 실행 검증 → 커밋 확인** 파이프라인.
+**기획 확인 → 스펙 확정 → 테스트 선행 작성 → (Cursor) 레이어 구현 → 테스트 실행 검증 → 커밋 확인** 파이프라인.
+
+## 도구 역할 (핸드오프)
+
+| Phase | 도구 | 비고 |
+|-------|------|------|
+| 1, 1.5 | **Claude** | 스펙·테스트 선행 작성 |
+| **2** | **Cursor** | 실제 코드 구현만 |
+| 3, 4, 4.5, 5 | **Claude** | QA·커밋·패턴·승격 |
+
+Phase 2에서 `implementer` 에이전트를 **호출하지 않는다**. Cursor 핸드오프 후 사용자 복귀 시 Phase 3부터 이어간다.
 
 ---
 
@@ -68,7 +81,7 @@ description: |
 |---------|-------|------|
 | Code Analyzer | 1 | 스택 감지 + 코드 패턴 탐색 + TDD 스펙 초안 생성 |
 | Test Writer | 1.5 | 확정 스펙 기준 테스트 파일 선행 생성 (TDD Red) |
-| Implementer | 2 | 스택별 레이어 순서로 구현 (TDD Green) |
+| Implementer | 2 | *(Cursor 핸드오프)* 스펙 기준 구현 — Claude 에이전트 미사용 |
 | QA Validator | 3 | 테스트 실행 + 스펙 달성 검증 + 위험 진단 |
 | Pattern Extractor | 4.5 | 커밋 **후** 사용자 승인 시 `local/` 패턴 등록 |
 | Pattern Promoter | 5 | 사용자 요청 시 `team-patterns/` draft PR 승격 |
@@ -143,7 +156,51 @@ Agent(
 
 ---
 
-### Phase 2: 레이어 순서 구현
+### Phase 2: Cursor 핸드오프 (구현)
+
+**`implementer` 에이전트를 호출하지 않는다.** 스펙 확정(Phase 1) 및 테스트 선행(Phase 1.5) 완료 후 Cursor로 넘긴다.
+
+#### Step 2-A: HANDOFF.md 작성
+
+`{WORKSPACE_DIR}/HANDOFF.md` 생성:
+
+```markdown
+# Phase 2 Handoff → Cursor
+
+status: pending
+workspace_dir: {WORKSPACE_DIR}
+stack: {DETECTED_STACK}
+
+## 읽을 파일
+- {WORKSPACE_DIR}/01_spec.md
+- {WORKSPACE_DIR}/01_test_plan.md  # SKIP_TESTS=false 일 때
+
+## 구현 후 작성
+- {WORKSPACE_DIR}/02_implementation.md
+- 이 파일 status → done
+
+## 완료 후 Claude
+"QA 돌려줘" 또는 "Phase 3 해줘"
+```
+
+#### Step 2-B: 사용자 안내 (중단점)
+
+```
+스펙 확정됐습니다. Phase 2 구현은 Cursor에서 진행하세요.
+
+1. Cursor에서 이 프로젝트 열기
+2. "HANDOFF.md / 01_spec.md 기준으로 구현해줘" (또는 phase2-implement 룰 참조)
+3. 완료 후 02_implementation.md 작성
+4. Claude Code로 돌아와 "QA 돌려줘"
+
+워크스페이스: {WORKSPACE_DIR}
+```
+
+**여기서 파이프라인을 중단한다.** Phase 3은 사용자가 Claude로 복귀할 때까지 시작하지 않는다.
+
+#### Step 2-C: Cursor 없이 계속 (예외)
+
+사용자가 "Cursor 없이 구현해줘" / "여기서 구현해"라고 **명시**한 경우에만:
 
 ```
 Agent(
@@ -158,7 +215,7 @@ Agent(
 )
 ```
 
-**스택별 레이어 순서:**
+**스택별 레이어 순서 (Cursor·implementer 공통):**
 
 | 스택 | 레이어 순서 |
 |------|------------|
@@ -169,6 +226,18 @@ Agent(
 | go | models → repository → services → handlers |
 | flutter | models → repository → providers → screens |
 | 미지원 | 코드베이스 탐색 후 기존 패턴 추론 |
+
+---
+
+### Phase 2 → 3 복귀 (Claude)
+
+트리거: `구현 완료`, `QA 돌려줘`, `Phase 3 해줘`, `테스트 검증해줘`
+
+1. `{WORKSPACE_DIR}/02_implementation.md` 존재 확인 (없으면 요청)
+2. `HANDOFF.md`의 `status: done` 확인 (없으면 경고만 하고 진행 가능)
+3. **Phase 3** 실행
+
+최신 `WORKSPACE_DIR`이 불명확하면 `_workspace/`에서 가장 최근 `HANDOFF.md` 또는 `01_spec.md`가 있는 폴더를 사용한다.
 
 ---
 
@@ -188,7 +257,7 @@ Agent(
 )
 ```
 
-FAIL + `RETRY_COUNT < MAX_RETRIES` → Implementer 재호출 (최대 2회).
+FAIL + `RETRY_COUNT < MAX_RETRIES` → **Cursor 핸드오프** (Step 2-B와 동일, `03_qa_report.md` FAIL 사유 포함). `implementer` 재호출하지 않는다.
 
 ---
 
@@ -298,7 +367,7 @@ Agent(
 |------|--------|
 | "스펙 다시 정해줘" | Phase 1 전체 |
 | "테스트 다시 만들어줘" | Phase 1.5 |
-| "구현 수정해줘" | Implementer |
+| "구현 수정해줘" | Phase 2 Cursor 핸드오프 (HANDOFF.md 갱신) |
 | "QA 다시 해줘" | QA Validator |
 | "패턴 저장해줘" | Phase 4.5 (커밋된 작업 기준) |
 | "팀에 올려줘" / "승격해줘" | Phase 5 |
