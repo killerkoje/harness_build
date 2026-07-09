@@ -7,7 +7,7 @@
 
 > **AX 플랫폼**: 커밋 후 `저장해줘` → `local/`. 팀 공유는 `팀에 올려줘` → `team-patterns/` PR → `install.sh --sync-patterns`.
 
-**현재 버전:** `v0.6.0` (`harness_global/VERSION`)
+**현재 버전:** `v0.6.1` (`harness_global/VERSION`)
 
 ---
 
@@ -92,8 +92,9 @@ PR #42 리뷰해줘
     │
     ├─ Phase 1.5 ──▶ [test-writer]        SKIP_TESTS=false 일 때만
     │
-    ├─ Phase 2   ──▶ [Cursor]             HANDOFF.md → 구현 → 02_implementation.md
-    │                        │            (Claude 중단, 복귀 시 Phase 3)
+    ├─ Phase 2   ──▶ 질문: Cursor 핸드오프? 
+    │                 ├─ 예 → HANDOFF.md → [Cursor] → 복귀
+    │                 └─ 아니오 → [implementer] → Phase 3
     │
     ├─ Phase 3   ──▶ [qa-validator]       테스트 + 정적 분석 (Claude)
     │                        │            FAIL → implementer 재호출 (≤2회)
@@ -117,9 +118,10 @@ PR #42 리뷰해줘
 테스트 (SKIP_TESTS=false)
   Phase 1.5  테스트 파일 선행 작성 (TDD Red)
 
-구현 — Cursor HANDOFF
-  Phase 2    01_spec.md 기준 구현 → 02_implementation.md
-           "QA 돌려줘"로 Claude 복귀
+구현 — 선택 (Step 2-0)
+  "Cursor 핸드오프?" 
+    예  → HANDOFF.md → Cursor → "QA 돌려줘"
+    아니오 → Claude implementer → Phase 3
 
 검증 — Claude
   Phase 3    테스트 실행 + 정적 분석 → 03_qa_report.md
@@ -136,20 +138,20 @@ PR #42 리뷰해줘
 
 **패턴 참조:** `local/` > `team/` > 스택 컨벤션 문서
 
-### Claude ↔ Cursor 핸드오프
+### Claude ↔ Cursor 핸드오프 (선택)
 
-| 시점 | 도구 | 산출물 |
-|------|------|--------|
-| 스펙 ok 후 | → **Cursor** | `HANDOFF.md`, `01_spec.md` [, `01_test_plan.md`] |
-| 구현 완료 후 | → **Claude** | `02_implementation.md` → Phase 3 QA |
+Phase 2 직전 질문: **"Cursor로 핸드오프 하시겠습니까?"**
+
+| 답 | 동작 |
+|----|------|
+| `커서` / `핸드오프` | `HANDOFF.md` → Cursor 구현 → Claude `QA 돌려줘` |
+| `여기서` / `구현해줘` (기본) | Claude `implementer` → Phase 3 자동 |
 
 ```
-Claude  Phase 1 → 1.5 → HANDOFF.md
-Cursor  Phase 2 (구현)
-Claude  "QA 돌려줘" → Phase 3 → 4 → 4.5
+Claude  Phase 1 → 1.5 → [Cursor?]
+  ├─ No  → implementer → Phase 3
+  └─ Yes → HANDOFF → Cursor → "QA 돌려줘" → Phase 3
 ```
-
-예외: `Cursor 없이 구현해줘` → Claude `implementer` 사용
 
 ### 스택별 레이어 순서 (Phase 2)
 
@@ -314,5 +316,6 @@ npm install && npm run dev
 | **v0.5.1** | 커밋→로컬저장 분리, Phase 5 승격 |
 | **v0.5.2** | Cursor `team-patterns.mdc` alwaysApply |
 | **v0.6.0** | Phase 2 Cursor 핸드오프 (`HANDOFF.md`, `phase2-implement.mdc`) |
+| **v0.6.1** | Phase 2 Cursor **선택** 질문 (기본 Claude implementer) |
 
 이전 버전(0.1~0.3.x)은 git history 참조.
