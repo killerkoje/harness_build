@@ -4,10 +4,10 @@ globs: ["**/*"]
 alwaysApply: false
 ---
 
-# Phase 2 — Cursor 구현 (HANDOFF)
+# Phase 2 — Cursor 구현 (HANDOFF / cursor-agent)
 
-Claude `dev` 파이프라인에서 **스펙 확정 후** 넘어온 구현 단계다.
-파이프라인 오케스트레이션(Phase 1·1.5·3~)은 Claude가 담당한다.
+Claude `dev` 파이프라인에서 **스펙 확정 후** 실행되는 구현 단계다.
+`run-phase2-cursor.sh`가 `cursor-agent -p`로 이 룰을 적용해 자동 실행한다. IDE에서 수동 구현 시에도 동일 규칙을 따른다.
 
 ## 시작 전 읽기
 
@@ -52,7 +52,8 @@ cat .harness/patterns/team/*.yaml 2>/dev/null
 
 ## Claude로 복귀
 
-구현 후 사용자에게 안내:
+`cursor-agent` 자동 파이프라인에서는 Phase 3가 이어진다.
+수동으로 IDE에서만 구현한 경우:
 
 ```
 구현 완료. Claude Code에서 "QA 돌려줘" 또는 "Phase 3 해줘"라고 하세요.

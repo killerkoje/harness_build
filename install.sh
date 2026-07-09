@@ -151,6 +151,12 @@ echo "$HARNESS_VERSION" > "$TARGET/.harness-version"
 echo "→ team-patterns 동기화 중..."
 bash "$HARNESS_ROOT/scripts/sync-team-patterns.sh" "$TARGET"
 
+# 5-1b. Phase 2 cursor-agent 스크립트
+echo "→ .harness/scripts/ 복사 중..."
+mkdir -p "$TARGET/.harness/scripts"
+cp "$HARNESS_ROOT/scripts/run-phase2-cursor.sh" "$TARGET/.harness/scripts/"
+chmod +x "$TARGET/.harness/scripts/run-phase2-cursor.sh"
+
 # 5-2. 프로젝트 .gitignore 패턴 힌트 (없을 때만 append)
 GITIGNORE_PATTERNS="
 # harness — 팀 패턴은 sync로 갱신, 로컬 패턴만 커밋

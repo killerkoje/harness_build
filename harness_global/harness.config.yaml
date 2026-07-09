@@ -18,7 +18,11 @@ style_mode: auto      # tailwind | pure-css | hybrid | auto (프론트엔드 스
 branch_prefix: feat   # feat | feature | dev
 commit_style: conventional  # conventional | simple
 
-# ─── 패턴 (.harness/patterns/) ────────────────────────────
+# ─── Phase 2 구현 ─────────────────────────────────────────
+# cursor-agent: HANDOFF.md 작성 후 cursor-agent CLI 자동 실행 (기본)
+# claude:        Claude implementer 에이전트로 같은 세션에서 구현
+phase2: cursor-agent
+
 # team/ — team-patterns/ 중앙 레포 (install --sync-patterns로 갱신, 커밋 안 함)
 # local/ — ok+저장 시 pattern-extractor가 이 프로젝트에만 등록 (커밋함)
 patterns:

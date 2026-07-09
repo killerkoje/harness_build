@@ -9,7 +9,7 @@
 **파이프라인:**
 1. **Phase 1** — 코드 분석 + 기획 의도 정리 → **사용자 확인 필수**
 2. **Phase 1.5** — `SKIP_TESTS: false`일 때 테스트 선행 작성
-3. **Phase 2** — **Cursor** 핸드오프로 실제 코드 구현 (`HANDOFF.md`)
+3. **Phase 2** — `cursor-agent` CLI 자동 구현 (`HANDOFF.md` → `run-phase2-cursor.sh`). `phase2: claude` 시 implementer
 4. **Phase 3** — 테스트 실행 + 정적 검증 (Claude)
 5. **Phase 4** — 완료 보고 → 커밋
 6. **Phase 4.5** — 커밋 **후** 질문 → 승인 시 `.harness/patterns/local/` 등록
@@ -87,4 +87,4 @@ harness_global/
 | 2026-07-08 | 팀 패턴 중앙 레포 v0.5.0 | team-patterns/, sync-team-patterns.sh | team/local 분리, --sync-patterns |
 | 2026-07-08 | 패턴 UX v0.5.1 | dev/SKILL.md, pattern-promoter | 커밋→로컬저장 분리, Phase 5 승격 |
 | 2026-07-08 | Cursor team-patterns v0.5.2 | cursor/team-patterns.mdc, install.sh | alwaysApply 팀·로컬 패턴 참조 |
-| 2026-07-09 | Phase 2 Cursor 핸드오프 v0.6.0 | dev/SKILL.md, phase2-implement.mdc | 구현만 Cursor, QA~승격 Claude |
+| 2026-07-09 | Phase 2 cursor-agent 자동 v0.6.0 | dev/SKILL.md, run-phase2-cursor.sh, phase2-implement.mdc | HANDOFF 후 cursor-agent CLI, 한 세션 Phase 3 |
