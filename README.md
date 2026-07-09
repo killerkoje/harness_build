@@ -43,19 +43,45 @@ bash install.sh --sync-patterns /path/to/your-project
 
 ## 파이프라인 (dev)
 
-```
-Phase 1    code-analyzer → 01_spec.md ── 사용자 확인 ──
-Phase 1.5  test-writer (SKIP_TESTS=false)
-Phase 2    cursor-agent 자동 (기본) → 02_implementation.md
-Phase 3    qa-validator → 03_qa_report.md
-Phase 4    커밋 → "로컬 패턴 저장할까요?"
-Phase 4.5  pattern-extractor → local/
-Phase 5    pattern-promoter (별도: "팀에 올려줘")
+**시각화:** [docs/dev-pipeline.md](docs/dev-pipeline.md) (Mermaid flowchart + sequence)
+
+<details>
+<summary>Mermaid 미리보기</summary>
+
+```mermaid
+flowchart TB
+  START([사용자 명령]) --> P1
+  subgraph CLAUDE["Claude Code"]
+    P1["Phase 1 · code-analyzer → 01_spec.md"]
+    GATE{{"사용자 확인"}}
+    P15["Phase 1.5 · test-writer → 01_test_plan.md"]
+    P3["Phase 3 · qa-validator → 03_qa_report.md"]
+    P4["Phase 4 · 커밋 → 패턴 저장?"]
+    P45["Phase 4.5 · pattern-extractor → local/"]
+    P5["Phase 5 · pattern-promoter"]
+  end
+  subgraph CURSOR["Cursor Agent"]
+    P2["Phase 2 · cursor-agent → 02_implementation.md"]
+  end
+  P1 --> GATE --> P15 --> P2 --> P3
+  P3 -->|PASS| P4 --> P45
+  P3 -->|FAIL ≤2회| P2
+  P45 -.->|팀에 올려줘| P5
 ```
 
-**Phase 2 (기본):** `HANDOFF.md` → `.harness/scripts/run-phase2-cursor.sh` → Phase 3 (같은 세션)  
-**대안:** `harness.config.yaml`에 `phase2: claude` → implementer  
-**필요:** `cursor-agent login` (Cursor Pro 포함량 사용)
+</details>
+
+| Phase | 에이전트 | 도구 | 산출물 |
+|-------|----------|------|--------|
+| 1 | code-analyzer | Claude | `01_spec.md` |
+| 1.5 | test-writer | Claude | `01_test_plan.md` |
+| 2 | cursor-agent | **Cursor** | `02_implementation.md` |
+| 3 | qa-validator | Claude | `03_qa_report.md` |
+| 4 | — | Claude | 커밋 |
+| 4.5 | pattern-extractor | Claude | `local/` |
+| 5 | pattern-promoter | Claude | team-patterns PR (별도) |
+
+**Phase 2:** `HANDOFF.md` → `run-phase2-cursor.sh` → Phase 3 (같은 세션) · 대안 `phase2: claude` · 필요 `cursor-agent login`
 
 **패턴 우선순위:** `local/` > `team/` > 스택 컨벤션
 
