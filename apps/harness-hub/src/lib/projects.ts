@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { countProjectIssues } from './issues'
 
 export interface HarnessProject {
   id: string
@@ -10,6 +11,7 @@ export interface HarnessProject {
   patternCount: number
   specCount: number
   screenCount: number
+  issueCount: number
 }
 
 export function encodeProjectId(rootPath: string): string {
@@ -116,6 +118,7 @@ function toProject(root: string): HarnessProject {
     patternCount: countYamlPatterns(root),
     specCount: countWorkspaceSpecs(root) + (fs.existsSync(path.join(root, '.harness/docs/prd.md')) ? 1 : 0),
     screenCount: countScreensEstimate(root),
+    issueCount: countProjectIssues(root),
   }
 }
 

@@ -159,9 +159,10 @@ PROJECTS_ROOT=/path/to/projects   # 하위 폴더 중 harness.config.yaml 있는
 
 ```
 /  (1차 — 프로젝트 선택)
-│   프로젝트명 · 스택 · 하네스 버전 · 패턴/기획/화면 수
+│   프로젝트명 · 스택 · 하네스 버전 · 이슈/패턴/기획/화면 수
 │
-└─ /projects/[id]/  (2차 — 탭 3개)
+└─ /projects/[id]/  (2차 — 탭 4개)
+    ├─ issues     이슈 (Phase 태스크)
     ├─ patterns   패턴
     ├─ specs      기획
     └─ screens    화면
@@ -170,6 +171,7 @@ PROJECTS_ROOT=/path/to/projects   # 하위 폴더 중 harness.config.yaml 있는
 | 화면 | 경로 | 보여주는 것 | 데이터 소스 |
 |------|------|-------------|-------------|
 | **프로젝트 목록** | `/` | 등록된 하네스 프로젝트 카드 | `HARNESS_PROJECTS` / `PROJECTS_ROOT` 스캔 |
+| **이슈** | `/projects/[id]/issues` | run별 Phase 태스크 진행 | `_workspace/*/` 산출물 |
 | **패턴** | `/projects/[id]/patterns` | team + local 패턴, 카테고리·검색 | `.harness/patterns/{team,local}/*.yaml` |
 | **기획** | `/projects/[id]/specs` | PRD + 기능 스펙 목록·본문 | `.harness/docs/prd.md`, `_workspace/*/01_spec.md` |
 | **화면** | `/projects/[id]/screens` | 구현된 페이지·컴포넌트 카드 | `_workspace/*/02_implementation.md` 파싱 |
@@ -179,13 +181,13 @@ PROJECTS_ROOT=/path/to/projects   # 하위 폴더 중 harness.config.yaml 있는
 │ Harness Hub                             │
 ├─────────────────────────────────────────┤
 │ ▶ user-service    next  v0.6.0          │
-│   패턴 24 · 기획 8 · 화면 12             │
+│   이슈 5 · 패턴 24 · 기획 8 · 화면 12      │
 └─────────────────────────────────────────┘
           │ 클릭
           ▼
 ┌─────────────────────────────────────────┐
 │ user-service                            │
-│ [ 패턴 ] [ 기획 ] [ 화면 ]               │
+│ [ 이슈 ] [ 패턴 ] [ 기획 ] [ 화면 ]        │
 ├─────────────────────────────────────────┤
 │ (선택 탭 콘텐츠)                         │
 └─────────────────────────────────────────┘

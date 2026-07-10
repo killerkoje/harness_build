@@ -6,5 +6,5 @@ interface Props {
 
 export default async function ProjectIndex({ params }: Props) {
   const { id } = await params
-  redirect(`/projects/${id}/patterns`)
+  redirect(`/projects/${id}/issues`)
 }

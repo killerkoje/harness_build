@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const TABS = [
+  { href: 'issues', label: '이슈' },
   { href: 'patterns', label: '패턴' },
   { href: 'specs', label: '기획' },
   { href: 'screens', label: '화면' },

@@ -35,7 +35,7 @@ export default function HomePage() {
             {projects.map((project) => (
               <li key={project.id}>
                 <Link
-                  href={`/projects/${project.id}/patterns`}
+                  href={`/projects/${project.id}/issues`}
                   className="block rounded-xl border border-zinc-200 bg-white px-5 py-4 hover:border-indigo-300 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-start justify-between gap-4">
@@ -57,6 +57,7 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="flex gap-4 mt-3 text-xs text-zinc-500">
+                    <span>이슈 {project.issueCount}</span>
                     <span>패턴 {project.patternCount}</span>
                     <span>기획 {project.specCount}</span>
                     <span>화면 {project.screenCount}</span>
