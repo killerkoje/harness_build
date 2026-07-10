@@ -44,6 +44,9 @@ description: |
   [핸드오프 — Cursor 구현 후 복귀]
   구현 완료, QA 돌려줘, Phase 3 해줘, 테스트 검증해줘
 
+  [이슈 — 기능 단위 추적]
+  이슈 1번 수정, issue 2, #3 수정해줘, 이슈 5에서
+
   [제외 — 이 스킬을 쓰지 않는 경우]
   파일 읽어줘 / 코드 설명해줘 / 이게 뭐야 / 어떻게 동작해
   → 단순 질문·설명 요청은 직접 응답한다.
@@ -102,9 +105,15 @@ Phase 2 기본값은 **`cursor-agent` CLI 자동 실행**이다. `phase2: claude
    `DETECTED_STACK` 설정. `auto`이거나 없으면 code-analyzer가 Step 0에서 감지.
    `PHASE2_MODE` = `harness.config.yaml`의 `phase2` 값. 없으면 **`cursor-agent`**.
    사용자가 이번 요청에서 `여기서 구현` / `Claude로 구현` / `Cursor 없이` → `PHASE2_MODE=claude` (일회성 오버라이드).
-2. `WORKSPACE_DIR` 결정
-   - 오늘 날짜(YYYY-MM-DD) + 요청에서 추출한 영문 슬러그(최대 20자, kebab-case)
-   - 예) `_workspace/2026-07-08_user-login`
+2. **이슈 ID (`ISSUE_ID`) — 기능 단위 (고정)**
+   - `이슈 N번`, `issue N`, `#N` → **수정/amendment**: `ISSUE_ID=N`
+   - `.harness/issues/N.yaml` 읽기 → 최신 `runs[].run_id` 를 `PARENT_RUN_ID`로 기록
+   - **신규 기능** → `ISSUE_ID` = `.harness/issues/*.yaml` 최대 id + 1 (없으면 `1`)
+   - `WORKSPACE_DIR` = `_workspace/{YYYY-MM-DD}_issue-{ISSUE_ID}_{slug}`
+   - 예) `_workspace/2026-07-10_issue-1_user-login` · 수정 `_workspace/2026-07-11_issue-1_pw-fix`
+
+3. `WORKSPACE_DIR` 결정
+   - 오늘 날짜 + `issue-{ISSUE_ID}_` + 슬러그 (위 규칙 우선)
    - 해당 폴더 이미 존재 → 부분 재실행, 기존 파일 재사용
    - 이후 모든 파일 경로는 `{WORKSPACE_DIR}/` prefix
 
@@ -138,6 +147,19 @@ Agent(
 ```
 
 > 사용자 수정 반영 후 `{WORKSPACE_DIR}/01_spec.md`에 확정 저장.
+
+**`01_spec.md` frontmatter (필수):**
+
+```yaml
+---
+issue_id: {ISSUE_ID}
+parent_run_id: {PARENT_RUN_ID or null}
+kind: initial | amendment
+title: 기능 제목
+---
+```
+
+수정 요청(`이슈 N번`)이면 `kind: amendment`, `parent_run_id`에 이전 run_id.
 
 ---
 
@@ -288,10 +310,18 @@ FAIL + `RETRY_COUNT < MAX_RETRIES`:
 
 | 사용자 응답 | 처리 |
 |------------|------|
-| `ok` / `yes` / `ㅇㅋ` / `커밋해줘` | 커밋 & 푸시 → **Step 4-A로 진행** |
+| `ok` / `yes` / `ㅇㅋ` / `커밋해줘` | 커밋 & 푸시 → `harness-report.sh` → **Step 4-A** |
 | `no` / `아니오` | 종료 |
 
 > `ok + 저장` 레거시: 커밋 후 Step 4-A에서 저장으로 이어짐 (하위 호환).
+
+커밋 성공 후 **반드시** 이슈 동기화:
+
+```bash
+bash .harness/scripts/harness-report.sh
+```
+
+`.harness/issues/{ISSUE_ID}.yaml` 에 run·변경 파일이 누적된다. Hub 이슈 탭에서 추적.
 
 #### Step 4-A: 로컬 패턴 저장 질문 (커밋 성공 후 필수)
 

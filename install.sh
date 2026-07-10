@@ -155,15 +155,19 @@ bash "$HARNESS_ROOT/scripts/sync-team-patterns.sh" "$TARGET"
 echo "→ .harness/scripts/ 복사 중..."
 mkdir -p "$TARGET/.harness/scripts"
 cp "$HARNESS_ROOT/scripts/run-phase2-cursor.sh" "$TARGET/.harness/scripts/"
+cp "$HARNESS_ROOT/scripts/harness-report.sh" "$TARGET/.harness/scripts/"
 chmod +x "$TARGET/.harness/scripts/run-phase2-cursor.sh"
+chmod +x "$TARGET/.harness/scripts/harness-report.sh"
+mkdir -p "$TARGET/.harness/issues"
 
 # 5-2. 프로젝트 .gitignore 패턴 힌트 (없을 때만 append)
 GITIGNORE_PATTERNS="
-# harness — 팀 패턴은 sync로 갱신, 로컬 패턴만 커밋
+# harness — 팀 패턴은 sync로 갱신, 로컬·이슈만 커밋
 .harness/*
 !.harness/patterns/
 .harness/patterns/team/
-!.harness/patterns/local/"
+!.harness/patterns/local/
+!.harness/issues/"
 if [ -f "$TARGET/.gitignore" ]; then
   if ! grep -q ".harness/patterns/team/" "$TARGET/.gitignore" 2>/dev/null; then
     echo "$GITIGNORE_PATTERNS" >> "$TARGET/.gitignore"
