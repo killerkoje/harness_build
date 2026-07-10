@@ -37,19 +37,43 @@ bash install.sh --sync-patterns /path/to/your-project   # 팀 패턴 갱신
 
 ## 파이프라인 (dev)
 
-[docs/dev-pipeline.md](docs/dev-pipeline.md) — Mermaid flowchart
+**시각화:** [docs/dev-pipeline.md](docs/dev-pipeline.md)
+
+```mermaid
+flowchart TB
+  START([사용자 지시]) --> P0
+  subgraph ISSUE["이슈 · 프로젝트 단위"]
+    P0[Phase 0 ISSUE_ID]
+    STORE[(.harness/issues/N.yaml)]
+  end
+  subgraph CLAUDE[Claude Code]
+    P1[Phase 1 스펙]
+    GATE{{사용자 확인}}
+    P15[Phase 1.5 테스트]
+    P3[Phase 3 QA]
+    P4[Phase 4 커밋]
+    REP[harness-report]
+    P45[Phase 4.5 패턴]
+  end
+  subgraph CURSOR[Cursor]
+    P2[Phase 2 cursor-agent]
+  end
+  P0 --> P1 --> GATE --> P15 --> P2 --> P3
+  P3 -->|PASS| P4 --> REP --> STORE
+  P3 -->|FAIL| P2
+  P4 --> P45
+  AMEND([이슈 N번 수정]) -.-> P0
+```
 
 | Phase | 산출물 |
 |-------|--------|
-| 1 | `01_spec.md` (+ `issue_id` frontmatter) |
-| 1.5 | `01_test_plan.md` |
-| 2 | `02_implementation.md` (cursor-agent 기본) |
+| 0 | `ISSUE_ID`, `_workspace/..._issue-N_...` |
+| 1 | `01_spec.md` |
+| 2 | `02_implementation.md` |
 | 3 | `03_qa_report.md` |
-| 4 | 커밋 → **`harness-report.sh`** |
-| 4.5 | `local/` 패턴 |
-| 5 | team-patterns PR (별도) |
+| 4 | 커밋 → `harness-report.sh` → `.harness/issues/` |
 
-**Phase 2:** `HANDOFF.md` → `run-phase2-cursor.sh` · 대안 `phase2: claude`
+상세·Hub 연동: [docs/dev-pipeline.md](docs/dev-pipeline.md)
 
 ---
 
