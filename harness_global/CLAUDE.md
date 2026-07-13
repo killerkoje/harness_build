@@ -31,6 +31,23 @@
 
 ---
 
+## 하네스: Issue Board (기획 → 와이어 → 승인)
+
+**목표:** 기획/이슈/와이어프레임/디자인시스템을 SQLite 보드에서 관리하고, 승인된 이슈만 dev 파이프라인으로 넘긴다.
+
+**커맨드:**
+| 커맨드 | 역할 |
+|--------|------|
+| `/ib-plan` | 기획 작성·승인·**개정 시 이슈 동기화** |
+| `/ib-wireframe` | 이슈 + 디자인시스템 기반 화면 와이어 적재 |
+| `/ib-approve` | 개발 착수 게이트 |
+
+**기획 변경 연동:** `update_plan(..., approved)` 또는 `sync_plan_issues` → 이슈 create/update + 변경분 와이어 무효화 → `/ib-wireframe` 재실행 → 필요 시 `/ib-approve` 재승인.
+
+**트리거:** "기획해줘", "와이어프레임", "이슈보드", `/ib-*` 요청 시 위 커맨드를 사용하라.
+
+---
+
 ## 컨벤션 문서
 
 Next.js 스택에서는 코드 작성 전 아래 두 문서를 참조한다.
@@ -52,6 +69,10 @@ harness_global/
 ├── REACT_NEXT_CONVENTIONS.md          ← Next.js 스택 컨벤션 (next 스택에서만 참조)
 ├── CSS_CONVENTIONS.md                 ← CSS/Tailwind 스타일 규칙 (next 스택에서만 참조)
 └── .claude/
+    ├── commands/
+    │   ├── ib-plan.md                 ← 기획 · 개정 시 이슈 동기화
+    │   ├── ib-wireframe.md            ← 이슈+DS 기반 와이어프레임
+    │   └── ib-approve.md              ← 개발 승인 게이트
     ├── skills/
     │   ├── dev/SKILL.md               ← 기능 개발 오케스트레이터 (범용, TDD 파이프라인)
     │   ├── code-review/SKILL.md       ← 기획-코드 리뷰어 (범용)

@@ -124,22 +124,39 @@ phase2: cursor-agent   # cursor-agent | claude
 
 ## Issue Board
 
-`apps/issue-board`(대시보드, Next.js) + `apps/issue-board-mcp`(백엔드, Node/TS) 2개 앱으로 구성. 백엔드는 SQLite에 기획·이슈·와이어프레임을 저장하고 REST(`/api/*`)와 MCP(`/mcp`)를 함께 제공한다.
+`apps/issue-board`(대시보드, Next.js) + `apps/issue-board-mcp`(백엔드, Node/TS) 2개 앱으로 구성. 백엔드는 SQLite에 기획·이슈·와이어프레임·디자인시스템을 저장하고 REST(`/api/*`)와 MCP(`/mcp`)를 함께 제공한다.
 
 ```bash
 cd apps/issue-board-mcp && npm install && npm run dev   # :4000 (REST /api/*, MCP /mcp)
 cd apps/issue-board && npm install && npm run dev       # :5173 (대시보드)
 ```
 
-**현재 탭 (3개):** 기획 · 이슈 · 와이어프레임 — 패턴 탭은 아직 없음 (범위 밖, 추후 개발 시점 작업으로 이연)
+**현재 탭 (4개):** 기획 · 이슈 · 와이어프레임 · 디자인시스템 — 팀 패턴 탭은 아직 없음 (개발 시점 2차로 이연)
 
 | 탭 | 데이터 |
 |----|--------|
-| 기획 | issue-board-mcp DB (plans) |
-| 이슈 | issue-board-mcp DB (issues) |
-| 와이어프레임 | issue-board-mcp DB (wireframes) |
+| 기획 | `plans` (+ `plan_snapshots`) |
+| 이슈 | `issues` (`planned` → `wireframed` → `dev_approved`) |
+| 와이어프레임 | `wireframes` (이슈당 screens JSON, `region.component`로 DS 컴포넌트 표기) |
+| 디자인시스템 | `design_systems` (토큰·컴포넌트 카탈로그·`@scope/ui` / Storybook 메타) |
 
-`/ib-plan`으로 기획 작성 → Issue Board 대시보드(기획/이슈/와이어프레임)에서 확인 → `/ib-approve <이슈 번호>`로 CLI에서 개발 승인(게이트) → "이슈 N번 개발해줘"로 기존 dev 파이프라인 착수. (`/ib-wireframe`, `/ib-issues` 같은 전용 명령은 아직 없음 — 대시보드에서 직접 확인)
+### 커맨드 흐름
+
+```
+/ib-plan          기획 작성·승인 (MVP 행 → 이슈 생성)
+       ↓
+/ib-wireframe     이슈 + 디자인시스템 기반 화면 와이어 적재
+       ↓
+대시보드 검토
+       ↓
+/ib-approve       개발 착수 게이트 → .harness/issues/{number}.yaml 시딩
+       ↓
+"이슈 N번 개발해줘"  → 기존 TDD 파이프라인
+```
+
+**기획 개정 연동:** 이미 승인된 기획을 수정한 뒤 `update_plan(..., approved)` 또는 MCP `sync_plan_issues` → 이슈 create/update, 변경분은 와이어 무효화(`planned`) → `/ib-wireframe` 재실행 → 필요 시 `/ib-approve` 재승인. (표에서 빠진 기능 행은 이슈를 삭제하지 않고 orphaned로만 보고)
+
+디자인시스템은 [Turborepo design-system](https://github.com/vercel/turborepo/tree/main/examples/design-system)처럼 `packages/ui` + Storybook(`apps/docs`)을 소스 오브 트루스로 두고, 보드는 조회·이슈 매핑용이다. 무신사 스토어 목데이터 시드: `node apps/issue-board-mcp/scripts/seed-musinsa-store.mjs` → `http://localhost:5173/projects/3/...`
 
 스택: Next.js 15 · React 19 · Tailwind v4 · TS (대시보드) / Node 20 · TypeScript · better-sqlite3 · express · `@modelcontextprotocol/sdk` (백엔드)
 
@@ -166,3 +183,4 @@ harness_build/
 | v0.6.0 | cursor-agent Phase 2, Harness Hub (폐기, issue-board로 대체) |
 | v0.6.1 | 기능 이슈 추적 (`.harness/issues/`, 이슈 탭) |
 | v0.7.0 | Issue Board 신설 (기획/이슈/와이어프레임, SQLite+REST+MCP), `/ib-plan`·`/ib-approve` 커맨드, Harness Hub 대체 |
+| v0.8.0 | 디자인시스템 탭·`design_systems` 테이블, `/ib-wireframe`, 기획 개정 시 `sync_plan_issues` (이슈/와이어 연동) |

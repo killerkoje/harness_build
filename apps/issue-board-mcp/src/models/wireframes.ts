@@ -39,3 +39,8 @@ export function upsertWireframe(
     .run(issueId, JSON.stringify(screens), now, now)
   return { id: Number(result.lastInsertRowid), issueId, screens, createdAt: now, updatedAt: now }
 }
+
+export function deleteWireframeByIssue(db: Database.Database, issueId: number): boolean {
+  const result = db.prepare('DELETE FROM wireframes WHERE issue_id = ?').run(issueId)
+  return result.changes > 0
+}

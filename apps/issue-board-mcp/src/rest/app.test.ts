@@ -105,4 +105,31 @@ describe('REST API', () => {
     const yamlPath = path.join(projectRoot, '.harness/issues/1.yaml')
     expect(fs.existsSync(yamlPath)).toBe(true)
   })
+
+  it('PUT/GET design-system upserts and returns tokens + component issue links', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const body = {
+      name: 'Musinsa Store DS',
+      version: '0.1.0',
+      packageName: '@musinsa/ui',
+      storybookPath: 'apps/docs',
+      tokens: { color: { brand: { primary: '#111111' } } },
+      components: [
+        {
+          name: 'Button',
+          packageExport: '@musinsa/ui/button',
+          description: 'CTA',
+          issueNumbers: [4],
+        },
+      ],
+    }
+    const put = await request(app).put(`/api/projects/${project.id}/design-system`).send(body)
+    expect(put.status).toBe(200)
+    expect(put.body.packageName).toBe('@musinsa/ui')
+
+    const get = await request(app).get(`/api/projects/${project.id}/design-system`)
+    expect(get.status).toBe(200)
+    expect(get.body.components[0].issueNumbers).toEqual([4])
+    expect(get.body.tokens.color.brand.primary).toBe('#111111')
+  })
 })

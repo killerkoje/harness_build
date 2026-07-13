@@ -7,6 +7,7 @@ const TABS = [
   { href: 'plan', label: '기획' },
   { href: 'issues', label: '이슈' },
   { href: 'wireframe', label: '와이어프레임' },
+  { href: 'design-system', label: '디자인시스템' },
 ] as const
 
 export default function TabNav({ projectId }: { projectId: number }) {

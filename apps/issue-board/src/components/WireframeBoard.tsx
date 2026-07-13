@@ -12,6 +12,29 @@ const REGION_CLASS: Record<string, string> = {
   footer: 'w-full h-8 bg-zinc-100 rounded flex items-center px-3 text-xs text-zinc-500',
 }
 
+function RegionBox({
+  type,
+  label,
+  component,
+}: {
+  type: string
+  label: string
+  component?: string
+}) {
+  return (
+    <div className={REGION_CLASS[type] ?? REGION_CLASS.content}>
+      <div className="flex items-center justify-between gap-2">
+        <span>{label}</span>
+        {component && (
+          <span className="shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+            {component}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ScreenBox({ screen }: { screen: WireframeScreen }) {
   const nav = screen.layout.regions.find((r) => r.type === 'nav')
   const sidebar = screen.layout.regions.find((r) => r.type === 'sidebar')
@@ -24,14 +47,14 @@ function ScreenBox({ screen }: { screen: WireframeScreen }) {
         {screen.route && <span className="text-xs font-mono text-indigo-600">{screen.route}</span>}
       </div>
       <div className="space-y-2">
-        {nav && <div className={REGION_CLASS.nav}>{nav.label}</div>}
+        {nav && <RegionBox type="nav" label={nav.label} component={nav.component} />}
         <div className="flex gap-2">
-          {sidebar && <div className={REGION_CLASS.sidebar}>{sidebar.label}</div>}
+          {sidebar && (
+            <RegionBox type="sidebar" label={sidebar.label} component={sidebar.component} />
+          )}
           <div className="flex-1 space-y-2">
             {rest.map((r, i) => (
-              <div key={i} className={REGION_CLASS[r.type] ?? REGION_CLASS.content}>
-                {r.label}
-              </div>
+              <RegionBox key={i} type={r.type} label={r.label} component={r.component} />
             ))}
           </div>
         </div>

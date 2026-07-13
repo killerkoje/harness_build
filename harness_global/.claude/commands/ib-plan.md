@@ -72,10 +72,20 @@ $ARGUMENTS
 ### 4) 보고
 
 생성된 `projectId`와 `planId`를 출력하고, 다음 단계를 안내한다:
-"기획을 대시보드(http://localhost:5173)에서 검토·수정한 뒤 `/ib-wireframe` → `/ib-issues` 순으로 진행하세요."
+"기획을 대시보드(http://localhost:5173)에서 검토한 뒤 `/ib-wireframe`으로 화면을 그리고 `/ib-approve`로 개발 승인하세요."
+
+## 기획 개정 (이미 승인·이슈가 있는 경우)
+
+1. `update_plan(planId, sections)`로 MVP 기능표를 수정한다.
+2. `update_plan(planId, status="approved")` 또는 `sync_plan_issues({ planId })` 호출:
+   - **신규** 기능 행 → 이슈 생성 (`planned`)
+   - **변경**된 행(같은 title) → 이슈 갱신 + **와이어프레임 무효화** (`planned`)
+   - 표에서 **빠진** 행 → 이슈는 삭제하지 않고 `orphaned`로만 보고 (수동 확인)
+3. 변경·신규 이슈에 `/ib-wireframe`을 다시 실행한다.
+4. 이미 `dev_approved`였던 이슈가 무효화되면 재검토 후 `/ib-approve` 필요.
 
 ## 주의
 
 - 이 커맨드는 issue-board MCP 서버(`http://localhost:4000/mcp`)에 의존한다.
   MCP 툴이 안 보이면 대상 프로젝트에 `.mcp.json`이 있는지, 서버가 떠 있는지 먼저 확인하라.
-- 코드를 작성하지 마라. 이 단계의 산출물은 기획서 하나다.
+- 코드를 작성하지 마라. 이 단계의 산출물은 기획서(및 이슈 동기화)다.

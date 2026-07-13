@@ -3,9 +3,10 @@ import express from 'express'
 import cors from 'cors'
 import type Database from 'better-sqlite3'
 import { getOrCreateProject, getProject } from '../models/projects.js'
-import { createPlan, getPlan, approvePlanAndCreateIssues } from '../models/plans.js'
+import { createPlan, getPlan, approvePlanAndCreateIssues, syncIssuesFromPlan } from '../models/plans.js'
 import { listIssuesByProject, getIssue, setIssueStatus, approveIssueForDev } from '../models/issues.js'
 import { upsertWireframe, getWireframeByIssue } from '../models/wireframes.js'
+import { getDesignSystemByProject, upsertDesignSystem } from '../models/design-systems.js'
 
 export function createApp(db: Database.Database) {
   const app = express()
@@ -42,8 +43,24 @@ export function createApp(db: Database.Database) {
     const plan = getPlan(db, planId)
     if (!plan) return res.status(404).json({ error: 'not found' })
 
+    if (plan.status === 'approved') {
+      const result = syncIssuesFromPlan(db, planId)
+      return res.json(result)
+    }
+
     const result = approvePlanAndCreateIssues(db, planId)
     res.json(result)
+  })
+
+  app.post('/api/plans/:id/sync-issues', (req, res) => {
+    const planId = Number(req.params.id)
+    const plan = getPlan(db, planId)
+    if (!plan) return res.status(404).json({ error: 'not found' })
+    try {
+      res.json(syncIssuesFromPlan(db, planId))
+    } catch (e) {
+      res.status(400).json({ error: e instanceof Error ? e.message : String(e) })
+    }
   })
 
   app.get('/api/projects/:projectId/issues', (req, res) => {
@@ -77,6 +94,33 @@ export function createApp(db: Database.Database) {
     const updated = approveIssueForDev(db, issueId)
     if (!updated) return res.status(404).json({ error: 'not found' })
     res.json(updated)
+  })
+
+  app.get('/api/projects/:projectId/design-system', (req, res) => {
+    const ds = getDesignSystemByProject(db, Number(req.params.projectId))
+    if (!ds) return res.status(404).json({ error: 'not found' })
+    res.json(ds)
+  })
+
+  app.put('/api/projects/:projectId/design-system', (req, res) => {
+    const projectId = Number(req.params.projectId)
+    const project = getProject(db, projectId)
+    if (!project) return res.status(404).json({ error: 'not found' })
+
+    const { name, version, packageName, storybookPath, tokens, components } = req.body ?? {}
+    if (!name || !version || !packageName || !storybookPath || tokens == null || !Array.isArray(components)) {
+      return res.status(400).json({ error: 'invalid body' })
+    }
+
+    const ds = upsertDesignSystem(db, projectId, {
+      name,
+      version,
+      packageName,
+      storybookPath,
+      tokens,
+      components,
+    })
+    res.json(ds)
   })
 
   // Safety net: any error thrown/forwarded from a route handler above lands

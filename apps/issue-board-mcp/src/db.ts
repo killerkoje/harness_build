@@ -50,6 +50,19 @@ export function createDb(filename: string): Database.Database {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS design_systems (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL UNIQUE REFERENCES projects(id),
+      name TEXT NOT NULL,
+      version TEXT NOT NULL,
+      package_name TEXT NOT NULL,
+      storybook_path TEXT NOT NULL,
+      tokens TEXT NOT NULL,
+      components TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `)
   return db
 }

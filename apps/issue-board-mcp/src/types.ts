@@ -55,6 +55,8 @@ export interface Issue {
 export interface WireframeRegion {
   type: string
   label: string
+  /** 디자인시스템 컴포넌트명 (예: ProductCard, TabBar) — 렌더러가 강조 표시 */
+  component?: string
 }
 
 export interface WireframeScreen {
@@ -67,6 +69,27 @@ export interface Wireframe {
   id: number
   issueId: number
   screens: WireframeScreen[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** Turborepo design-system 스타일 패키지 메타 + 토큰/컴포넌트 카탈로그 */
+export interface DesignSystemComponent {
+  name: string
+  packageExport: string
+  description: string
+  issueNumbers: number[]
+}
+
+export interface DesignSystem {
+  id: number
+  projectId: number
+  name: string
+  version: string
+  packageName: string
+  storybookPath: string
+  tokens: Record<string, unknown>
+  components: DesignSystemComponent[]
   createdAt: string
   updatedAt: string
 }

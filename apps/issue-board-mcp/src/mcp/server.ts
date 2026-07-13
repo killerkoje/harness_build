@@ -3,9 +3,23 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type Database from 'better-sqlite3'
 import { getOrCreateProject } from '../models/projects.js'
-import { createPlan, getPlan, snapshotPlan, updatePlanSections, approvePlanAndCreateIssues } from '../models/plans.js'
-import { getIssue, approveIssueForDev } from '../models/issues.js'
+import {
+  createPlan,
+  getPlan,
+  snapshotPlan,
+  updatePlanSections,
+  approvePlanAndCreateIssues,
+  syncIssuesFromPlan,
+} from '../models/plans.js'
+import {
+  getIssue,
+  getIssueByNumber,
+  listIssuesByProject,
+  approveIssueForDev,
+  setIssueStatus,
+} from '../models/issues.js'
 import { upsertWireframe } from '../models/wireframes.js'
+import { upsertDesignSystem, getDesignSystemByProject } from '../models/design-systems.js'
 
 const mvpFeatureSchema = z.object({
   priority: z.enum(['높음', '보통', '낮음']),
@@ -18,6 +32,12 @@ const planSectionsSchema = z.object({
   targetUsers: z.string(),
   mvpFeatures: z.array(mvpFeatureSchema),
   outOfScope: z.string(),
+})
+
+const regionSchema = z.object({
+  type: z.string(),
+  label: z.string(),
+  component: z.string().optional(),
 })
 
 export function createMcpServer(db: Database.Database): McpServer {
@@ -36,7 +56,7 @@ export function createMcpServer(db: Database.Database): McpServer {
 
   server.tool(
     'update_plan',
-    '기획을 갱신한다. sections만 주면 draft 내용을 덮어쓰고(버전 안 쌓임), status="approved"를 주면 확정 + 자동 스냅샷 + MVP 기능표 각 행을 이슈로 생성한다. /ib-plan 커맨드의 `update_plan(planId, status="approved")` 호출과 대응한다',
+    '기획을 갱신한다. sections만 주면 내용 덮어쓰기. status="approved"면 최초 승인+이슈 생성, 이미 approved면 sync_plan_issues와 동일하게 이슈 동기화',
     {
       planId: z.number(),
       sections: planSectionsSchema.optional(),
@@ -49,6 +69,11 @@ export function createMcpServer(db: Database.Database): McpServer {
         const existing = getPlan(db, planId)
         if (!existing) {
           return { content: [{ type: 'text', text: `plan ${planId} not found` }], isError: true }
+        }
+        if (existing.status === 'approved') {
+          const result = syncIssuesFromPlan(db, planId)
+          snapshotPlan(db, planId, 'amended')
+          return { content: [{ type: 'text', text: JSON.stringify(result) }] }
         }
         const result = approvePlanAndCreateIssues(db, planId)
         return { content: [{ type: 'text', text: JSON.stringify(result) }] }
@@ -69,8 +94,64 @@ export function createMcpServer(db: Database.Database): McpServer {
   )
 
   server.tool(
+    'sync_plan_issues',
+    '승인된 기획의 MVP 기능표와 이슈를 동기화한다. 신규 생성 / 변경 시 와이어프레임 무효화 / 제거된 기능은 orphaned로 보고(삭제 안 함)',
+    { planId: z.number() },
+    async ({ planId }) => {
+      try {
+        const result = syncIssuesFromPlan(db, planId)
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+      } catch (e) {
+        return {
+          content: [{ type: 'text', text: e instanceof Error ? e.message : String(e) }],
+          isError: true,
+        }
+      }
+    }
+  )
+
+  server.tool(
+    'list_issues',
+    '프로젝트의 이슈 목록을 반환한다',
+    { projectRoot: z.string() },
+    async ({ projectRoot }) => {
+      const project = getOrCreateProject(db, projectRoot)
+      const issues = listIssuesByProject(db, project.id)
+      return { content: [{ type: 'text', text: JSON.stringify(issues) }] }
+    }
+  )
+
+  server.tool(
+    'get_issue_by_number',
+    '프로젝트 표시 번호(number)로 이슈를 조회한다',
+    { projectRoot: z.string(), number: z.number() },
+    async ({ projectRoot, number }) => {
+      const project = getOrCreateProject(db, projectRoot)
+      const issue = getIssueByNumber(db, project.id, number)
+      if (!issue) {
+        return { content: [{ type: 'text', text: `issue #${number} not found` }], isError: true }
+      }
+      return { content: [{ type: 'text', text: JSON.stringify(issue) }] }
+    }
+  )
+
+  server.tool(
+    'get_design_system',
+    '프로젝트의 디자인 시스템을 조회한다',
+    { projectRoot: z.string() },
+    async ({ projectRoot }) => {
+      const project = getOrCreateProject(db, projectRoot)
+      const ds = getDesignSystemByProject(db, project.id)
+      if (!ds) {
+        return { content: [{ type: 'text', text: 'design system not found' }], isError: true }
+      }
+      return { content: [{ type: 'text', text: JSON.stringify(ds) }] }
+    }
+  )
+
+  server.tool(
     'create_wireframe',
-    '이슈의 화면 레이아웃(박스형 와이어프레임 스키마)을 저장한다',
+    '이슈의 화면 레이아웃(와이어프레임)을 저장한다. region.component에 DS 컴포넌트명을 넣을 수 있다',
     {
       issueId: z.number(),
       screens: z.array(
@@ -78,7 +159,7 @@ export function createMcpServer(db: Database.Database): McpServer {
           name: z.string(),
           route: z.string().nullable(),
           layout: z.object({
-            regions: z.array(z.object({ type: z.string(), label: z.string() })),
+            regions: z.array(regionSchema),
           }),
         })
       ),
@@ -89,6 +170,7 @@ export function createMcpServer(db: Database.Database): McpServer {
         return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
       }
       const wireframe = upsertWireframe(db, issueId, screens)
+      setIssueStatus(db, issueId, 'wireframed')
       return { content: [{ type: 'text', text: JSON.stringify(wireframe) }] }
     }
   )
@@ -103,6 +185,39 @@ export function createMcpServer(db: Database.Database): McpServer {
         return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
       }
       return { content: [{ type: 'text', text: JSON.stringify(updated) }] }
+    }
+  )
+
+  server.tool(
+    'upsert_design_system',
+    '프로젝트의 디자인 시스템(토큰·컴포넌트 카탈로그·패키지 경로)을 저장한다. Turborepo packages/ui + Storybook 메타를 포함한다',
+    {
+      projectRoot: z.string(),
+      name: z.string(),
+      version: z.string(),
+      packageName: z.string(),
+      storybookPath: z.string(),
+      tokens: z.record(z.string(), z.unknown()),
+      components: z.array(
+        z.object({
+          name: z.string(),
+          packageExport: z.string(),
+          description: z.string(),
+          issueNumbers: z.array(z.number()),
+        })
+      ),
+    },
+    async ({ projectRoot, name, version, packageName, storybookPath, tokens, components }) => {
+      const project = getOrCreateProject(db, projectRoot)
+      const ds = upsertDesignSystem(db, project.id, {
+        name,
+        version,
+        packageName,
+        storybookPath,
+        tokens,
+        components,
+      })
+      return { content: [{ type: 'text', text: JSON.stringify(ds) }] }
     }
   )
 

@@ -15,6 +15,7 @@ describe('createDb', () => {
     expect(tables).toContain('plan_snapshots')
     expect(tables).toContain('issues')
     expect(tables).toContain('wireframes')
+    expect(tables).toContain('design_systems')
   })
 
   it('enforces unique (project_id, number) on issues', () => {

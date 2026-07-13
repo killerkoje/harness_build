@@ -1,7 +1,14 @@
 // src/models/plans.ts
 import type Database from 'better-sqlite3'
 import type { Issue, Plan, PlanSections, PlanSnapshot } from '../types.js'
-import { createIssuesFromPlan } from './issues.js'
+import {
+  createIssuesFromPlan,
+  getIssue,
+  listIssuesByProject,
+  setIssueStatus,
+  updateIssueFields,
+} from './issues.js'
+import { deleteWireframeByIssue } from './wireframes.js'
 
 function rowToPlan(row: any): Plan {
   return {
@@ -77,6 +84,79 @@ export function approvePlanAndCreateIssues(
     return { plan, issues }
   })
   return run()
+}
+
+/**
+ * Sync issues to the plan's current MVP feature table (title match).
+ * - New features → create (planned)
+ * - Changed priority/description → update + drop wireframe + status planned
+ * - Removed from plan → left as orphaned (not deleted)
+ */
+export function syncIssuesFromPlan(
+  db: Database.Database,
+  planId: number
+): {
+  plan: Plan
+  created: Issue[]
+  updated: Issue[]
+  unchanged: Issue[]
+  orphaned: Issue[]
+  wireframesInvalidated: number[]
+} {
+  const plan = getPlan(db, planId)
+  if (!plan) throw new Error(`plan ${planId} not found`)
+
+  const features = plan.sections.mvpFeatures
+  const existing = listIssuesByProject(db, plan.projectId).filter((i) => i.planId === planId)
+  const byTitle = new Map(existing.map((i) => [i.title, i]))
+
+  const created: Issue[] = []
+  const updated: Issue[] = []
+  const unchanged: Issue[] = []
+  const wireframesInvalidated: number[] = []
+  const matchedIds = new Set<number>()
+
+  const run = db.transaction(() => {
+    for (const feature of features) {
+      const prev = byTitle.get(feature.title)
+      if (!prev) {
+        const [issue] = createIssuesFromPlan(db, plan.projectId, planId, [feature])
+        created.push(issue)
+        matchedIds.add(issue.id)
+        continue
+      }
+
+      matchedIds.add(prev.id)
+      const changed =
+        prev.priority !== feature.priority || prev.description !== feature.description
+
+      if (!changed) {
+        unchanged.push(prev)
+        continue
+      }
+
+      updateIssueFields(db, prev.id, {
+        priority: feature.priority,
+        description: feature.description,
+      })
+      if (deleteWireframeByIssue(db, prev.id)) {
+        wireframesInvalidated.push(prev.id)
+      }
+      setIssueStatus(db, prev.id, 'planned')
+      updated.push(getIssue(db, prev.id)!)
+    }
+  })
+  run()
+
+  const orphaned = existing.filter((i) => !matchedIds.has(i.id))
+  return {
+    plan: getPlan(db, planId)!,
+    created,
+    updated,
+    unchanged,
+    orphaned,
+    wireframesInvalidated,
+  }
 }
 
 export function listSnapshots(db: Database.Database, planId: number): PlanSnapshot[] {

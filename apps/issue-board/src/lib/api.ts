@@ -15,7 +15,7 @@ export interface Issue {
 export interface WireframeScreen {
   name: string
   route: string | null
-  layout: { regions: { type: string; label: string }[] }
+  layout: { regions: { type: string; label: string; component?: string }[] }
 }
 
 export interface Wireframe {
@@ -35,6 +35,24 @@ export interface Plan {
     mvpFeatures: { priority: string; title: string; description: string }[]
     outOfScope: string
   }
+}
+
+export interface DesignSystemComponent {
+  name: string
+  packageExport: string
+  description: string
+  issueNumbers: number[]
+}
+
+export interface DesignSystem {
+  id: number
+  projectId: number
+  name: string
+  version: string
+  packageName: string
+  storybookPath: string
+  tokens: Record<string, unknown>
+  components: DesignSystemComponent[]
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_ISSUE_BOARD_API_URL ?? 'http://localhost:4000'
@@ -64,4 +82,10 @@ export async function fetchWireframe(issueId: number): Promise<Wireframe | null>
 
 export async function approveIssue(issueId: number): Promise<Issue> {
   return json(await fetch(`${BASE_URL}/api/issues/${issueId}/approve`, { method: 'POST' }))
+}
+
+export async function fetchDesignSystem(projectId: number): Promise<DesignSystem | null> {
+  const res = await fetch(`${BASE_URL}/api/projects/${projectId}/design-system`)
+  if (res.status === 404) return null
+  return json(res)
 }

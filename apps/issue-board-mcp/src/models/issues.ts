@@ -1,6 +1,6 @@
 // src/models/issues.ts
 import type Database from 'better-sqlite3'
-import type { Issue, IssueStatus, MvpFeature } from '../types.js'
+import type { Issue, IssueStatus, MvpFeature, Priority } from '../types.js'
 import { getProject } from './projects.js'
 import { seedIssueYaml } from '../handoff.js'
 
@@ -74,6 +74,36 @@ export function setIssueStatus(db: Database.Database, id: number, status: IssueS
   db.prepare('UPDATE issues SET status = ?, updated_at = ? WHERE id = ?').run(
     status,
     new Date().toISOString(),
+    id
+  )
+}
+
+export function getIssueByNumber(
+  db: Database.Database,
+  projectId: number,
+  number: number
+): Issue | null {
+  const row = db
+    .prepare('SELECT * FROM issues WHERE project_id = ? AND number = ?')
+    .get(projectId, number)
+  return row ? rowToIssue(row) : null
+}
+
+export function updateIssueFields(
+  db: Database.Database,
+  id: number,
+  fields: { title?: string; priority?: Priority; description?: string }
+): void {
+  const issue = getIssue(db, id)
+  if (!issue) return
+  const now = new Date().toISOString()
+  db.prepare(
+    `UPDATE issues SET title = ?, priority = ?, description = ?, updated_at = ? WHERE id = ?`
+  ).run(
+    fields.title ?? issue.title,
+    fields.priority ?? issue.priority,
+    fields.description ?? issue.description,
+    now,
     id
   )
 }
