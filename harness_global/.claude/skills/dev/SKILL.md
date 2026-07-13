@@ -107,7 +107,9 @@ Phase 2 기본값은 **`cursor-agent` CLI 자동 실행**이다. `phase2: claude
    사용자가 이번 요청에서 `여기서 구현` / `Claude로 구현` / `Cursor 없이` → `PHASE2_MODE=claude` (일회성 오버라이드).
 2. **이슈 ID (`ISSUE_ID`) — 기능 단위 (고정)**
    - `이슈 N번`, `issue N`, `#N` → **수정/amendment**: `ISSUE_ID=N`
-   - `.harness/issues/N.yaml` 읽기 → 최신 `runs[].run_id` 를 `PARENT_RUN_ID`로 기록
+   - `.harness/issues/N.yaml` 읽기:
+     - `runs`가 비어있으면(issue-board가 승인만 하고 아직 실행 전) → **최초 실행**으로 처리, `PARENT_RUN_ID` 없음
+     - `runs`에 항목이 있으면 → 최신 `runs[].run_id` 를 `PARENT_RUN_ID`로 기록 (기존 동작)
    - **신규 기능** → `ISSUE_ID` = `.harness/issues/*.yaml` 최대 id + 1 (없으면 `1`)
    - `WORKSPACE_DIR` = `_workspace/{YYYY-MM-DD}_issue-{ISSUE_ID}_{slug}`
    - 예) `_workspace/2026-07-10_issue-1_user-login` · 수정 `_workspace/2026-07-11_issue-1_pw-fix`
