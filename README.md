@@ -73,7 +73,7 @@ flowchart TB
 | 3 | `03_qa_report.md` |
 | 4 | 커밋 → `harness-report.sh` → `.harness/issues/` |
 
-상세·Hub 연동: [docs/dev-pipeline.md](docs/dev-pipeline.md)
+상세·Issue Board 연동: [docs/dev-pipeline.md](docs/dev-pipeline.md)
 
 ---
 
@@ -96,7 +96,7 @@ _workspace/..._issue-1_*/  ← 실행 이력 (initial / amendment)
 bash .harness/scripts/harness-report.sh
 ```
 
-Hub **이슈 탭**: `#1` 선택 → run 타임라인 + 누적 파일 + Phase 태스크
+Issue Board **이슈 탭**: `#1` 선택 → run 타임라인 + 누적 파일 + Phase 태스크
 
 ---
 
@@ -122,25 +122,26 @@ phase2: cursor-agent   # cursor-agent | claude
 
 ---
 
-## Harness Hub
+## Issue Board
+
+`apps/issue-board`(대시보드, Next.js) + `apps/issue-board-mcp`(백엔드, Node/TS) 2개 앱으로 구성. 백엔드는 SQLite에 기획·이슈·와이어프레임을 저장하고 REST(`/api/*`)와 MCP(`/mcp`)를 함께 제공한다.
 
 ```bash
-cd apps/harness-hub && cp .env.local.example .env.local
-npm install && npm run dev   # :3001
+cd apps/issue-board-mcp && npm install && npm run dev   # :4000 (REST /api/*, MCP /mcp)
+cd apps/issue-board && npm install && npm run dev       # :5173 (대시보드)
 ```
 
-`HARNESS_PROJECTS` 또는 `PROJECTS_ROOT` 설정.
-
-**1차** 프로젝트 선택 → **2차 탭:** 이슈 · 패턴 · 기획 · 화면
+**현재 탭 (3개):** 기획 · 이슈 · 와이어프레임 — 패턴 탭은 아직 없음 (범위 밖, 추후 개발 시점 작업으로 이연)
 
 | 탭 | 데이터 |
 |----|--------|
-| 이슈 | `.harness/issues/*.yaml` + `_workspace` Phase |
-| 패턴 | `.harness/patterns/{team,local}` |
-| 기획 | `prd.md`, `01_spec.md` |
-| 화면 | `02_implementation.md` |
+| 기획 | issue-board-mcp DB (plans) |
+| 이슈 | issue-board-mcp DB (issues) |
+| 와이어프레임 | issue-board-mcp DB (wireframes) |
 
-스택: Next.js 15 · React 19 · Tailwind v4 · TS
+`/ib-plan`으로 기획 작성 → Issue Board 대시보드(기획/이슈/와이어프레임)에서 확인. (`/ib-wireframe`, `/ib-issues` 같은 전용 명령은 아직 없음 — 대시보드에서 직접 확인)
+
+스택: Next.js 15 · React 19 · Tailwind v4 · TS (대시보드) / Node 20 · TypeScript · better-sqlite3 · express · `@modelcontextprotocol/sdk` (백엔드)
 
 ---
 
@@ -151,7 +152,8 @@ harness_build/
 ├── install.sh
 ├── scripts/          harness-report, run-phase2-cursor, sync-team-patterns
 ├── team-patterns/
-├── apps/harness-hub/
+├── apps/issue-board/       대시보드 (Next.js, :5173)
+├── apps/issue-board-mcp/   백엔드 (Node/TS, :4000, REST + MCP)
 └── harness_global/
 ```
 
@@ -161,5 +163,5 @@ harness_build/
 
 | 버전 | 주요 변경 |
 |------|----------|
-| v0.6.0 | cursor-agent Phase 2, Harness Hub |
-| v0.6.1 | 기능 이슈 추적 (`.harness/issues/`, Hub 이슈 탭) |
+| v0.6.0 | cursor-agent Phase 2, Harness Hub (폐기, issue-board로 대체) |
+| v0.6.1 | 기능 이슈 추적 (`.harness/issues/`, 이슈 탭) |

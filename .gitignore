@@ -7,10 +7,6 @@ apps/pattern-viewer/node_modules/
 apps/pattern-viewer/.next/
 apps/pattern-viewer/.env.local
 
-apps/harness-hub/node_modules/
-apps/harness-hub/.next/
-apps/harness-hub/.env.local
-
 apps/issue-board-mcp/node_modules/
 apps/issue-board-mcp/*.db
 apps/issue-board-mcp/*.db-shm
