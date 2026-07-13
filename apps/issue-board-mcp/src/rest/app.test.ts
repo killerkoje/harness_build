@@ -32,6 +32,37 @@ describe('REST API', () => {
     expect(res.body.id).toBe(project.id)
   })
 
+  it('CORS: responds to a cross-origin GET with Access-Control-Allow-Origin', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const res = await request(app)
+      .get(`/api/projects/${project.id}`)
+      .set('Origin', 'http://localhost:5173')
+    expect(res.status).toBe(200)
+    expect(res.headers['access-control-allow-origin']).toBe('*')
+  })
+
+  it('CORS: responds to an OPTIONS preflight with Access-Control-Allow-Origin', async () => {
+    const res = await request(app)
+      .options('/api/projects/1')
+      .set('Origin', 'http://localhost:5173')
+      .set('Access-Control-Request-Method', 'GET')
+    expect(res.headers['access-control-allow-origin']).toBe('*')
+  })
+
+  it('POST /api/plans/:id/approve returns 404 (not 500) for a nonexistent plan', async () => {
+    const res = await request(app).post('/api/plans/999999/approve')
+    expect(res.status).toBe(404)
+    expect(res.body).toEqual({ error: 'not found' })
+  })
+
+  it('PUT /api/issues/:id/wireframe returns 404 (not 500) for a nonexistent issue', async () => {
+    const res = await request(app)
+      .put('/api/issues/999999/wireframe')
+      .send({ screens: [] })
+    expect(res.status).toBe(404)
+    expect(res.body).toEqual({ error: 'not found' })
+  })
+
   it('full flow: create plan -> approve -> issues created -> wireframe -> approve issue seeds yaml', async () => {
     const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
 

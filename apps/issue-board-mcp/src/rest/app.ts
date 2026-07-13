@@ -1,14 +1,19 @@
 // src/rest/app.ts
 import express from 'express'
+import cors from 'cors'
 import type Database from 'better-sqlite3'
 import { getOrCreateProject, getProject } from '../models/projects.js'
-import { createPlan, approvePlan, getPlan } from '../models/plans.js'
-import { createIssuesFromPlan, listIssuesByProject, getIssue, setIssueStatus } from '../models/issues.js'
+import { createPlan, getPlan, approvePlanAndCreateIssues } from '../models/plans.js'
+import { listIssuesByProject, getIssue, setIssueStatus } from '../models/issues.js'
 import { upsertWireframe, getWireframeByIssue } from '../models/wireframes.js'
 import { seedIssueYaml } from '../handoff.js'
 
 export function createApp(db: Database.Database) {
   const app = express()
+  // This server is an explicitly local, single-user tool (see design doc) with
+  // no auth anywhere — permissive CORS lets the dashboard (a different origin/port)
+  // call the REST API directly from the browser.
+  app.use(cors())
   app.use(express.json())
 
   app.post('/api/projects', (req, res) => {
@@ -35,10 +40,11 @@ export function createApp(db: Database.Database) {
 
   app.post('/api/plans/:id/approve', (req, res) => {
     const planId = Number(req.params.id)
-    approvePlan(db, planId)
-    const plan = getPlan(db, planId)!
-    const issues = createIssuesFromPlan(db, plan.projectId, planId, plan.sections.mvpFeatures)
-    res.json({ plan, issues })
+    const plan = getPlan(db, planId)
+    if (!plan) return res.status(404).json({ error: 'not found' })
+
+    const result = approvePlanAndCreateIssues(db, planId)
+    res.json(result)
   })
 
   app.get('/api/projects/:projectId/issues', (req, res) => {
@@ -53,6 +59,9 @@ export function createApp(db: Database.Database) {
 
   app.put('/api/issues/:id/wireframe', (req, res) => {
     const issueId = Number(req.params.id)
+    const issue = getIssue(db, issueId)
+    if (!issue) return res.status(404).json({ error: 'not found' })
+
     const wireframe = upsertWireframe(db, issueId, req.body.screens)
     setIssueStatus(db, issueId, 'wireframed')
     res.json(wireframe)
@@ -74,6 +83,13 @@ export function createApp(db: Database.Database) {
     const project = getProject(db, updated.projectId)!
     seedIssueYaml(project.rootPath, updated)
     res.json(updated)
+  })
+
+  // Safety net: any error thrown/forwarded from a route handler above lands
+  // here instead of Node's default HTML+stacktrace error page.
+  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error(err)
+    res.status(500).json({ error: 'internal error' })
   })
 
   return app

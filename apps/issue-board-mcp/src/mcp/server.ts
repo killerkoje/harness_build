@@ -2,9 +2,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type Database from 'better-sqlite3'
-import { getOrCreateProject, getProject } from '../models/projects.js'
-import { createPlan, approvePlan, getPlan, snapshotPlan, updatePlanSections } from '../models/plans.js'
-import { createIssuesFromPlan } from '../models/issues.js'
+import { getOrCreateProject } from '../models/projects.js'
+import { createPlan, getPlan, snapshotPlan, updatePlanSections, approvePlanAndCreateIssues } from '../models/plans.js'
+import { getIssue } from '../models/issues.js'
 import { upsertWireframe } from '../models/wireframes.js'
 
 const mvpFeatureSchema = z.object({
@@ -46,10 +46,12 @@ export function createMcpServer(db: Database.Database): McpServer {
       if (sections) updatePlanSections(db, planId, sections)
 
       if (status === 'approved') {
-        approvePlan(db, planId)
-        const plan = getPlan(db, planId)!
-        const issues = createIssuesFromPlan(db, plan.projectId, planId, plan.sections.mvpFeatures)
-        return { content: [{ type: 'text', text: JSON.stringify({ plan, issues }) }] }
+        const existing = getPlan(db, planId)
+        if (!existing) {
+          return { content: [{ type: 'text', text: `plan ${planId} not found` }], isError: true }
+        }
+        const result = approvePlanAndCreateIssues(db, planId)
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] }
       }
 
       return { content: [{ type: 'text', text: JSON.stringify(getPlan(db, planId)) }] }
@@ -82,6 +84,10 @@ export function createMcpServer(db: Database.Database): McpServer {
       ),
     },
     async ({ issueId, screens }) => {
+      const issue = getIssue(db, issueId)
+      if (!issue) {
+        return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
+      }
       const wireframe = upsertWireframe(db, issueId, screens)
       return { content: [{ type: 'text', text: JSON.stringify(wireframe) }] }
     }
@@ -89,5 +95,3 @@ export function createMcpServer(db: Database.Database): McpServer {
 
   return server
 }
-
-export { getProject }
