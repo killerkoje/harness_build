@@ -19,7 +19,7 @@ export default async function ProjectLayout({
     <div className="flex min-h-screen">
       <ProjectSidebar projects={[project]} activeId={projectId} />
       <div className="flex-1 flex flex-col">
-        <TabNav projectId={projectId} active="plan" />
+        <TabNav projectId={projectId} />
         <main className="flex-1 p-6">{children}</main>
       </div>
     </div>
