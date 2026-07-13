@@ -54,7 +54,7 @@ apps/issue-board-mcp/      Node/TS — MCP 서버 + REST API, :4000, SQLite
 | `issues` | id, project_id, plan_id, title, priority, description, status | status: `planned → wireframed → dev_approved` (되돌아가 재승인 가능), plan의 MVP 기능표 각 행에서 생성 |
 | `wireframes` | id, issue_id, screens(JSON) | `screens: [{name, route, layout: {regions: [{type, label}]}}]` — 정규식 파싱이 아니라 `/ib-wireframe`이 이 구조를 직접 채워 저장 (박스형 렌더링, "화면 카드 목록형"이 아닌 "실제 레이아웃 미리보기" 방식으로 확정) |
 
-이슈 ID는 issue-board가 발급하는 것이 canonical이며, 개발 승인 시 기존 `.harness/issues/{같은 ID}.yaml`이 그대로 재사용한다 (새로 채번하지 않음).
+이슈 ID는 **프로젝트 내에서** issue-board가 발급하는 것이 canonical이며(기존 dev 파이프라인과 동일하게 이슈 번호는 프로젝트마다 독립), 개발 승인 시 기존 `.harness/issues/{같은 ID}.yaml`이 그대로 재사용한다 (새로 채번하지 않음).
 
 ---
 
