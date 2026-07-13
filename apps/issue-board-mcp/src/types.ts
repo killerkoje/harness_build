@@ -13,12 +13,15 @@ export interface PlanSections {
   targetUsers: string
   mvpFeatures: MvpFeature[]
   outOfScope: string
+  /** /ib-plan 마크다운 전문 — 있으면 대시보드가 이걸 렌더 */
+  markdown?: string
 }
 
 export interface Project {
   id: number
   rootPath: string
   name: string
+  description?: string
 }
 
 export interface Plan {

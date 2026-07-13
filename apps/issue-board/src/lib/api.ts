@@ -34,6 +34,7 @@ export interface Plan {
     targetUsers: string
     mvpFeatures: { priority: string; title: string; description: string }[]
     outOfScope: string
+    markdown?: string
   }
 }
 

@@ -2,12 +2,19 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type Database from 'better-sqlite3'
-import { getOrCreateProject } from '../models/projects.js'
+import {
+  getOrCreateProject,
+  createProject,
+  getProjectContext,
+  getProject,
+} from '../models/projects.js'
 import {
   createPlan,
+  createPlanFromMarkdown,
   getPlan,
   snapshotPlan,
   updatePlanSections,
+  updatePlanContent,
   approvePlanAndCreateIssues,
   syncIssuesFromPlan,
 } from '../models/plans.js'
@@ -32,32 +39,88 @@ const planSectionsSchema = z.object({
   targetUsers: z.string(),
   mvpFeatures: z.array(mvpFeatureSchema),
   outOfScope: z.string(),
+  markdown: z.string().optional(),
 })
 
 export function createMcpServer(db: Database.Database): McpServer {
   const server = new McpServer({ name: 'issue-board', version: '0.1.0' })
 
   server.tool(
+    'get_project_context',
+    'repoPath(절대경로)로 등록된 프로젝트·기획·이슈 요약. 없으면 project=null',
+    { repoPath: z.string() },
+    async ({ repoPath }) => {
+      const ctx = getProjectContext(db, repoPath)
+      return { content: [{ type: 'text', text: JSON.stringify(ctx) }] }
+    }
+  )
+
+  server.tool(
+    'create_project',
+    '프로젝트를 등록한다. 같은 repoPath가 있으면 name/description만 갱신',
+    {
+      name: z.string(),
+      description: z.string().optional(),
+      repoPath: z.string(),
+    },
+    async ({ name, description, repoPath }) => {
+      const project = createProject(db, { name, description, repoPath })
+      return { content: [{ type: 'text', text: JSON.stringify(project) }] }
+    }
+  )
+
+  server.tool(
     'create_plan',
-    'projectRoot 경로로 프로젝트를 등록하고 새 기획을 draft 상태로 생성한다',
-    { projectRoot: z.string(), title: z.string(), sections: planSectionsSchema },
-    async ({ projectRoot, title, sections }) => {
-      const project = getOrCreateProject(db, projectRoot)
-      const plan = createPlan(db, project.id, title, sections)
+    '새 기획을 draft로 생성. content(마크다운 전문) 권장. sections도 허용(레거시)',
+    {
+      projectId: z.number().optional(),
+      projectRoot: z.string().optional(),
+      title: z.string(),
+      content: z.string().optional(),
+      sections: planSectionsSchema.optional(),
+    },
+    async ({ projectId, projectRoot, title, content, sections }) => {
+      let pid = projectId
+      if (pid == null && projectRoot) {
+        pid = getOrCreateProject(db, projectRoot).id
+      }
+      if (pid == null) {
+        return {
+          content: [{ type: 'text', text: 'projectId 또는 projectRoot 필요' }],
+          isError: true,
+        }
+      }
+      if (!getProject(db, pid)) {
+        return { content: [{ type: 'text', text: `project ${pid} not found` }], isError: true }
+      }
+
+      let plan
+      if (content) {
+        plan = createPlanFromMarkdown(db, pid, title, content)
+      } else if (sections) {
+        plan = createPlan(db, pid, title, sections)
+      } else {
+        return {
+          content: [{ type: 'text', text: 'content 또는 sections 필요' }],
+          isError: true,
+        }
+      }
       return { content: [{ type: 'text', text: JSON.stringify(plan) }] }
     }
   )
 
   server.tool(
     'update_plan',
-    '기획을 갱신한다. sections만 주면 내용 덮어쓰기. status="approved"면 최초 승인+이슈 생성, 이미 approved면 sync_plan_issues와 동일하게 이슈 동기화',
+    '기획 갱신. content/sections로 작업본 덮어쓰기. status=approved면 승인+이슈 생성/동기화',
     {
       planId: z.number(),
+      content: z.string().optional(),
       sections: planSectionsSchema.optional(),
       status: z.enum(['draft', 'approved']).optional(),
     },
-    async ({ planId, sections, status }) => {
-      if (sections) updatePlanSections(db, planId, sections)
+    async ({ planId, content, sections, status }) => {
+      if (content) updatePlanContent(db, planId, content)
+      else if (sections) updatePlanSections(db, planId, sections)
 
       if (status === 'approved') {
         const existing = getPlan(db, planId)

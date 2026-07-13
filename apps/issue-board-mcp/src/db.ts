@@ -8,7 +8,8 @@ export function createDb(filename: string): Database.Database {
     CREATE TABLE IF NOT EXISTS projects (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       root_path TEXT NOT NULL UNIQUE,
-      name TEXT NOT NULL
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS plans (

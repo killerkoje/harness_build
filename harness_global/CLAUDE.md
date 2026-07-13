@@ -38,11 +38,11 @@
 **커맨드:**
 | 커맨드 | 역할 |
 |--------|------|
-| `/ib-plan` | 기획 작성·승인·**개정 시 이슈 동기화** |
+| `/ib-plan` | 마크다운 기획(§1~8) 작성·적재·승인(MVP→이슈) |
 | `/ib-wireframe` | 이슈 + 디자인시스템 기반 화면 와이어 적재 |
 | `/ib-approve` | 개발 착수 게이트 |
 
-**기획 변경 연동:** `update_plan(..., approved)` 또는 `sync_plan_issues` → 이슈 create/update + 변경분 와이어 무효화 → `/ib-wireframe` 재실행 → 필요 시 `/ib-approve` 재승인.
+**기획 변경 연동:** `update_plan(content|approved)` 또는 `sync_plan_issues` → 이슈 create/update + 변경분 와이어 무효화 → `/ib-wireframe` 재실행 → 필요 시 `/ib-approve` 재승인.
 
 **트리거:** "기획해줘", "와이어프레임", "이슈보드", `/ib-*` 요청 시 위 커맨드를 사용하라.
 

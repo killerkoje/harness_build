@@ -9,6 +9,7 @@ import {
   updateIssueFields,
 } from './issues.js'
 import { deleteWireframeByIssue } from './wireframes.js'
+import { parsePlanMarkdown } from './parse-plan-markdown.js'
 
 function rowToPlan(row: any): Plan {
   return {
@@ -49,6 +50,21 @@ export function updatePlanSections(db: Database.Database, id: number, sections: 
     new Date().toISOString(),
     id
   )
+}
+
+export function updatePlanContent(db: Database.Database, id: number, content: string): Plan {
+  const sections = parsePlanMarkdown(content)
+  updatePlanSections(db, id, sections)
+  return getPlan(db, id)!
+}
+
+export function createPlanFromMarkdown(
+  db: Database.Database,
+  projectId: number,
+  title: string,
+  content: string
+): Plan {
+  return createPlan(db, projectId, title, parsePlanMarkdown(content))
 }
 
 export function approvePlan(db: Database.Database, id: number): void {

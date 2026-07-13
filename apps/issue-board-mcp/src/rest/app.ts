@@ -3,7 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import type Database from 'better-sqlite3'
 import { getOrCreateProject, getProject } from '../models/projects.js'
-import { createPlan, getPlan, approvePlanAndCreateIssues, syncIssuesFromPlan } from '../models/plans.js'
+import { createPlan, createPlanFromMarkdown, getPlan, approvePlanAndCreateIssues, syncIssuesFromPlan } from '../models/plans.js'
 import { listIssuesByProject, getIssue, setIssueStatus, approveIssueForDev } from '../models/issues.js'
 import { upsertWireframe, getWireframeByIssue } from '../models/wireframes.js'
 import { getDesignSystemByProject, upsertDesignSystem } from '../models/design-systems.js'
@@ -28,7 +28,11 @@ export function createApp(db: Database.Database) {
   })
 
   app.post('/api/projects/:projectId/plans', (req, res) => {
-    const plan = createPlan(db, Number(req.params.projectId), req.body.title, req.body.sections)
+    const projectId = Number(req.params.projectId)
+    if (req.body.content) {
+      return res.json(createPlanFromMarkdown(db, projectId, req.body.title, req.body.content))
+    }
+    const plan = createPlan(db, projectId, req.body.title, req.body.sections)
     res.json(plan)
   })
 
