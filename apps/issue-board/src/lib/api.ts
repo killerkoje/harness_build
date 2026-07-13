@@ -15,7 +15,7 @@ export interface Issue {
 export interface WireframeScreen {
   name: string
   route: string | null
-  layout: { regions: { type: string; label: string; component?: string }[] }
+  html: string
 }
 
 export interface Wireframe {

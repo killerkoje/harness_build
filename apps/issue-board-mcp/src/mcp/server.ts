@@ -34,12 +34,6 @@ const planSectionsSchema = z.object({
   outOfScope: z.string(),
 })
 
-const regionSchema = z.object({
-  type: z.string(),
-  label: z.string(),
-  component: z.string().optional(),
-})
-
 export function createMcpServer(db: Database.Database): McpServer {
   const server = new McpServer({ name: 'issue-board', version: '0.1.0' })
 
@@ -151,16 +145,14 @@ export function createMcpServer(db: Database.Database): McpServer {
 
   server.tool(
     'create_wireframe',
-    '이슈의 화면 레이아웃(와이어프레임)을 저장한다. region.component에 DS 컴포넌트명을 넣을 수 있다',
+    '이슈의 화면 와이어프레임을 저장한다. screen.html에 실제 렌더링 가능한 HTML 마크업을 담는다',
     {
       issueId: z.number(),
       screens: z.array(
         z.object({
           name: z.string(),
           route: z.string().nullable(),
-          layout: z.object({
-            regions: z.array(regionSchema),
-          }),
+          html: z.string(),
         })
       ),
     },

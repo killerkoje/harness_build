@@ -48,7 +48,7 @@ describe('syncIssuesFromPlan', () => {
   it('updates changed features and invalidates wireframes', () => {
     const home = listIssuesByProject(db, projectId).find((i) => i.title === '홈')!
     upsertWireframe(db, home.id, [
-      { name: '홈', route: '/home', layout: { regions: [{ type: 'content', label: 'old' }] } },
+      { name: '홈', route: '/home', html: '<div>old</div>' },
     ])
 
     updatePlanSections(db, planId, {

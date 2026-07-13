@@ -87,7 +87,7 @@ describe('REST API', () => {
     expect(issue.status).toBe('planned')
 
     const screens = [
-      { name: '로그인', route: '/login', layout: { regions: [{ type: 'content', label: '폼' }] } },
+      { name: '로그인', route: '/login', html: '<div>폼</div>' },
     ]
     const wfRes = await request(app)
       .put(`/api/issues/${issue.id}/wireframe`)

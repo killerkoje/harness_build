@@ -19,7 +19,7 @@ const screens: WireframeScreen[] = [
   {
     name: '로그인 화면',
     route: '/login',
-    layout: { regions: [{ type: 'nav', label: '상단 네비' }, { type: 'content', label: '로그인 폼' }] },
+    html: '<div><nav>상단 네비</nav><form>로그인 폼</form></div>',
   },
 ]
 

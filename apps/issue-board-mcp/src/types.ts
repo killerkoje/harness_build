@@ -52,17 +52,10 @@ export interface Issue {
   updatedAt: string
 }
 
-export interface WireframeRegion {
-  type: string
-  label: string
-  /** 디자인시스템 컴포넌트명 (예: ProductCard, TabBar) — 렌더러가 강조 표시 */
-  component?: string
-}
-
 export interface WireframeScreen {
   name: string
   route: string | null
-  layout: { regions: WireframeRegion[] }
+  html: string
 }
 
 export interface Wireframe {

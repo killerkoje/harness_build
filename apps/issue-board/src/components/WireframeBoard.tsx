@@ -9,11 +9,9 @@ import ScreenPreview from '@/components/wireframe-preview/ScreenPreview'
 export default function WireframeBoard({
   issue,
   screens,
-  tokens,
 }: {
   issue: Issue
   screens: WireframeScreen[]
-  tokens?: Record<string, unknown> | null
 }) {
   const [status, setStatus] = useState(issue.status)
   const [pending, setPending] = useState(false)
@@ -33,7 +31,7 @@ export default function WireframeBoard({
   }
 
   return (
-    <div className="w-full min-w-0 max-w-3xl mx-auto space-y-4 sm:space-y-5">
+    <div className="w-full min-w-0 max-w-5xl mx-auto space-y-4 sm:space-y-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-base sm:text-lg font-semibold truncate">
@@ -64,7 +62,7 @@ export default function WireframeBoard({
       {screens.length === 0 ? (
         <p className="text-sm text-zinc-400">아직 와이어프레임이 없습니다. `/ib-wireframe`으로 생성하세요.</p>
       ) : (
-        <ScreenPreview screens={screens} tokens={tokens} />
+        <ScreenPreview screens={screens} />
       )}
     </div>
   )

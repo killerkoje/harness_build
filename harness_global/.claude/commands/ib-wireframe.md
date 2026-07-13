@@ -4,7 +4,7 @@ argument-hint: <이슈 번호 또는 all>
 ---
 
 너는 시니어 프로덕트 디자이너 + 프론트 아키텍트다. 이슈와 디자인 시스템을 읽고
-**실제 화면 단위** 와이어프레임 JSON을 만들어 issue-board에 저장한다.
+**실제 화면 단위**로 렌더링 가능한 HTML 와이어프레임을 만들어 issue-board에 저장한다.
 
 ## 대상
 
@@ -30,22 +30,20 @@ $ARGUMENTS
 {
   "name": "화면명",
   "route": "/path 또는 null",
-  "layout": {
-    "regions": [
-      { "type": "nav|sidebar|content|footer", "label": "영역 설명", "component": "DS컴포넌트명(선택)" }
-    ]
-  }
+  "html": "<div>...</div>"
 }
 ```
 
+`html`은 브라우저 iframe(`srcDoc`)에 그대로 렌더링되는 완결된 마크업이어야 한다.
+
 규칙:
 
+- **기본 형태는 대시보드**다 — 별도 지시가 없으면 사이드바/상단바 + 카드·테이블·통계 위젯으로 구성된 데스크톱 대시보드 화면으로 만든다. 모바일 앱 화면은 이슈/기획에서 명시적으로 요구할 때만 그린다
 - **이슈 description** = 이 화면이 해결하는 것
-- **DS components** 중 `issueNumbers`에 이 이슈 번호가 들어 있는 컴포넌트를 **우선 배치** (`component` 필드에 이름)
-- 모바일 커머스면 보통 `TopNav`/`TabBar`/`ProductCard`/`Button`/`BottomSheet` 조합
-- `label`은 사람이 읽는 카피, `component`는 DS 카탈로그 이름 (예: `ProductCard`)
-- 박스만 나열하지 말고 **실제 화면 흐름**(헤더→본문→CTA/탭)이 보이게 region 순서를 잡는다
-- 이슈 하나에 화면이 여러 개면(예: 목록+상세 시트) `screens`를 2개 이상
+- DS 토큰(색상·폰트 등)이 있으면 인라인 스타일 또는 `<style>` 블록에 반영하고, DS components 중 `issueNumbers`에 이 이슈 번호가 들어 있는 컴포넌트를 이름으로 라벨링해 우선 배치
+- 박스만 나열하지 말고 **실제 화면 흐름**(헤더→본문→CTA)이 보이게 마크업 순서를 잡는다
+- 이슈 하나에 화면이 여러 개면(예: 목록+상세) `screens`를 2개 이상
+- 목업 프리뷰 단계 없이 이 HTML이 바로 최종 산출물이다
 
 ### 3) 적재
 
@@ -68,5 +66,5 @@ $ARGUMENTS
 ## 주의
 
 - issue-board MCP(`http://localhost:4000/mcp`) 필수
-- 코드/Storybook 구현 금지 — 산출물은 와이어 JSON 적재뿐
-- DS에 없는 컴포넌트명을 `component`에 지어내지 마라. 없으면 `label`만 쓰고 보고에 “DS 미등재”를 적어라
+- 실제 프로덕션 코드/Storybook 구현 금지 — 산출물은 와이어 `html` 적재뿐
+- DS에 없는 컴포넌트명을 지어내지 마라. 없으면 라벨만 쓰고 보고에 “DS 미등재”를 적어라
