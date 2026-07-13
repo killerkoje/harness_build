@@ -88,3 +88,4 @@ harness_global/
 | 2026-07-08 | 패턴 UX v0.5.1 | dev/SKILL.md, pattern-promoter | 커밋→로컬저장 분리, Phase 5 승격 |
 | 2026-07-08 | Cursor team-patterns v0.5.2 | cursor/team-patterns.mdc, install.sh | alwaysApply 팀·로컬 패턴 참조 |
 | 2026-07-09 | Phase 2 cursor-agent 자동 v0.6.0 | dev/SKILL.md, run-phase2-cursor.sh, phase2-implement.mdc | HANDOFF 후 cursor-agent CLI, 한 세션 Phase 3 |
+| 2026-07-13 | issue-board 연동 | dev/SKILL.md | issue-board가 승인 시 미리 시딩하는 runs:[] 이슈를 최초 실행(kind: initial)으로 처리 |

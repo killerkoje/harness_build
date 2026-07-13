@@ -161,7 +161,8 @@ title: 기능 제목
 ---
 ```
 
-수정 요청(`이슈 N번`)이면 `kind: amendment`, `parent_run_id`에 이전 run_id.
+수정 요청(`이슈 N번`)이고 `PARENT_RUN_ID`가 있으면 `kind: amendment`, `parent_run_id`에 이전 run_id.
+`이슈 N번`이지만 `runs`가 비어있어 `PARENT_RUN_ID`가 없으면(issue-board 승인 직후 최초 실행) `kind: initial`, `parent_run_id: null`.
 
 ---
 
