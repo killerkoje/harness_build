@@ -156,7 +156,9 @@ cd apps/issue-board && npm install && npm run dev       # :5173 (대시보드)
 
 **기획 개정 연동:** 이미 승인된 기획을 수정한 뒤 `update_plan(..., approved)` 또는 MCP `sync_plan_issues` → 이슈 create/update, 변경분은 와이어 무효화(`planned`) → `/ib-wireframe` 재실행 → 필요 시 `/ib-approve` 재승인. (표에서 빠진 기능 행은 이슈를 삭제하지 않고 orphaned로만 보고)
 
-디자인시스템은 [Turborepo design-system](https://github.com/vercel/turborepo/tree/main/examples/design-system)처럼 `packages/ui` + Storybook(`apps/docs`)을 소스 오브 트루스로 두고, 보드는 조회·이슈 매핑용이다. 무신사 스토어 목데이터 시드: `node apps/issue-board-mcp/scripts/seed-musinsa-store.mjs` → `http://localhost:5173/projects/3/...`
+디자인시스템은 [Turborepo design-system](https://github.com/vercel/turborepo/tree/main/examples/design-system)처럼 `packages/ui` + Storybook(`apps/docs`)을 소스 오브 트루스로 두고, 보드는 조회·이슈 매핑용이다. (개발용 목데이터 시드 스크립트는 제거됨 — REST API로 직접 기획/이슈/디자인시스템을 적재한다.)
+
+와이어프레임 탭은 `region.component`로 표기된 디자인시스템 컴포넌트를 실제 목업 UI(폰 프레임, 카드/버튼 등)로 렌더링한다 (`apps/issue-board/src/components/wireframe-preview/`).
 
 스택: Next.js 15 · React 19 · Tailwind v4 · TS (대시보드) / Node 20 · TypeScript · better-sqlite3 · express · `@modelcontextprotocol/sdk` (백엔드)
 

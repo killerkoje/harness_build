@@ -4,71 +4,16 @@
 import { useState } from 'react'
 import type { Issue, WireframeScreen } from '@/lib/api'
 import { approveIssue } from '@/lib/api'
-
-const REGION_CLASS: Record<string, string> = {
-  nav: 'w-full h-10 bg-zinc-200 rounded flex items-center px-3 text-xs text-zinc-600',
-  sidebar: 'w-32 shrink-0 bg-zinc-100 rounded p-2 text-xs text-zinc-600',
-  content: 'flex-1 bg-zinc-50 border border-dashed border-zinc-300 rounded p-3 text-xs text-zinc-500',
-  footer: 'w-full h-8 bg-zinc-100 rounded flex items-center px-3 text-xs text-zinc-500',
-}
-
-function RegionBox({
-  type,
-  label,
-  component,
-}: {
-  type: string
-  label: string
-  component?: string
-}) {
-  return (
-    <div className={REGION_CLASS[type] ?? REGION_CLASS.content}>
-      <div className="flex items-center justify-between gap-2">
-        <span>{label}</span>
-        {component && (
-          <span className="shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
-            {component}
-          </span>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function ScreenBox({ screen }: { screen: WireframeScreen }) {
-  const nav = screen.layout.regions.find((r) => r.type === 'nav')
-  const sidebar = screen.layout.regions.find((r) => r.type === 'sidebar')
-  const rest = screen.layout.regions.filter((r) => r.type !== 'nav' && r.type !== 'sidebar')
-
-  return (
-    <div className="border border-zinc-200 rounded-xl p-4 space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">{screen.name}</h3>
-        {screen.route && <span className="text-xs font-mono text-indigo-600">{screen.route}</span>}
-      </div>
-      <div className="space-y-2">
-        {nav && <RegionBox type="nav" label={nav.label} component={nav.component} />}
-        <div className="flex gap-2">
-          {sidebar && (
-            <RegionBox type="sidebar" label={sidebar.label} component={sidebar.component} />
-          )}
-          <div className="flex-1 space-y-2">
-            {rest.map((r, i) => (
-              <RegionBox key={i} type={r.type} label={r.label} component={r.component} />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+import ScreenPreview from '@/components/wireframe-preview/ScreenPreview'
 
 export default function WireframeBoard({
   issue,
   screens,
+  tokens,
 }: {
   issue: Issue
   screens: WireframeScreen[]
+  tokens?: Record<string, unknown> | null
 }) {
   const [status, setStatus] = useState(issue.status)
   const [pending, setPending] = useState(false)
@@ -88,35 +33,38 @@ export default function WireframeBoard({
   }
 
   return (
-    <div className="max-w-3xl space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">
-          #{issue.number} {issue.title}
-        </h1>
-        {status === 'dev_approved' ? (
-          <span className="text-xs px-3 py-1.5 rounded bg-emerald-50 text-emerald-700">개발 승인됨</span>
-        ) : (
-          <div className="flex items-center gap-2">
-            {error && <span className="text-xs text-red-600">{error}</span>}
-            <button
-              onClick={handleApprove}
-              disabled={pending}
-              className="text-sm px-3 py-1.5 rounded-lg bg-indigo-600 text-white disabled:opacity-50"
-            >
-              {pending ? '승인 중...' : '개발 승인'}
-            </button>
-          </div>
-        )}
-      </div>
+    <div className="w-full min-w-0 max-w-3xl mx-auto space-y-4 sm:space-y-5">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-base sm:text-lg font-semibold truncate">
+            #{issue.number} {issue.title}
+          </h1>
+          <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5">화면 프리뷰 · 클릭으로 플로우 체험</p>
+        </div>
+        <div className="shrink-0 self-start">
+          {status === 'dev_approved' ? (
+            <span className="inline-flex text-[11px] sm:text-xs px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-md bg-emerald-50 text-emerald-700">
+              개발 승인됨
+            </span>
+          ) : (
+            <div className="flex items-center gap-2">
+              {error && <span className="text-[11px] text-red-600">{error}</span>}
+              <button
+                onClick={handleApprove}
+                disabled={pending}
+                className="text-xs sm:text-sm px-3 py-1.5 rounded-lg bg-zinc-900 text-white disabled:opacity-50"
+              >
+                {pending ? '승인 중...' : '개발 승인'}
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
 
       {screens.length === 0 ? (
         <p className="text-sm text-zinc-400">아직 와이어프레임이 없습니다. `/ib-wireframe`으로 생성하세요.</p>
       ) : (
-        <div className="space-y-4">
-          {screens.map((s, i) => (
-            <ScreenBox key={i} screen={s} />
-          ))}
-        </div>
+        <ScreenPreview screens={screens} tokens={tokens} />
       )}
     </div>
   )
