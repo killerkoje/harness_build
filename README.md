@@ -139,7 +139,7 @@ cd apps/issue-board && npm install && npm run dev       # :5173 (대시보드)
 | 이슈 | issue-board-mcp DB (issues) |
 | 와이어프레임 | issue-board-mcp DB (wireframes) |
 
-`/ib-plan`으로 기획 작성 → Issue Board 대시보드(기획/이슈/와이어프레임)에서 확인. (`/ib-wireframe`, `/ib-issues` 같은 전용 명령은 아직 없음 — 대시보드에서 직접 확인)
+`/ib-plan`으로 기획 작성 → Issue Board 대시보드(기획/이슈/와이어프레임)에서 확인 → `/ib-approve <이슈 번호>`로 CLI에서 개발 승인(게이트) → "이슈 N번 개발해줘"로 기존 dev 파이프라인 착수. (`/ib-wireframe`, `/ib-issues` 같은 전용 명령은 아직 없음 — 대시보드에서 직접 확인)
 
 스택: Next.js 15 · React 19 · Tailwind v4 · TS (대시보드) / Node 20 · TypeScript · better-sqlite3 · express · `@modelcontextprotocol/sdk` (백엔드)
 
@@ -165,3 +165,4 @@ harness_build/
 |------|----------|
 | v0.6.0 | cursor-agent Phase 2, Harness Hub (폐기, issue-board로 대체) |
 | v0.6.1 | 기능 이슈 추적 (`.harness/issues/`, 이슈 탭) |
+| v0.7.0 | Issue Board 신설 (기획/이슈/와이어프레임, SQLite+REST+MCP), `/ib-plan`·`/ib-approve` 커맨드, Harness Hub 대체 |
