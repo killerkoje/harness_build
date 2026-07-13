@@ -2,6 +2,7 @@
 .harness/
 .claude/
 .superpowers/
+_tmp_resume/
 
 apps/pattern-viewer/node_modules/
 apps/pattern-viewer/.next/
