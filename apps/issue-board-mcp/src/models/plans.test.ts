@@ -3,7 +3,16 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type Database from 'better-sqlite3'
 import { createDb } from '../db.js'
 import { getOrCreateProject } from './projects.js'
-import { createPlan, updatePlanSections, approvePlan, snapshotPlan, getPlan, listSnapshots } from './plans.js'
+import {
+  createPlan,
+  updatePlanSections,
+  approvePlan,
+  snapshotPlan,
+  getPlan,
+  listSnapshots,
+  approvePlanAndCreateIssues,
+} from './plans.js'
+import { listIssuesByProject } from './issues.js'
 import type { PlanSections } from '../types.js'
 
 const sections: PlanSections = {
@@ -47,5 +56,19 @@ describe('plans model', () => {
     const plan = createPlan(db, projectId, '내 프로젝트', sections)
     snapshotPlan(db, plan.id, 'MVP 범위 축소')
     expect(listSnapshots(db, plan.id).map((s) => s.label)).toEqual(['MVP 범위 축소'])
+  })
+
+  it('approvePlanAndCreateIssues approves the plan and creates one issue per mvpFeatures row', () => {
+    const plan = createPlan(db, projectId, '내 프로젝트', sections)
+    const result = approvePlanAndCreateIssues(db, plan.id)
+    expect(result.plan.status).toBe('approved')
+    expect(result.issues).toHaveLength(1)
+    expect(result.issues[0].title).toBe('로그인')
+    expect(listIssuesByProject(db, projectId)).toHaveLength(1)
+  })
+
+  it('approvePlanAndCreateIssues throws for a nonexistent plan and creates no issues', () => {
+    expect(() => approvePlanAndCreateIssues(db, 999999)).toThrow()
+    expect(listIssuesByProject(db, projectId)).toHaveLength(0)
   })
 })

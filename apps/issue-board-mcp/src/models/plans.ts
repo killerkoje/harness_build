@@ -1,6 +1,7 @@
 // src/models/plans.ts
 import type Database from 'better-sqlite3'
-import type { Plan, PlanSections, PlanSnapshot } from '../types.js'
+import type { Issue, Plan, PlanSections, PlanSnapshot } from '../types.js'
+import { createIssuesFromPlan } from './issues.js'
 
 function rowToPlan(row: any): Plan {
   return {
@@ -57,6 +58,25 @@ export function snapshotPlan(db: Database.Database, planId: number, label: strin
     .prepare('INSERT INTO plan_snapshots (plan_id, label, content, created_at) VALUES (?, ?, ?, ?)')
     .run(planId, label, JSON.stringify(plan.sections), now)
   return { id: Number(result.lastInsertRowid), planId, label, content: plan.sections, createdAt: now }
+}
+
+/**
+ * Approves a plan and creates one issue per MVP feature row, atomically.
+ * Shared by the REST handler and the MCP `update_plan` tool so the two
+ * surfaces can't drift out of sync.
+ */
+export function approvePlanAndCreateIssues(
+  db: Database.Database,
+  planId: number
+): { plan: Plan; issues: Issue[] } {
+  const run = db.transaction(() => {
+    approvePlan(db, planId)
+    const plan = getPlan(db, planId)
+    if (!plan) throw new Error(`plan ${planId} not found`)
+    const issues = createIssuesFromPlan(db, plan.projectId, planId, plan.sections.mvpFeatures)
+    return { plan, issues }
+  })
+  return run()
 }
 
 export function listSnapshots(db: Database.Database, planId: number): PlanSnapshot[] {

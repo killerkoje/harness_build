@@ -66,4 +66,14 @@ describe('issues model', () => {
     const list = listIssuesByProject(db, projectId)
     expect(list.map((i) => i.number)).toEqual([1, 2])
   })
+
+  it('is atomic: a failure partway through the loop leaves no partial rows', () => {
+    const badFeatures = [
+      sections.mvpFeatures[0],
+      // undefined is not bindable by better-sqlite3 and throws mid-transaction
+      { ...sections.mvpFeatures[1], description: undefined as unknown as string },
+    ]
+    expect(() => createIssuesFromPlan(db, projectId, planId, badFeatures)).toThrow()
+    expect(listIssuesByProject(db, projectId)).toHaveLength(0)
+  })
 })

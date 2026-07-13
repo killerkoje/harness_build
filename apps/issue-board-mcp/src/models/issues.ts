@@ -34,23 +34,26 @@ export function createIssuesFromPlan(
     return row.maxNumber + 1
   }
 
-  const created: Issue[] = []
   const now = new Date().toISOString()
-  for (const feature of features) {
-    const number = nextNumber()
-    const result = insert.run(
-      projectId,
-      number,
-      planId,
-      feature.title,
-      feature.priority,
-      feature.description,
-      now,
-      now
-    )
-    created.push(getIssue(db, Number(result.lastInsertRowid))!)
-  }
-  return created
+  const insertAll = db.transaction((featuresToInsert: MvpFeature[]) => {
+    const created: Issue[] = []
+    for (const feature of featuresToInsert) {
+      const number = nextNumber()
+      const result = insert.run(
+        projectId,
+        number,
+        planId,
+        feature.title,
+        feature.priority,
+        feature.description,
+        now,
+        now
+      )
+      created.push(getIssue(db, Number(result.lastInsertRowid))!)
+    }
+    return created
+  })
+  return insertAll(features)
 }
 
 export function getIssue(db: Database.Database, id: number): Issue | null {
