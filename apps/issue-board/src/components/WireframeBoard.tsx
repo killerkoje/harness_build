@@ -49,12 +49,16 @@ export default function WireframeBoard({
 }) {
   const [status, setStatus] = useState(issue.status)
   const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleApprove() {
     setPending(true)
+    setError(null)
     try {
       const updated = await approveIssue(issue.id)
       setStatus(updated.status)
+    } catch {
+      setError('승인에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setPending(false)
     }
@@ -69,13 +73,16 @@ export default function WireframeBoard({
         {status === 'dev_approved' ? (
           <span className="text-xs px-3 py-1.5 rounded bg-emerald-50 text-emerald-700">개발 승인됨</span>
         ) : (
-          <button
-            onClick={handleApprove}
-            disabled={pending}
-            className="text-sm px-3 py-1.5 rounded-lg bg-indigo-600 text-white disabled:opacity-50"
-          >
-            {pending ? '승인 중...' : '개발 승인'}
-          </button>
+          <div className="flex items-center gap-2">
+            {error && <span className="text-xs text-red-600">{error}</span>}
+            <button
+              onClick={handleApprove}
+              disabled={pending}
+              className="text-sm px-3 py-1.5 rounded-lg bg-indigo-600 text-white disabled:opacity-50"
+            >
+              {pending ? '승인 중...' : '개발 승인'}
+            </button>
+          </div>
         )}
       </div>
 
