@@ -4,7 +4,7 @@ import { z } from 'zod'
 import type Database from 'better-sqlite3'
 import { getOrCreateProject } from '../models/projects.js'
 import { createPlan, getPlan, snapshotPlan, updatePlanSections, approvePlanAndCreateIssues } from '../models/plans.js'
-import { getIssue } from '../models/issues.js'
+import { getIssue, approveIssueForDev } from '../models/issues.js'
 import { upsertWireframe } from '../models/wireframes.js'
 
 const mvpFeatureSchema = z.object({
@@ -90,6 +90,19 @@ export function createMcpServer(db: Database.Database): McpServer {
       }
       const wireframe = upsertWireframe(db, issueId, screens)
       return { content: [{ type: 'text', text: JSON.stringify(wireframe) }] }
+    }
+  )
+
+  server.tool(
+    'approve_issue',
+    '이슈를 개발 승인 상태(dev_approved)로 전환하고 .harness/issues/{number}.yaml을 시딩해 기존 dev 파이프라인과 연결한다',
+    { issueId: z.number() },
+    async ({ issueId }) => {
+      const updated = approveIssueForDev(db, issueId)
+      if (!updated) {
+        return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
+      }
+      return { content: [{ type: 'text', text: JSON.stringify(updated) }] }
     }
   )
 
