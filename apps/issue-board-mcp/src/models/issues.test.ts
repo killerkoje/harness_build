@@ -1,6 +1,10 @@
 // src/models/issues.test.ts
 import { describe, it, expect, beforeEach } from 'vitest'
 import type Database from 'better-sqlite3'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import yaml from 'js-yaml'
 import { createDb } from '../db.js'
 import { getOrCreateProject } from './projects.js'
 import { createPlan } from './plans.js'
@@ -9,6 +13,7 @@ import {
   listIssuesByProject,
   getIssue,
   setIssueStatus,
+  approveIssueForDev,
 } from './issues.js'
 import type { PlanSections } from '../types.js'
 
@@ -75,5 +80,36 @@ describe('issues model', () => {
     ]
     expect(() => createIssuesFromPlan(db, projectId, planId, badFeatures)).toThrow()
     expect(listIssuesByProject(db, projectId)).toHaveLength(0)
+  })
+
+  describe('approveIssueForDev', () => {
+    let projectRoot: string
+    let issuesProjectId: number
+    let issuesPlanId: number
+
+    beforeEach(() => {
+      projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'issue-board-model-'))
+      issuesProjectId = getOrCreateProject(db, projectRoot).id
+      issuesPlanId = createPlan(db, issuesProjectId, 'p', sections).id
+    })
+
+    it('sets status to dev_approved and seeds the handoff yaml with correct content', () => {
+      const [issue] = createIssuesFromPlan(db, issuesProjectId, issuesPlanId, [sections.mvpFeatures[0]])
+
+      const updated = approveIssueForDev(db, issue.id)
+
+      expect(updated?.status).toBe('dev_approved')
+      expect(getIssue(db, issue.id)?.status).toBe('dev_approved')
+
+      const yamlPath = path.join(projectRoot, '.harness/issues', `${issue.number}.yaml`)
+      expect(fs.existsSync(yamlPath)).toBe(true)
+      const doc = yaml.load(fs.readFileSync(yamlPath, 'utf-8')) as any
+      expect(doc.id).toBe(issue.number)
+      expect(doc.title).toBe(issue.title)
+    })
+
+    it('returns null for a nonexistent issue', () => {
+      expect(approveIssueForDev(db, 999999)).toBeNull()
+    })
   })
 })

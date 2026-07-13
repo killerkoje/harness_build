@@ -4,9 +4,8 @@ import cors from 'cors'
 import type Database from 'better-sqlite3'
 import { getOrCreateProject, getProject } from '../models/projects.js'
 import { createPlan, getPlan, approvePlanAndCreateIssues } from '../models/plans.js'
-import { listIssuesByProject, getIssue, setIssueStatus } from '../models/issues.js'
+import { listIssuesByProject, getIssue, setIssueStatus, approveIssueForDev } from '../models/issues.js'
 import { upsertWireframe, getWireframeByIssue } from '../models/wireframes.js'
-import { seedIssueYaml } from '../handoff.js'
 
 export function createApp(db: Database.Database) {
   const app = express()
@@ -75,13 +74,8 @@ export function createApp(db: Database.Database) {
 
   app.post('/api/issues/:id/approve', (req, res) => {
     const issueId = Number(req.params.id)
-    const issue = getIssue(db, issueId)
-    if (!issue) return res.status(404).json({ error: 'not found' })
-
-    setIssueStatus(db, issueId, 'dev_approved')
-    const updated = getIssue(db, issueId)!
-    const project = getProject(db, updated.projectId)!
-    seedIssueYaml(project.rootPath, updated)
+    const updated = approveIssueForDev(db, issueId)
+    if (!updated) return res.status(404).json({ error: 'not found' })
     res.json(updated)
   })
 

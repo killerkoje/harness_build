@@ -1,6 +1,8 @@
 // src/models/issues.ts
 import type Database from 'better-sqlite3'
 import type { Issue, IssueStatus, MvpFeature } from '../types.js'
+import { getProject } from './projects.js'
+import { seedIssueYaml } from '../handoff.js'
 
 function rowToIssue(row: any): Issue {
   return {
@@ -74,4 +76,26 @@ export function setIssueStatus(db: Database.Database, id: number, status: IssueS
     new Date().toISOString(),
     id
   )
+}
+
+/**
+ * Approves an issue for dev handoff: flips its status to `dev_approved` and
+ * seeds `.harness/issues/{number}.yaml` so the existing dev pipeline picks it
+ * up. Shared by the REST route and the MCP `approve_issue` tool so the two
+ * surfaces can't drift out of sync.
+ *
+ * The status update is a DB write, but seeding the yaml is filesystem I/O —
+ * it must stay outside any db.transaction() (transactions are DB-only).
+ * Returns null if the issue doesn't exist; callers decide how to signal
+ * not-found in their own transport.
+ */
+export function approveIssueForDev(db: Database.Database, issueId: number): Issue | null {
+  const issue = getIssue(db, issueId)
+  if (!issue) return null
+
+  setIssueStatus(db, issueId, 'dev_approved')
+  const updated = getIssue(db, issueId)!
+  const project = getProject(db, updated.projectId)!
+  seedIssueYaml(project.rootPath, updated)
+  return updated
 }
