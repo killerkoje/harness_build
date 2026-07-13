@@ -16,6 +16,12 @@ export function createApp(db: Database.Database) {
     res.json(project)
   })
 
+  app.get('/api/projects/:id', (req, res) => {
+    const project = getProject(db, Number(req.params.id))
+    if (!project) return res.status(404).json({ error: 'not found' })
+    res.json(project)
+  })
+
   app.post('/api/projects/:projectId/plans', (req, res) => {
     const plan = createPlan(db, Number(req.params.projectId), req.body.title, req.body.sections)
     res.json(plan)

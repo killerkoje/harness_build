@@ -25,6 +25,13 @@ describe('REST API', () => {
     expect(res.body.name).toBe(path.basename(projectRoot))
   })
 
+  it('GET /api/projects/:id returns the project', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const res = await request(app).get(`/api/projects/${project.id}`)
+    expect(res.status).toBe(200)
+    expect(res.body.id).toBe(project.id)
+  })
+
   it('full flow: create plan -> approve -> issues created -> wireframe -> approve issue seeds yaml', async () => {
     const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
 
