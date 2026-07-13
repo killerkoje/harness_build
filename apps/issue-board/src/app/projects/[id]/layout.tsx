@@ -11,7 +11,7 @@ export default async function ProjectLayout({
 }) {
   const { id } = await params
   const projectId = Number(id)
-  const baseUrl = process.env.ISSUE_BOARD_API_URL ?? 'http://localhost:4000'
+  const baseUrl = process.env.NEXT_PUBLIC_ISSUE_BOARD_API_URL ?? 'http://localhost:4000'
   const res = await fetch(`${baseUrl}/api/projects/${projectId}`)
   const project = res.ok ? await res.json() : { id: projectId, name: `프로젝트 ${projectId}` }
 

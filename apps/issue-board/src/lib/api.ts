@@ -37,7 +37,7 @@ export interface Plan {
   }
 }
 
-const BASE_URL = process.env.ISSUE_BOARD_API_URL ?? 'http://localhost:4000'
+const BASE_URL = process.env.NEXT_PUBLIC_ISSUE_BOARD_API_URL ?? 'http://localhost:4000'
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(`request failed: ${res.status}`)
