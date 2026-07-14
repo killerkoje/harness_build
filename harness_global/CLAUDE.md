@@ -110,3 +110,4 @@ harness_global/
 | 2026-07-08 | Cursor team-patterns v0.5.2 | cursor/team-patterns.mdc, install.sh | alwaysApply 팀·로컬 패턴 참조 |
 | 2026-07-09 | Phase 2 cursor-agent 자동 v0.6.0 | dev/SKILL.md, run-phase2-cursor.sh, phase2-implement.mdc | HANDOFF 후 cursor-agent CLI, 한 세션 Phase 3 |
 | 2026-07-13 | issue-board 연동 | dev/SKILL.md | issue-board가 승인 시 미리 시딩하는 runs:[] 이슈를 최초 실행(kind: initial)으로 처리 |
+| 2026-07-14 | issue-board 완료 동기화 | dev/SKILL.md, issue-board-mcp | Phase 4 harness-report.sh 이후 complete_issue MCP 호출 → 이슈 상태 done + Notion 완료 동기화 (best-effort) |

@@ -7,7 +7,7 @@
 
 > **AX 팀 패턴:** `저장해줘` → `local/` · `팀에 올려줘` → `team-patterns/` PR · `install.sh --sync-patterns`
 
-**현재 버전:** `v0.6.1` (`harness_global/VERSION`)
+**현재 버전:** `v0.9.0` (`harness_global/VERSION`)
 
 ---
 
@@ -136,7 +136,7 @@ cd apps/issue-board && npm install && npm run dev       # :5173 (대시보드)
 | 탭 | 데이터 |
 |----|--------|
 | 기획 | `plans` (+ `plan_snapshots`) |
-| 이슈 | `issues` (`planned` → `wireframed` → `dev_approved`) |
+| 이슈 | `issues` (`planned` → `wireframed` → `dev_approved` → `done`) |
 | 와이어프레임 | `wireframes` (이슈당 screens JSON, `region.component`로 DS 컴포넌트 표기) |
 | 디자인시스템 | `design_systems` (토큰·컴포넌트 카탈로그·`@scope/ui` / Storybook 메타) |
 
@@ -160,7 +160,31 @@ cd apps/issue-board && npm install && npm run dev       # :5173 (대시보드)
 
 와이어프레임 탭은 `region.component`로 표기된 디자인시스템 컴포넌트를 실제 목업 UI(폰 프레임, 카드/버튼 등)로 렌더링한다 (`apps/issue-board/src/components/wireframe-preview/`).
 
+`/ib-plan`은 기획 초반에 **플랫폼(웹/앱(모바일)/데스크톱/CLI)을 필수로 확인**하고 기획서 §1에 `**플랫폼:**` 줄로 고정 기록한다. `/ib-wireframe`은 이 값을 그대로 읽어 프레임(브라우저/폰/터미널)을 정하며, 별도로 추론하지 않는다.
+
 스택: Next.js 15 · React 19 · Tailwind v4 · TS (대시보드) / Node 20 · TypeScript · better-sqlite3 · express · `@modelcontextprotocol/sdk` (백엔드)
+
+### Notion 동기화 (선택)
+
+이슈보드 → Notion **단방향** push. `apps/issue-board-mcp/.env`에 아래 두 값이 있을 때만 동작하고, 없으면 조용히 스킵한다 (하드 디펜던시 아님).
+
+```bash
+# apps/issue-board-mcp/.env
+NOTION_API_KEY=ntn_...
+NOTION_DATABASE_ID=<대상 데이터베이스 ID>
+```
+
+| 트리거 | 이슈보드 상태 | Notion `상태` |
+|--------|--------------|---------------|
+| 기획 승인/동기화 | `planned` | 기획 중 |
+| `/ib-wireframe` | `wireframed` | 시작 전 |
+| `/ib-approve` | `dev_approved` | 진행 중 |
+| `/dev` 파이프라인 커밋 완료 (`complete_issue`) | `done` | 완료 |
+
+- `우선순위`: `높음→높음`, `보통→중간`, `낮음→낮음` (Notion 쪽 옵션명이 "중간"이라 매핑 필요)
+- 대시보드 이슈 목록에서 **Notion 상태를 직접 선택**할 수도 있다 (`보류`/`반영 대기` 등 이슈보드에 대응 상태가 없는 값 포함) — 수동으로 고른 값은 위 자동 매핑보다 항상 우선한다. 지우면(자동으로 되돌리면) 다시 파이프라인 상태 기준으로 동기화된다.
+- 페이지 생성은 최초 1회(POST)뿐이고 이후엔 같은 페이지를 갱신(PATCH)한다 (`issues.notion_page_id`로 추적).
+- Notion → 이슈보드 **역방향 동기화는 아직 없음** (Notion 쪽 API 웹훅으로 가능하지만 별도 작업).
 
 ---
 
@@ -186,3 +210,4 @@ harness_build/
 | v0.6.1 | 기능 이슈 추적 (`.harness/issues/`, 이슈 탭) |
 | v0.7.0 | Issue Board 신설 (기획/이슈/와이어프레임, SQLite+REST+MCP), `/ib-plan`·`/ib-approve` 커맨드, Harness Hub 대체 |
 | v0.8.0 | 디자인시스템 탭·`design_systems` 테이블, `/ib-wireframe`, 기획 개정 시 `sync_plan_issues` (이슈/와이어 연동) |
+| v0.9.0 | Notion 단방향 동기화(우선순위·상태 매핑, 수동 오버라이드), 이슈 `done` 상태 + `/dev` 완료 훅, `/ib-plan` 플랫폼(웹/앱/데스크톱/CLI) 필수 확인 |

@@ -13,6 +13,7 @@ const STATUS_MAP: Record<IssueStatus, string> = {
   planned: '기획 중',
   wireframed: '시작 전',
   dev_approved: '진행 중',
+  done: '완료',
 }
 
 interface NotionConfig {
@@ -31,7 +32,8 @@ function buildProperties(issue: Issue) {
   return {
     이름: { title: [{ text: { content: issue.title } }] },
     우선순위: { select: { name: PRIORITY_MAP[issue.priority] } },
-    상태: { status: { name: STATUS_MAP[issue.status] } },
+    // 사람이 대시보드에서 직접 고른 값이 있으면 파이프라인 자동 매핑보다 우선한다.
+    상태: { status: { name: issue.notionStatus ?? STATUS_MAP[issue.status] } },
   }
 }
 

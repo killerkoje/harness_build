@@ -63,6 +63,68 @@ describe('REST API', () => {
     expect(res.body).toEqual({ error: 'not found' })
   })
 
+  it('PUT /api/issues/:id/notion-status returns 404 for a nonexistent issue', async () => {
+    const res = await request(app)
+      .put('/api/issues/999999/notion-status')
+      .send({ notionStatus: '보류' })
+    expect(res.status).toBe(404)
+  })
+
+  it('PUT /api/issues/:id/notion-status rejects an option outside the Notion schema', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const plan = (
+      await request(app)
+        .post(`/api/projects/${project.id}/plans`)
+        .send({
+          title: 'p',
+          sections: {
+            overview: 'o',
+            targetUsers: 't',
+            mvpFeatures: [{ priority: '높음', title: '로그인', description: 'd' }],
+            outOfScope: 'x',
+          },
+        })
+    ).body
+    await request(app).post(`/api/plans/${plan.id}/approve`)
+    const issue = (await request(app).get(`/api/projects/${project.id}/issues`)).body[0]
+
+    const res = await request(app)
+      .put(`/api/issues/${issue.id}/notion-status`)
+      .send({ notionStatus: '없는옵션' })
+    expect(res.status).toBe(400)
+  })
+
+  it('PUT /api/issues/:id/notion-status sets and clears (null) the manual override', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const plan = (
+      await request(app)
+        .post(`/api/projects/${project.id}/plans`)
+        .send({
+          title: 'p',
+          sections: {
+            overview: 'o',
+            targetUsers: 't',
+            mvpFeatures: [{ priority: '높음', title: '로그인', description: 'd' }],
+            outOfScope: 'x',
+          },
+        })
+    ).body
+    await request(app).post(`/api/plans/${plan.id}/approve`)
+    const issue = (await request(app).get(`/api/projects/${project.id}/issues`)).body[0]
+
+    const setRes = await request(app)
+      .put(`/api/issues/${issue.id}/notion-status`)
+      .send({ notionStatus: '보류' })
+    expect(setRes.status).toBe(200)
+    expect(setRes.body.notionStatus).toBe('보류')
+
+    const clearRes = await request(app)
+      .put(`/api/issues/${issue.id}/notion-status`)
+      .send({ notionStatus: null })
+    expect(clearRes.status).toBe(200)
+    expect(clearRes.body.notionStatus).toBeNull()
+  })
+
   it('full flow: create plan -> approve -> issues created -> wireframe -> approve issue seeds yaml', async () => {
     const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
 

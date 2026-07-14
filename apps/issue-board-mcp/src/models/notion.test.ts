@@ -59,6 +59,32 @@ describe('pushIssueToNotion', () => {
     expect(getIssue(db, issue.id)?.notionPageId).toBe('page-123')
   })
 
+  it('maps done status to 완료', async () => {
+    ;(fetch as any).mockResolvedValue({ json: async () => ({}) })
+
+    const [issue] = createIssuesFromPlan(db, projectId, planId, [
+      { priority: '높음', title: '결제', description: 'PG 연동' },
+    ])
+    await pushIssueToNotion(db, { ...issue, status: 'done' }, CONFIG)
+
+    const [, init] = (fetch as any).mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.properties.상태.status.name).toBe('완료')
+  })
+
+  it('prefers a manually-set notionStatus over the status-derived mapping', async () => {
+    ;(fetch as any).mockResolvedValue({ json: async () => ({}) })
+
+    const [issue] = createIssuesFromPlan(db, projectId, planId, [
+      { priority: '높음', title: '결제', description: 'PG 연동' },
+    ])
+    await pushIssueToNotion(db, { ...issue, status: 'dev_approved', notionStatus: '보류' }, CONFIG)
+
+    const [, init] = (fetch as any).mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.properties.상태.status.name).toBe('보류')
+  })
+
   it('patches the existing page when the issue already has a notionPageId', async () => {
     ;(fetch as any).mockResolvedValue({ json: async () => ({}) })
 

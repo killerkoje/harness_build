@@ -40,9 +40,9 @@ export default function WireframeBoard({
           <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5">화면 프리뷰 · 클릭으로 플로우 체험</p>
         </div>
         <div className="shrink-0 self-start">
-          {status === 'dev_approved' ? (
+          {status === 'dev_approved' || status === 'done' ? (
             <span className="inline-flex text-[11px] sm:text-xs px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-md bg-emerald-50 text-emerald-700">
-              개발 승인됨
+              {status === 'done' ? '완료' : '개발 승인됨'}
             </span>
           ) : (
             <div className="flex items-center gap-2">

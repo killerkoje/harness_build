@@ -14,6 +14,7 @@ import {
   getIssue,
   setIssueStatus,
   approveIssueForDev,
+  completeIssue,
 } from './issues.js'
 import type { PlanSections } from '../types.js'
 
@@ -110,6 +111,34 @@ describe('issues model', () => {
 
     it('returns null for a nonexistent issue', async () => {
       expect(await approveIssueForDev(db, 999999)).toBeNull()
+    })
+  })
+
+  describe('completeIssue', () => {
+    let projectRoot: string
+    let completeProjectId: number
+    let completePlanId: number
+
+    beforeEach(() => {
+      projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'issue-board-model-'))
+      completeProjectId = getOrCreateProject(db, projectRoot).id
+      completePlanId = createPlan(db, completeProjectId, 'p', sections).id
+    })
+
+    it('sets status to done', async () => {
+      const [issue] = createIssuesFromPlan(db, completeProjectId, completePlanId, [
+        sections.mvpFeatures[0],
+      ])
+      await approveIssueForDev(db, issue.id)
+
+      const updated = await completeIssue(db, issue.id)
+
+      expect(updated?.status).toBe('done')
+      expect(getIssue(db, issue.id)?.status).toBe('done')
+    })
+
+    it('returns null for a nonexistent issue', async () => {
+      expect(await completeIssue(db, 999999)).toBeNull()
     })
   })
 })

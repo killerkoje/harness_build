@@ -326,6 +326,17 @@ bash .harness/scripts/harness-report.sh
 
 `.harness/issues/{ISSUE_ID}.yaml` 에 run·변경 파일이 누적된다. Hub 이슈 탭에서 추적.
 
+**issue-board 완료 동기화 (연결된 프로젝트만, best-effort)**
+
+이 프로젝트에 issue-board MCP(`get_issue_by_number`/`complete_issue` 툴)가 보이면:
+
+1. `get_issue_by_number({ projectRoot: <cwd 절대경로>, number: ISSUE_ID })` 로 내부 `issueId` 조회
+2. 찾으면 `complete_issue({ issueId })` 호출 → 이슈보드 상태 `done` + (연동돼 있으면) Notion 상태도 `완료`로 동기화
+
+툴이 안 보이거나(`.mcp.json` 미연결) 이슈를 못 찾으면 **조용히 스킵**한다 — 이 단계는 부가 기능이라
+실패해도 커밋/파이프라인 자체를 막지 않는다. `kind: amendment`(기존 완료 이슈의 재수정)여도
+동일하게 호출해 최신 커밋 기준으로 `done` 상태를 유지한다.
+
 #### Step 4-A: 로컬 패턴 저장 질문 (커밋 성공 후 필수)
 
 커밋·푸시가 끝난 뒤 **반드시** 한 번만 질문한다. 커밋과 동시에 묻지 않는다.

@@ -4,9 +4,18 @@ import cors from 'cors'
 import type Database from 'better-sqlite3'
 import { getOrCreateProject, getProject } from '../models/projects.js'
 import { createPlan, createPlanFromMarkdown, getPlan, approvePlanAndCreateIssues, syncIssuesFromPlan } from '../models/plans.js'
-import { listIssuesByProject, getIssue, setIssueStatus, approveIssueForDev } from '../models/issues.js'
+import {
+  listIssuesByProject,
+  getIssue,
+  setIssueStatus,
+  approveIssueForDev,
+  completeIssue,
+  setIssueNotionStatus,
+} from '../models/issues.js'
 import { upsertWireframe, getWireframeByIssue } from '../models/wireframes.js'
 import { getDesignSystemByProject, upsertDesignSystem } from '../models/design-systems.js'
+import { pushIssueToNotion } from '../models/notion.js'
+import { NOTION_STATUS_OPTIONS } from '../types.js'
 
 export function createApp(db: Database.Database) {
   const app = express()
@@ -97,6 +106,29 @@ export function createApp(db: Database.Database) {
     const issueId = Number(req.params.id)
     const updated = await approveIssueForDev(db, issueId)
     if (!updated) return res.status(404).json({ error: 'not found' })
+    res.json(updated)
+  })
+
+  app.post('/api/issues/:id/complete', async (req, res) => {
+    const issueId = Number(req.params.id)
+    const updated = await completeIssue(db, issueId)
+    if (!updated) return res.status(404).json({ error: 'not found' })
+    res.json(updated)
+  })
+
+  app.put('/api/issues/:id/notion-status', async (req, res) => {
+    const issueId = Number(req.params.id)
+    const issue = getIssue(db, issueId)
+    if (!issue) return res.status(404).json({ error: 'not found' })
+
+    const { notionStatus } = req.body ?? {}
+    if (notionStatus !== null && !NOTION_STATUS_OPTIONS.includes(notionStatus)) {
+      return res.status(400).json({ error: `notionStatus must be one of ${NOTION_STATUS_OPTIONS.join(', ')} or null` })
+    }
+
+    setIssueNotionStatus(db, issueId, notionStatus)
+    const updated = getIssue(db, issueId)!
+    await pushIssueToNotion(db, updated)
     res.json(updated)
   })
 

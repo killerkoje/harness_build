@@ -1,4 +1,7 @@
 // src/lib/api.ts
+export const NOTION_STATUS_OPTIONS = ['기획 중', '시작 전', '보류', '진행 중', '반영 대기', '완료'] as const
+export type NotionStatus = (typeof NOTION_STATUS_OPTIONS)[number]
+
 export interface Issue {
   id: number
   projectId: number
@@ -7,7 +10,9 @@ export interface Issue {
   title: string
   priority: '높음' | '보통' | '낮음'
   description: string
-  status: 'planned' | 'wireframed' | 'dev_approved'
+  status: 'planned' | 'wireframed' | 'dev_approved' | 'done'
+  notionPageId: string | null
+  notionStatus: NotionStatus | null
   createdAt: string
   updatedAt: string
 }
@@ -83,6 +88,16 @@ export async function fetchWireframe(issueId: number): Promise<Wireframe | null>
 
 export async function approveIssue(issueId: number): Promise<Issue> {
   return json(await fetch(`${BASE_URL}/api/issues/${issueId}/approve`, { method: 'POST' }))
+}
+
+export async function setIssueNotionStatus(issueId: number, notionStatus: NotionStatus | null): Promise<Issue> {
+  return json(
+    await fetch(`${BASE_URL}/api/issues/${issueId}/notion-status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notionStatus }),
+    })
+  )
 }
 
 export async function fetchDesignSystem(projectId: number): Promise<DesignSystem | null> {

@@ -1,6 +1,6 @@
 // src/models/issues.ts
 import type Database from 'better-sqlite3'
-import type { Issue, IssueStatus, MvpFeature, Priority } from '../types.js'
+import type { Issue, IssueStatus, MvpFeature, NotionStatus, Priority } from '../types.js'
 import { getProject } from './projects.js'
 import { seedIssueYaml } from '../handoff.js'
 import { pushIssueToNotion } from './notion.js'
@@ -16,6 +16,7 @@ function rowToIssue(row: any): Issue {
     description: row.description,
     status: row.status,
     notionPageId: row.notion_page_id,
+    notionStatus: row.notion_status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -24,6 +25,19 @@ function rowToIssue(row: any): Issue {
 export function setIssueNotionPageId(db: Database.Database, id: number, notionPageId: string): void {
   db.prepare('UPDATE issues SET notion_page_id = ?, updated_at = ? WHERE id = ?').run(
     notionPageId,
+    new Date().toISOString(),
+    id
+  )
+}
+
+/** null이면 자동 매핑(STATUS_MAP[issue.status])으로 되돌린다 */
+export function setIssueNotionStatus(
+  db: Database.Database,
+  id: number,
+  notionStatus: NotionStatus | null
+): void {
+  db.prepare('UPDATE issues SET notion_status = ?, updated_at = ? WHERE id = ?').run(
+    notionStatus,
     new Date().toISOString(),
     id
   )
@@ -137,6 +151,22 @@ export async function approveIssueForDev(db: Database.Database, issueId: number)
   const updated = getIssue(db, issueId)!
   const project = getProject(db, updated.projectId)!
   seedIssueYaml(project.rootPath, updated)
+  await pushIssueToNotion(db, updated)
+  return updated
+}
+
+/**
+ * Marks an issue as done once the dev pipeline (harness `/dev`) commits its
+ * implementation. Called from outside this DB (Phase 4's harness-report.sh
+ * step), not from any issue-board-mcp tool — there's no local file to seed
+ * here, just the status flip + Notion push.
+ */
+export async function completeIssue(db: Database.Database, issueId: number): Promise<Issue | null> {
+  const issue = getIssue(db, issueId)
+  if (!issue) return null
+
+  setIssueStatus(db, issueId, 'done')
+  const updated = getIssue(db, issueId)!
   await pushIssueToNotion(db, updated)
   return updated
 }

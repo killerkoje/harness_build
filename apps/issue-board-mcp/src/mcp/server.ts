@@ -23,6 +23,7 @@ import {
   getIssueByNumber,
   listIssuesByProject,
   approveIssueForDev,
+  completeIssue,
   setIssueStatus,
 } from '../models/issues.js'
 import { upsertWireframe } from '../models/wireframes.js'
@@ -236,6 +237,19 @@ export function createMcpServer(db: Database.Database): McpServer {
     { issueId: z.number() },
     async ({ issueId }) => {
       const updated = await approveIssueForDev(db, issueId)
+      if (!updated) {
+        return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
+      }
+      return { content: [{ type: 'text', text: JSON.stringify(updated) }] }
+    }
+  )
+
+  server.tool(
+    'complete_issue',
+    '이슈를 완료(done) 상태로 전환한다. /dev 파이프라인이 커밋을 끝낸 뒤 호출 (Notion 상태도 완료로 동기화)',
+    { issueId: z.number() },
+    async ({ issueId }) => {
+      const updated = await completeIssue(db, issueId)
       if (!updated) {
         return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
       }

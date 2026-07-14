@@ -1,6 +1,11 @@
 export type PlanStatus = 'draft' | 'approved'
-export type IssueStatus = 'planned' | 'wireframed' | 'dev_approved'
+export type IssueStatus = 'planned' | 'wireframed' | 'dev_approved' | 'done'
 export type Priority = '높음' | '보통' | '낮음'
+
+/** Notion `상태` 속성의 실제 옵션 전체 — 이슈보드 파이프라인 상태와 무관하게
+ *  사람이 대시보드에서 직접 골라 Notion에 그대로 반영할 수 있는 값들. */
+export const NOTION_STATUS_OPTIONS = ['기획 중', '시작 전', '보류', '진행 중', '반영 대기', '완료'] as const
+export type NotionStatus = (typeof NOTION_STATUS_OPTIONS)[number]
 
 export interface MvpFeature {
   priority: Priority
@@ -52,6 +57,8 @@ export interface Issue {
   description: string
   status: IssueStatus
   notionPageId: string | null
+  /** 사람이 대시보드에서 직접 고른 Notion 상태 — 있으면 status 기반 자동 매핑을 덮어쓴다 */
+  notionStatus: NotionStatus | null
   createdAt: string
   updatedAt: string
 }
