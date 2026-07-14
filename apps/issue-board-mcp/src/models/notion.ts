@@ -32,6 +32,31 @@ function getNotionConfig(): NotionConfig | null {
   return { apiKey, databaseId }
 }
 
+const NOTION_TIMEOUT_MS = 10_000
+
+/**
+ * fetch() wrapper for Notion calls: bounds the wait with a timeout and turns
+ * network errors / non-2xx responses into a logged failure instead of a
+ * silently-swallowed one or an unhandled rejection. Returns null on any
+ * failure so callers can no-op — Notion sync is best-effort, not a hard
+ * dependency of the DB write path.
+ */
+async function notionFetch(url: string, init: RequestInit, label: string): Promise<Response | null> {
+  let res: Response
+  try {
+    res = await fetch(url, { ...init, signal: AbortSignal.timeout(NOTION_TIMEOUT_MS) })
+  } catch (err) {
+    console.error(`[notion] ${label} failed (request error):`, err)
+    return null
+  }
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    console.error(`[notion] ${label} failed: ${res.status} ${res.statusText} ${body}`)
+    return null
+  }
+  return res
+}
+
 /** Whether NOTION_API_KEY/NOTION_DATABASE_ID are both set. */
 export function isNotionConfigured(): boolean {
   return getNotionConfig() !== null
@@ -85,25 +110,36 @@ export async function pushIssueToNotion(
   }
 
   if (issue.notionPageId) {
-    await fetch(`https://api.notion.com/v1/pages/${issue.notionPageId}`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ properties: buildIssueProperties(issue, epicPageId) }),
-    })
+    await notionFetch(
+      `https://api.notion.com/v1/pages/${issue.notionPageId}`,
+      {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ properties: buildIssueProperties(issue, epicPageId) }),
+      },
+      `patch issue ${issue.id}`
+    )
     return
   }
 
-  const res = await fetch('https://api.notion.com/v1/pages', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      parent: { database_id: config.databaseId },
-      properties: buildIssueProperties(issue, epicPageId),
-    }),
-  })
+  const res = await notionFetch(
+    'https://api.notion.com/v1/pages',
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        parent: { database_id: config.databaseId },
+        properties: buildIssueProperties(issue, epicPageId),
+      }),
+    },
+    `create issue ${issue.id}`
+  )
+  if (!res) return
   const data = (await res.json()) as { id?: string }
   if (data.id) {
     setIssueNotionPageId(db, issue.id, data.id)
+  } else {
+    console.error(`[notion] create issue ${issue.id} succeeded but response had no page id`)
   }
 }
 
@@ -128,22 +164,31 @@ export async function pushEpicToNotion(
   }
 
   if (existingEpicPageId) {
-    await fetch(`https://api.notion.com/v1/pages/${existingEpicPageId}`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ properties: buildEpicProperties(planTitle) }),
-    })
+    await notionFetch(
+      `https://api.notion.com/v1/pages/${existingEpicPageId}`,
+      {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ properties: buildEpicProperties(planTitle) }),
+      },
+      `patch epic ${existingEpicPageId}`
+    )
     return existingEpicPageId
   }
 
-  const res = await fetch('https://api.notion.com/v1/pages', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      parent: { database_id: config.databaseId },
-      properties: buildEpicProperties(planTitle),
-    }),
-  })
+  const res = await notionFetch(
+    'https://api.notion.com/v1/pages',
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        parent: { database_id: config.databaseId },
+        properties: buildEpicProperties(planTitle),
+      }),
+    },
+    `create epic "${planTitle}"`
+  )
+  if (!res) return null
   const data = (await res.json()) as { id?: string }
   return data.id ?? null
 }

@@ -12,8 +12,15 @@ export default async function ProjectLayout({
   const { id } = await params
   const projectId = Number(id)
   const baseUrl = process.env.NEXT_PUBLIC_ISSUE_BOARD_API_URL ?? 'http://localhost:4000'
-  const res = await fetch(`${baseUrl}/api/projects/${projectId}`)
-  const project = res.ok ? await res.json() : { id: projectId, name: `프로젝트 ${projectId}` }
+  // fetch itself can throw (e.g. MCP server down/unreachable), not just
+  // return a non-ok response — fall back the same way for both.
+  let project: { id: number; name: string }
+  try {
+    const res = await fetch(`${baseUrl}/api/projects/${projectId}`)
+    project = res.ok ? await res.json() : { id: projectId, name: `프로젝트 ${projectId}` }
+  } catch {
+    project = { id: projectId, name: `프로젝트 ${projectId}` }
+  }
 
   return (
     <div className="flex flex-col md:flex-row min-h-dvh min-w-0">

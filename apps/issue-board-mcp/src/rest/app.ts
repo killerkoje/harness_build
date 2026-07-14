@@ -24,6 +24,18 @@ import { getDesignSystemByProject, upsertDesignSystem } from '../models/design-s
 import { pushIssueToNotion } from '../models/notion.js'
 import { NOTION_STATUS_OPTIONS } from '../types.js'
 
+// Express 4 doesn't forward a rejected promise from an async handler to the
+// error middleware on its own — an uncaught rejection would otherwise crash
+// the process instead of producing a 500. This wraps handlers so any
+// rejection is routed to next(err).
+function asyncHandler(
+  fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<unknown>
+) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    fn(req, res, next).catch(next)
+  }
+}
+
 export function createApp(db: Database.Database) {
   const app = express()
   // This server is an explicitly local, single-user tool (see design doc) with
@@ -64,7 +76,7 @@ export function createApp(db: Database.Database) {
     res.json(plan)
   })
 
-  app.post('/api/plans/:id/approve', async (req, res) => {
+  app.post('/api/plans/:id/approve', asyncHandler(async (req, res) => {
     const planId = Number(req.params.id)
     const plan = getPlan(db, planId)
     if (!plan) return res.status(404).json({ error: 'not found' })
@@ -76,9 +88,9 @@ export function createApp(db: Database.Database) {
 
     const result = await approvePlanAndCreateIssues(db, planId)
     res.json(result)
-  })
+  }))
 
-  app.post('/api/plans/:id/sync-issues', async (req, res) => {
+  app.post('/api/plans/:id/sync-issues', asyncHandler(async (req, res) => {
     const planId = Number(req.params.id)
     const plan = getPlan(db, planId)
     if (!plan) return res.status(404).json({ error: 'not found' })
@@ -87,7 +99,7 @@ export function createApp(db: Database.Database) {
     } catch (e) {
       res.status(400).json({ error: e instanceof Error ? e.message : String(e) })
     }
-  })
+  }))
 
   app.get('/api/projects/:projectId/issues', (req, res) => {
     res.json(listIssuesByProject(db, Number(req.params.projectId)))
@@ -115,21 +127,21 @@ export function createApp(db: Database.Database) {
     res.json(wireframe)
   })
 
-  app.post('/api/issues/:id/approve', async (req, res) => {
+  app.post('/api/issues/:id/approve', asyncHandler(async (req, res) => {
     const issueId = Number(req.params.id)
     const updated = await approveIssueForDev(db, issueId)
     if (!updated) return res.status(404).json({ error: 'not found' })
     res.json(updated)
-  })
+  }))
 
-  app.post('/api/issues/:id/complete', async (req, res) => {
+  app.post('/api/issues/:id/complete', asyncHandler(async (req, res) => {
     const issueId = Number(req.params.id)
     const updated = await completeIssue(db, issueId)
     if (!updated) return res.status(404).json({ error: 'not found' })
     res.json(updated)
-  })
+  }))
 
-  app.put('/api/issues/:id/notion-status', async (req, res) => {
+  app.put('/api/issues/:id/notion-status', asyncHandler(async (req, res) => {
     const issueId = Number(req.params.id)
     const issue = getIssue(db, issueId)
     if (!issue) return res.status(404).json({ error: 'not found' })
@@ -143,7 +155,7 @@ export function createApp(db: Database.Database) {
     const updated = getIssue(db, issueId)!
     await pushIssueToNotion(db, updated)
     res.json(updated)
-  })
+  }))
 
   app.get('/api/projects/:projectId/design-system', (req, res) => {
     const ds = getDesignSystemByProject(db, Number(req.params.projectId))

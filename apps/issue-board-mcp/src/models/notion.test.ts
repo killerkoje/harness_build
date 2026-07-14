@@ -39,7 +39,7 @@ describe('pushIssueToNotion', () => {
   })
 
   it('creates a page for an issue with no notionPageId, then stores the returned page id', async () => {
-    ;(fetch as any).mockResolvedValue({ json: async () => ({ id: 'page-123' }) })
+    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({ id: 'page-123' }) })
 
     const [issue] = createIssuesFromPlan(db, projectId, planId, [
       { priority: '보통', title: '검색', description: '필터' },
@@ -63,7 +63,7 @@ describe('pushIssueToNotion', () => {
   })
 
   it('includes a 상위 항목 relation to the epic when an epicPageId is passed', async () => {
-    ;(fetch as any).mockResolvedValue({ json: async () => ({ id: 'page-456' }) })
+    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({ id: 'page-456' }) })
 
     const [issue] = createIssuesFromPlan(db, projectId, planId, [
       { priority: '높음', title: '홈', description: '피드' },
@@ -76,7 +76,7 @@ describe('pushIssueToNotion', () => {
   })
 
   it('maps done status to 완료', async () => {
-    ;(fetch as any).mockResolvedValue({ json: async () => ({}) })
+    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({}) })
 
     const [issue] = createIssuesFromPlan(db, projectId, planId, [
       { priority: '높음', title: '결제', description: 'PG 연동' },
@@ -89,7 +89,7 @@ describe('pushIssueToNotion', () => {
   })
 
   it('prefers a manually-set notionStatus over the status-derived mapping', async () => {
-    ;(fetch as any).mockResolvedValue({ json: async () => ({}) })
+    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({}) })
 
     const [issue] = createIssuesFromPlan(db, projectId, planId, [
       { priority: '높음', title: '결제', description: 'PG 연동' },
@@ -102,7 +102,7 @@ describe('pushIssueToNotion', () => {
   })
 
   it('patches the existing page when the issue already has a notionPageId', async () => {
-    ;(fetch as any).mockResolvedValue({ json: async () => ({}) })
+    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({}) })
 
     const [issue] = createIssuesFromPlan(db, projectId, planId, [
       { priority: '낮음', title: '마이', description: '프로필' },
@@ -133,7 +133,7 @@ describe('pushEpicToNotion', () => {
   })
 
   it('creates an Epic page and returns the new page id', async () => {
-    ;(fetch as any).mockResolvedValue({ json: async () => ({ id: 'epic-1' }) })
+    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({ id: 'epic-1' }) })
 
     const result = await pushEpicToNotion(null, 'FoodNow 기획', CONFIG)
 
@@ -148,7 +148,7 @@ describe('pushEpicToNotion', () => {
   })
 
   it('patches the existing Epic page and returns the same id', async () => {
-    ;(fetch as any).mockResolvedValue({ json: async () => ({}) })
+    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({}) })
 
     const result = await pushEpicToNotion('epic-1', 'FoodNow 기획 (수정)', CONFIG)
 

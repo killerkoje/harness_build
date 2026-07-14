@@ -26,14 +26,24 @@ const db = createDb(DB_PATH)
 const restApp = createApp(db)
 
 restApp.post('/mcp', express.json(), async (req, res) => {
-  const server = createMcpServer(db)
-  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
-  res.on('close', () => {
-    transport.close()
-    server.close()
-  })
-  await server.connect(transport)
-  await transport.handleRequest(req, res, req.body)
+  // This route is registered after createApp()'s own error middleware, so
+  // next(err) here would fall through to Express's default HTML error page
+  // instead of that JSON handler — respond directly instead.
+  try {
+    const server = createMcpServer(db)
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
+    res.on('close', () => {
+      transport.close()
+      server.close()
+    })
+    await server.connect(transport)
+    await transport.handleRequest(req, res, req.body)
+  } catch (err) {
+    console.error(err)
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'internal error' })
+    }
+  }
 })
 
 restApp.listen(PORT, () => {

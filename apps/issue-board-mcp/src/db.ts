@@ -4,6 +4,7 @@ import Database from 'better-sqlite3'
 export function createDb(filename: string): Database.Database {
   const db = new Database(filename)
   db.pragma('journal_mode = WAL')
+  db.pragma('foreign_keys = ON')
   db.exec(`
     CREATE TABLE IF NOT EXISTS projects (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

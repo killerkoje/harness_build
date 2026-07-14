@@ -20,6 +20,7 @@ const STATUS_STYLE: Record<Issue['status'], string> = {
 
 export default function IssueList({ issues, projectId }: { issues: Issue[]; projectId: number }) {
   const [items, setItems] = useState(issues)
+  const [error, setError] = useState<string | null>(null)
 
   if (items.length === 0) {
     return <p className="text-sm text-zinc-400">이슈가 없습니다. 기획을 먼저 확정하세요.</p>
@@ -27,12 +28,18 @@ export default function IssueList({ issues, projectId }: { issues: Issue[]; proj
 
   async function handleNotionStatusChange(issueId: number, value: string) {
     const notionStatus = (value || null) as NotionStatus | null
-    const updated = await setIssueNotionStatus(issueId, notionStatus)
-    setItems((prev) => prev.map((i) => (i.id === issueId ? updated : i)))
+    setError(null)
+    try {
+      const updated = await setIssueNotionStatus(issueId, notionStatus)
+      setItems((prev) => prev.map((i) => (i.id === issueId ? updated : i)))
+    } catch {
+      setError('Notion 상태 변경에 실패했습니다. 잠시 후 다시 시도하세요.')
+    }
   }
 
   return (
     <ul className="space-y-2 max-w-2xl">
+      {error && <p className="text-xs text-red-600">{error}</p>}
       {items.map((issue) => (
         <li key={issue.id} className="border border-zinc-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1">

@@ -13,6 +13,7 @@ apps/issue-board-mcp/node_modules/
 apps/issue-board-mcp/*.db
 apps/issue-board-mcp/*.db-shm
 apps/issue-board-mcp/*.db-wal
+apps/issue-board-mcp/*.db.bak.*
 apps/issue-board-mcp/.env
 
 apps/issue-board/node_modules/
@@ -20,3 +21,4 @@ apps/issue-board/.next/
 apps/issue-board/.env.local
 apps/issue-board/tsconfig.tsbuildinfo
 apps/issue-board-mcp/tsconfig.tsbuildinfo
+apps/pattern-viewer/tsconfig.tsbuildinfo
