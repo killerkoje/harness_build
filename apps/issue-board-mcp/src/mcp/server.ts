@@ -128,11 +128,11 @@ export function createMcpServer(db: Database.Database): McpServer {
           return { content: [{ type: 'text', text: `plan ${planId} not found` }], isError: true }
         }
         if (existing.status === 'approved') {
-          const result = syncIssuesFromPlan(db, planId)
+          const result = await syncIssuesFromPlan(db, planId)
           snapshotPlan(db, planId, 'amended')
           return { content: [{ type: 'text', text: JSON.stringify(result) }] }
         }
-        const result = approvePlanAndCreateIssues(db, planId)
+        const result = await approvePlanAndCreateIssues(db, planId)
         return { content: [{ type: 'text', text: JSON.stringify(result) }] }
       }
 
@@ -156,7 +156,7 @@ export function createMcpServer(db: Database.Database): McpServer {
     { planId: z.number() },
     async ({ planId }) => {
       try {
-        const result = syncIssuesFromPlan(db, planId)
+        const result = await syncIssuesFromPlan(db, planId)
         return { content: [{ type: 'text', text: JSON.stringify(result) }] }
       } catch (e) {
         return {
@@ -235,7 +235,7 @@ export function createMcpServer(db: Database.Database): McpServer {
     '이슈를 개발 승인 상태(dev_approved)로 전환하고 .harness/issues/{number}.yaml을 시딩해 기존 dev 파이프라인과 연결한다',
     { issueId: z.number() },
     async ({ issueId }) => {
-      const updated = approveIssueForDev(db, issueId)
+      const updated = await approveIssueForDev(db, issueId)
       if (!updated) {
         return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
       }

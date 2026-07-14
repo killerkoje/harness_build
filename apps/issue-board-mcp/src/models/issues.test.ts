@@ -93,10 +93,10 @@ describe('issues model', () => {
       issuesPlanId = createPlan(db, issuesProjectId, 'p', sections).id
     })
 
-    it('sets status to dev_approved and seeds the handoff yaml with correct content', () => {
+    it('sets status to dev_approved and seeds the handoff yaml with correct content', async () => {
       const [issue] = createIssuesFromPlan(db, issuesProjectId, issuesPlanId, [sections.mvpFeatures[0]])
 
-      const updated = approveIssueForDev(db, issue.id)
+      const updated = await approveIssueForDev(db, issue.id)
 
       expect(updated?.status).toBe('dev_approved')
       expect(getIssue(db, issue.id)?.status).toBe('dev_approved')
@@ -108,8 +108,8 @@ describe('issues model', () => {
       expect(doc.title).toBe(issue.title)
     })
 
-    it('returns null for a nonexistent issue', () => {
-      expect(approveIssueForDev(db, 999999)).toBeNull()
+    it('returns null for a nonexistent issue', async () => {
+      expect(await approveIssueForDev(db, 999999)).toBeNull()
     })
   })
 })

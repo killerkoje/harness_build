@@ -6,6 +6,12 @@ import { createDb } from './db.js'
 import { createApp } from './rest/app.js'
 import { createMcpServer } from './mcp/server.js'
 
+try {
+  process.loadEnvFile(path.join(process.cwd(), '.env'))
+} catch {
+  // .env is optional — Notion sync just stays disabled without it
+}
+
 const PORT = Number(process.env.PORT ?? 4000)
 const DB_PATH = process.env.ISSUE_BOARD_DB ?? path.join(process.cwd(), 'issue-board.db')
 

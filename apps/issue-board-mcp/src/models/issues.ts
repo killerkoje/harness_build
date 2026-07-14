@@ -3,6 +3,7 @@ import type Database from 'better-sqlite3'
 import type { Issue, IssueStatus, MvpFeature, Priority } from '../types.js'
 import { getProject } from './projects.js'
 import { seedIssueYaml } from '../handoff.js'
+import { pushIssueToNotion } from './notion.js'
 
 function rowToIssue(row: any): Issue {
   return {
@@ -14,9 +15,18 @@ function rowToIssue(row: any): Issue {
     priority: row.priority,
     description: row.description,
     status: row.status,
+    notionPageId: row.notion_page_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
+}
+
+export function setIssueNotionPageId(db: Database.Database, id: number, notionPageId: string): void {
+  db.prepare('UPDATE issues SET notion_page_id = ?, updated_at = ? WHERE id = ?').run(
+    notionPageId,
+    new Date().toISOString(),
+    id
+  )
 }
 
 export function createIssuesFromPlan(
@@ -119,7 +129,7 @@ export function updateIssueFields(
  * Returns null if the issue doesn't exist; callers decide how to signal
  * not-found in their own transport.
  */
-export function approveIssueForDev(db: Database.Database, issueId: number): Issue | null {
+export async function approveIssueForDev(db: Database.Database, issueId: number): Promise<Issue | null> {
   const issue = getIssue(db, issueId)
   if (!issue) return null
 
@@ -127,5 +137,6 @@ export function approveIssueForDev(db: Database.Database, issueId: number): Issu
   const updated = getIssue(db, issueId)!
   const project = getProject(db, updated.projectId)!
   seedIssueYaml(project.rootPath, updated)
+  await pushIssueToNotion(db, updated)
   return updated
 }

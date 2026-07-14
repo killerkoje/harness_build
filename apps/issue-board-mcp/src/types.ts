@@ -51,6 +51,7 @@ export interface Issue {
   priority: Priority
   description: string
   status: IssueStatus
+  notionPageId: string | null
   createdAt: string
   updatedAt: string
 }

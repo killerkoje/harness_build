@@ -12,6 +12,7 @@ apps/issue-board-mcp/node_modules/
 apps/issue-board-mcp/*.db
 apps/issue-board-mcp/*.db-shm
 apps/issue-board-mcp/*.db-wal
+apps/issue-board-mcp/.env
 
 apps/issue-board/node_modules/
 apps/issue-board/.next/

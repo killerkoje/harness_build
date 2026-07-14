@@ -10,6 +10,7 @@ import {
 } from './issues.js'
 import { deleteWireframeByIssue } from './wireframes.js'
 import { parsePlanMarkdown } from './parse-plan-markdown.js'
+import { pushIssueToNotion } from './notion.js'
 
 function rowToPlan(row: any): Plan {
   return {
@@ -88,10 +89,10 @@ export function snapshotPlan(db: Database.Database, planId: number, label: strin
  * Shared by the REST handler and the MCP `update_plan` tool so the two
  * surfaces can't drift out of sync.
  */
-export function approvePlanAndCreateIssues(
+export async function approvePlanAndCreateIssues(
   db: Database.Database,
   planId: number
-): { plan: Plan; issues: Issue[] } {
+): Promise<{ plan: Plan; issues: Issue[] }> {
   const run = db.transaction(() => {
     approvePlan(db, planId)
     const plan = getPlan(db, planId)
@@ -99,7 +100,12 @@ export function approvePlanAndCreateIssues(
     const issues = createIssuesFromPlan(db, plan.projectId, planId, plan.sections.mvpFeatures)
     return { plan, issues }
   })
-  return run()
+  const result = run()
+  // Network I/O — must run after the transaction commits, not inside it.
+  for (const issue of result.issues) {
+    await pushIssueToNotion(db, issue)
+  }
+  return result
 }
 
 /**
@@ -108,17 +114,17 @@ export function approvePlanAndCreateIssues(
  * - Changed priority/description → update + drop wireframe + status planned
  * - Removed from plan → left as orphaned (not deleted)
  */
-export function syncIssuesFromPlan(
+export async function syncIssuesFromPlan(
   db: Database.Database,
   planId: number
-): {
+): Promise<{
   plan: Plan
   created: Issue[]
   updated: Issue[]
   unchanged: Issue[]
   orphaned: Issue[]
   wireframesInvalidated: number[]
-} {
+}> {
   const plan = getPlan(db, planId)
   if (!plan) throw new Error(`plan ${planId} not found`)
 
@@ -163,6 +169,11 @@ export function syncIssuesFromPlan(
     }
   })
   run()
+
+  // Network I/O — must run after the transaction commits, not inside it.
+  for (const issue of [...created, ...updated]) {
+    await pushIssueToNotion(db, issue)
+  }
 
   const orphaned = existing.filter((i) => !matchedIds.has(i.id))
   return {

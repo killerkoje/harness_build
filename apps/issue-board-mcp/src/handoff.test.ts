@@ -26,6 +26,7 @@ describe('seedIssueYaml', () => {
       priority: '높음',
       description: '이메일 로그인',
       status: 'dev_approved',
+      notionPageId: null,
       createdAt: '2026-07-13T00:00:00.000Z',
       updatedAt: '2026-07-13T00:00:00.000Z',
     }
@@ -51,6 +52,7 @@ describe('seedIssueYaml', () => {
       priority: '보통',
       description: 'd',
       status: 'dev_approved',
+      notionPageId: null,
       createdAt: '2026-07-13T00:00:00.000Z',
       updatedAt: '2026-07-13T00:00:00.000Z',
     }

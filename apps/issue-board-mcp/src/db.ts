@@ -39,6 +39,7 @@ export function createDb(filename: string): Database.Database {
       priority TEXT NOT NULL,
       description TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'planned',
+      notion_page_id TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       UNIQUE(project_id, number)
@@ -65,5 +66,11 @@ export function createDb(filename: string): Database.Database {
       updated_at TEXT NOT NULL
     );
   `)
+
+  const issueCols = db.prepare('PRAGMA table_info(issues)').all() as { name: string }[]
+  if (!issueCols.some((c) => c.name === 'notion_page_id')) {
+    db.exec('ALTER TABLE issues ADD COLUMN notion_page_id TEXT')
+  }
+
   return db
 }

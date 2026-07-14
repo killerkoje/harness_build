@@ -42,26 +42,26 @@ export function createApp(db: Database.Database) {
     res.json(plan)
   })
 
-  app.post('/api/plans/:id/approve', (req, res) => {
+  app.post('/api/plans/:id/approve', async (req, res) => {
     const planId = Number(req.params.id)
     const plan = getPlan(db, planId)
     if (!plan) return res.status(404).json({ error: 'not found' })
 
     if (plan.status === 'approved') {
-      const result = syncIssuesFromPlan(db, planId)
+      const result = await syncIssuesFromPlan(db, planId)
       return res.json(result)
     }
 
-    const result = approvePlanAndCreateIssues(db, planId)
+    const result = await approvePlanAndCreateIssues(db, planId)
     res.json(result)
   })
 
-  app.post('/api/plans/:id/sync-issues', (req, res) => {
+  app.post('/api/plans/:id/sync-issues', async (req, res) => {
     const planId = Number(req.params.id)
     const plan = getPlan(db, planId)
     if (!plan) return res.status(404).json({ error: 'not found' })
     try {
-      res.json(syncIssuesFromPlan(db, planId))
+      res.json(await syncIssuesFromPlan(db, planId))
     } catch (e) {
       res.status(400).json({ error: e instanceof Error ? e.message : String(e) })
     }
@@ -93,9 +93,9 @@ export function createApp(db: Database.Database) {
     res.json(wireframe)
   })
 
-  app.post('/api/issues/:id/approve', (req, res) => {
+  app.post('/api/issues/:id/approve', async (req, res) => {
     const issueId = Number(req.params.id)
-    const updated = approveIssueForDev(db, issueId)
+    const updated = await approveIssueForDev(db, issueId)
     if (!updated) return res.status(404).json({ error: 'not found' })
     res.json(updated)
   })
