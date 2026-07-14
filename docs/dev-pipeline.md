@@ -191,8 +191,8 @@ flowchart LR
 
   MCP --> T1[기획 탭]
   MCP --> T2[이슈 탭]
-  MCP --> T3[와이어프레임 탭]
-  MCP --> T4[디자인시스템 탭]
+  MCP --> T3[디자인시스템 탭]
+  MCP --> T4[와이어프레임 탭]
 
   MCP -.승인 시 시딩.-> Y1[".harness/issues/N.yaml"]
   Y1 -.Phase 0이 읽음.-> DEV["dev 파이프라인"]

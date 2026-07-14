@@ -143,7 +143,7 @@ phase2: cursor-agent   # cursor-agent | claude
 
 ## Issue Board
 
-`apps/issue-board`(대시보드, Next.js) + `apps/issue-board-mcp`(백엔드, Node/TS) 2개 앱으로 구성. 백엔드는 SQLite에 기획·이슈·와이어프레임·디자인시스템을 저장하고 REST(`/api/*`)와 MCP(`/mcp`)를 함께 제공한다.
+`apps/issue-board`(대시보드, Next.js) + `apps/issue-board-mcp`(백엔드, Node/TS) 2개 앱으로 구성. 백엔드는 SQLite에 기획·이슈·디자인시스템·와이어프레임을 저장하고 REST(`/api/*`)와 MCP(`/mcp`)를 함께 제공한다.
 
 ```bash
 # 최초 1회: 각 앱 의존성 설치
@@ -158,14 +158,14 @@ cd apps/issue-board-mcp && npm run dev   # :4000
 cd apps/issue-board && npm run dev       # :5173
 ```
 
-**현재 탭 (4개):** 기획 · 이슈 · 와이어프레임 · 디자인시스템 — 팀 패턴 탭은 아직 없음 (개발 시점 2차로 이연)
+**현재 탭 (4개):** 기획 · 이슈 · 디자인시스템 · 와이어프레임 — 팀 패턴 탭은 아직 없음 (개발 시점 2차로 이연)
 
 | 탭 | 데이터 |
 |----|--------|
 | 기획 | `plans` (+ `plan_snapshots`) |
 | 이슈 | `issues` (`planned` → `wireframed` → `dev_approved` → `done`) |
-| 와이어프레임 | `wireframes` (이슈당 screens JSON, `region.component`로 DS 컴포넌트 표기) |
 | 디자인시스템 | `design_systems` (토큰·컴포넌트 카탈로그·`@scope/ui` / Storybook 메타) |
+| 와이어프레임 | `wireframes` (이슈당 screens JSON, `region.component`로 DS 컴포넌트 표기) |
 
 ### 커맨드 흐름
 
