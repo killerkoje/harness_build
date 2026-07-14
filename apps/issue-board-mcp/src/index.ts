@@ -12,6 +12,13 @@ try {
   // .env is optional — Notion sync just stays disabled without it
 }
 
+if (!process.env.NOTION_API_KEY || !process.env.NOTION_DATABASE_ID) {
+  console.warn(
+    '[issue-board-mcp] NOTION_API_KEY/NOTION_DATABASE_ID not set — Notion sync disabled.\n' +
+      '  → 연동하려면 apps/issue-board-mcp/.env.example을 .env로 복사하고 값을 채우세요.'
+  )
+}
+
 const PORT = Number(process.env.PORT ?? 4000)
 const DB_PATH = process.env.ISSUE_BOARD_DB ?? path.join(process.cwd(), 'issue-board.db')
 

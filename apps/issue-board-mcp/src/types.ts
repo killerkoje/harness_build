@@ -35,6 +35,7 @@ export interface Plan {
   title: string
   sections: PlanSections
   status: PlanStatus
+  notionEpicPageId: string | null
   createdAt: string
   updatedAt: string
 }

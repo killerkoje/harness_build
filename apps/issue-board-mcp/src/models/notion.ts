@@ -16,6 +16,10 @@ const STATUS_MAP: Record<IssueStatus, string> = {
   done: '완료',
 }
 
+// 팀 공유 Notion DB("2-1.애자일 업무 관리")의 select 옵션 — 이 DB엔 프로젝트별
+// 태그가 없어 harness로 만든 항목은 전부 "기타"로 분류한다.
+const NOTION_GUBUN = '기타'
+
 interface NotionConfig {
   apiKey: string
   databaseId: string
@@ -28,12 +32,31 @@ function getNotionConfig(): NotionConfig | null {
   return { apiKey, databaseId }
 }
 
-function buildProperties(issue: Issue) {
-  return {
+/** Whether NOTION_API_KEY/NOTION_DATABASE_ID are both set. */
+export function isNotionConfigured(): boolean {
+  return getNotionConfig() !== null
+}
+
+function buildIssueProperties(issue: Issue, epicPageId?: string | null) {
+  const properties: Record<string, unknown> = {
     이름: { title: [{ text: { content: issue.title } }] },
-    우선순위: { select: { name: PRIORITY_MAP[issue.priority] } },
+    '우선 순위': { select: { name: PRIORITY_MAP[issue.priority] } },
     // 사람이 대시보드에서 직접 고른 값이 있으면 파이프라인 자동 매핑보다 우선한다.
     상태: { status: { name: issue.notionStatus ?? STATUS_MAP[issue.status] } },
+    선택: { select: { name: '이슈(스토리)' } },
+    구분: { select: { name: NOTION_GUBUN } },
+  }
+  if (epicPageId) {
+    properties['상위 항목'] = { relation: [{ id: epicPageId }] }
+  }
+  return properties
+}
+
+function buildEpicProperties(planTitle: string) {
+  return {
+    이름: { title: [{ text: { content: planTitle } }] },
+    선택: { select: { name: '에픽' } },
+    구분: { select: { name: NOTION_GUBUN } },
   }
 }
 
@@ -50,6 +73,7 @@ function buildProperties(issue: Issue) {
 export async function pushIssueToNotion(
   db: Database.Database,
   issue: Issue,
+  epicPageId?: string | null,
   config: NotionConfig | null = getNotionConfig()
 ): Promise<void> {
   if (!config) return
@@ -64,7 +88,7 @@ export async function pushIssueToNotion(
     await fetch(`https://api.notion.com/v1/pages/${issue.notionPageId}`, {
       method: 'PATCH',
       headers,
-      body: JSON.stringify({ properties: buildProperties(issue) }),
+      body: JSON.stringify({ properties: buildIssueProperties(issue, epicPageId) }),
     })
     return
   }
@@ -74,11 +98,52 @@ export async function pushIssueToNotion(
     headers,
     body: JSON.stringify({
       parent: { database_id: config.databaseId },
-      properties: buildProperties(issue),
+      properties: buildIssueProperties(issue, epicPageId),
     }),
   })
   const data = (await res.json()) as { id?: string }
   if (data.id) {
     setIssueNotionPageId(db, issue.id, data.id)
   }
+}
+
+/**
+ * Creates (or patches, if `existingEpicPageId` is set) the Notion page that
+ * represents a plan as an Epic ("선택" = 에픽). Stories link back to it via
+ * their "상위 항목" relation. Pure Notion I/O — no DB access, so callers
+ * (plans.ts) own persisting the returned page id to avoid a circular import
+ * with notion.ts. Returns null when Notion sync isn't configured.
+ */
+export async function pushEpicToNotion(
+  existingEpicPageId: string | null,
+  planTitle: string,
+  config: NotionConfig | null = getNotionConfig()
+): Promise<string | null> {
+  if (!config) return null
+
+  const headers = {
+    Authorization: `Bearer ${config.apiKey}`,
+    'Notion-Version': '2022-06-28',
+    'Content-Type': 'application/json',
+  }
+
+  if (existingEpicPageId) {
+    await fetch(`https://api.notion.com/v1/pages/${existingEpicPageId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ properties: buildEpicProperties(planTitle) }),
+    })
+    return existingEpicPageId
+  }
+
+  const res = await fetch('https://api.notion.com/v1/pages', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      parent: { database_id: config.databaseId },
+      properties: buildEpicProperties(planTitle),
+    }),
+  })
+  const data = (await res.json()) as { id?: string }
+  return data.id ?? null
 }

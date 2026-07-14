@@ -3,7 +3,14 @@ import express from 'express'
 import cors from 'cors'
 import type Database from 'better-sqlite3'
 import { getOrCreateProject, getProject } from '../models/projects.js'
-import { createPlan, createPlanFromMarkdown, getPlan, approvePlanAndCreateIssues, syncIssuesFromPlan } from '../models/plans.js'
+import {
+  createPlan,
+  createPlanFromMarkdown,
+  getPlan,
+  getLatestPlanForProject,
+  approvePlanAndCreateIssues,
+  syncIssuesFromPlan,
+} from '../models/plans.js'
 import {
   listIssuesByProject,
   getIssue,
@@ -47,6 +54,12 @@ export function createApp(db: Database.Database) {
 
   app.get('/api/plans/:id', (req, res) => {
     const plan = getPlan(db, Number(req.params.id))
+    if (!plan) return res.status(404).json({ error: 'not found' })
+    res.json(plan)
+  })
+
+  app.get('/api/projects/:projectId/plans/latest', (req, res) => {
+    const plan = getLatestPlanForProject(db, Number(req.params.projectId))
     if (!plan) return res.status(404).json({ error: 'not found' })
     res.json(plan)
   })

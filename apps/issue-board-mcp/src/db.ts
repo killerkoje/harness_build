@@ -76,5 +76,10 @@ export function createDb(filename: string): Database.Database {
     db.exec('ALTER TABLE issues ADD COLUMN notion_status TEXT')
   }
 
+  const planCols = db.prepare('PRAGMA table_info(plans)').all() as { name: string }[]
+  if (!planCols.some((c) => c.name === 'notion_epic_page_id')) {
+    db.exec('ALTER TABLE plans ADD COLUMN notion_epic_page_id TEXT')
+  }
+
   return db
 }

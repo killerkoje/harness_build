@@ -178,6 +178,24 @@ else
   echo "→ .gitignore 생성 (harness 패턴 규칙)"
 fi
 
+# 5-3. issue-board MCP (.mcp.json) — 없으면 생성, 있으면 유지
+MCP_URL="${HARNESS_MCP_URL:-http://localhost:4000/mcp}"
+if [ ! -f "$TARGET/.mcp.json" ]; then
+  echo "→ .mcp.json 생성 중... ($MCP_URL)"
+  cat > "$TARGET/.mcp.json" <<MCP_EOF
+{
+  "mcpServers": {
+    "issue-board": {
+      "type": "http",
+      "url": "$MCP_URL"
+    }
+  }
+}
+MCP_EOF
+else
+  echo "→ .mcp.json 이미 존재 — 유지함"
+fi
+
 # 6. Cursor 룰 (team-patterns 포함, 항상 설치)
 echo "→ .cursor/rules/ 복사 중..."
 mkdir -p "$TARGET/.cursor/rules"

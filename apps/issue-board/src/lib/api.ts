@@ -80,6 +80,12 @@ export async function fetchPlan(planId: number): Promise<Plan> {
   return json(await fetch(`${BASE_URL}/api/plans/${planId}`))
 }
 
+export async function fetchLatestPlan(projectId: number): Promise<Plan | null> {
+  const res = await fetch(`${BASE_URL}/api/projects/${projectId}/plans/latest`)
+  if (res.status === 404) return null
+  return json(res)
+}
+
 export async function fetchWireframe(issueId: number): Promise<Wireframe | null> {
   const res = await fetch(`${BASE_URL}/api/issues/${issueId}/wireframe`)
   if (res.status === 404) return null

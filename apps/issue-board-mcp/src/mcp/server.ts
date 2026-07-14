@@ -28,6 +28,14 @@ import {
 } from '../models/issues.js'
 import { upsertWireframe } from '../models/wireframes.js'
 import { upsertDesignSystem, getDesignSystemByProject } from '../models/design-systems.js'
+import { isNotionConfigured } from '../models/notion.js'
+
+const NOTION_SETUP_PROMPT =
+  'Notion 연동이 아직 설정되어 있지 않습니다(NOTION_API_KEY, NOTION_DATABASE_ID 미설정). ' +
+  '이슈가 생성됐으니 사용자에게 "Notion 연동을 하시겠어요?"라고 물어보고, ' +
+  '한다고 하면 Notion 통합 API 키와 데이터베이스 ID를 받아 apps/issue-board-mcp/.env에 ' +
+  'NOTION_API_KEY / NOTION_DATABASE_ID로 등록한 뒤 issue-board-mcp 서버를 재시작하도록 안내하세요. ' +
+  '원하지 않으면 그냥 넘어가면 됩니다.'
 
 const mvpFeatureSchema = z.object({
   priority: z.enum(['높음', '보통', '낮음']),
@@ -131,10 +139,18 @@ export function createMcpServer(db: Database.Database): McpServer {
         if (existing.status === 'approved') {
           const result = await syncIssuesFromPlan(db, planId)
           snapshotPlan(db, planId, 'amended')
-          return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+          const content = [{ type: 'text' as const, text: JSON.stringify(result) }]
+          if (result.created.length > 0 && !isNotionConfigured()) {
+            content.push({ type: 'text' as const, text: NOTION_SETUP_PROMPT })
+          }
+          return { content }
         }
         const result = await approvePlanAndCreateIssues(db, planId)
-        return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+        const content = [{ type: 'text' as const, text: JSON.stringify(result) }]
+        if (result.issues.length > 0 && !isNotionConfigured()) {
+          content.push({ type: 'text' as const, text: NOTION_SETUP_PROMPT })
+        }
+        return { content }
       }
 
       return { content: [{ type: 'text', text: JSON.stringify(getPlan(db, planId)) }] }

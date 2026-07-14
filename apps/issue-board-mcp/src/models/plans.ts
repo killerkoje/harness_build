@@ -10,7 +10,7 @@ import {
 } from './issues.js'
 import { deleteWireframeByIssue } from './wireframes.js'
 import { parsePlanMarkdown } from './parse-plan-markdown.js'
-import { pushIssueToNotion } from './notion.js'
+import { pushIssueToNotion, pushEpicToNotion } from './notion.js'
 
 function rowToPlan(row: any): Plan {
   return {
@@ -19,9 +19,32 @@ function rowToPlan(row: any): Plan {
     title: row.title,
     sections: JSON.parse(row.sections),
     status: row.status,
+    notionEpicPageId: row.notion_epic_page_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
+}
+
+export function setPlanNotionEpicPageId(db: Database.Database, id: number, notionEpicPageId: string): void {
+  db.prepare('UPDATE plans SET notion_epic_page_id = ?, updated_at = ? WHERE id = ?').run(
+    notionEpicPageId,
+    new Date().toISOString(),
+    id
+  )
+}
+
+/**
+ * Ensures a Notion Epic page exists for this plan (creates on first call,
+ * patches the same page after), then returns its page id. No-ops (returns
+ * null) when Notion sync isn't configured — same optionality as
+ * pushIssueToNotion.
+ */
+async function ensureEpicPageId(db: Database.Database, plan: Plan): Promise<string | null> {
+  const epicPageId = await pushEpicToNotion(plan.notionEpicPageId, plan.title)
+  if (epicPageId && epicPageId !== plan.notionEpicPageId) {
+    setPlanNotionEpicPageId(db, plan.id, epicPageId)
+  }
+  return epicPageId
 }
 
 export function createPlan(
@@ -42,6 +65,18 @@ export function createPlan(
 
 export function getPlan(db: Database.Database, id: number): Plan | null {
   const row = db.prepare('SELECT * FROM plans WHERE id = ?').get(id)
+  return row ? rowToPlan(row) : null
+}
+
+/**
+ * Most recently updated plan for a project. Used as the dashboard's fallback
+ * when a plan has no issues yet (draft, pre-approval) so there's no
+ * issue.planId to work backward from.
+ */
+export function getLatestPlanForProject(db: Database.Database, projectId: number): Plan | null {
+  const row = db
+    .prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY updated_at DESC LIMIT 1')
+    .get(projectId)
   return row ? rowToPlan(row) : null
 }
 
@@ -102,8 +137,9 @@ export async function approvePlanAndCreateIssues(
   })
   const result = run()
   // Network I/O — must run after the transaction commits, not inside it.
+  const epicPageId = await ensureEpicPageId(db, result.plan)
   for (const issue of result.issues) {
-    await pushIssueToNotion(db, issue)
+    await pushIssueToNotion(db, issue, epicPageId)
   }
   return result
 }
@@ -171,8 +207,9 @@ export async function syncIssuesFromPlan(
   run()
 
   // Network I/O — must run after the transaction commits, not inside it.
+  const epicPageId = await ensureEpicPageId(db, plan)
   for (const issue of [...created, ...updated]) {
-    await pushIssueToNotion(db, issue)
+    await pushIssueToNotion(db, issue, epicPageId)
   }
 
   const orphaned = existing.filter((i) => !matchedIds.has(i.id))
