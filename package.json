@@ -1,0 +1,11 @@
+{
+  "name": "harness_build",
+  "version": "0.9.0",
+  "private": true,
+  "scripts": {
+    "start:all": "concurrently -n mcp,board,pattern -c blue,green,yellow \"npm run dev --prefix apps/issue-board-mcp\" \"npm run dev --prefix apps/issue-board\" \"npm run dev --prefix apps/pattern-viewer -- --port 3100\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

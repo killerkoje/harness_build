@@ -39,47 +39,48 @@ bash install.sh --sync-patterns /path/to/your-project   # 팀 패턴 갱신
 
 **시각화:** [docs/dev-pipeline.md](docs/dev-pipeline.md)
 
+**세션 1(Issue Board)과 세션 2(개발)는 서로 다른 Claude Code 실행**이다 — 보통 시점도 다르고(기획은 미리, 개발은 나중에), 개발 세션은 다른 사람이 다른 cwd에서 시작할 수도 있다. 둘을 잇는 유일한 통로는 ①`.harness/issues/N.yaml` 파일(세션 1 → 세션 2, 필수)과 ②`complete_issue` MCP 호출(세션 2 → 세션 1/Notion, 선택) 뿐이라 **세션 2 쪽에 issue-board MCP(`.mcp.json`)가 연결돼 있지 않으면 완료 훅만 조용히 스킵되고 개발 자체는 그대로 끝난다.**
+
+### 1) 이슈보드 세션 (기획자) — 대시보드에서 기획 → 승인
+
 ```mermaid
-flowchart TB
-  subgraph S1["세션 1 · Issue Board 세션 (기획자)"]
-    IBP["/ib-plan 승인"] --> IBW["/ib-wireframe"] --> IBA["/ib-approve"]
-    IBA --> SEED[(".harness/issues/N.yaml 시딩")]
-  end
-
-  SEED ==파일로 인계==> P0
-
-  subgraph S2["세션 2 · 개발 세션 (별도 실행, 시점도 다름)"]
-    START(["이슈 N번 개발해줘"]) --> P0
-    subgraph ISSUE["이슈 · 프로젝트 단위"]
-      P0[Phase 0 ISSUE_ID]
-      STORE[(.harness/issues/N.yaml)]
-    end
-    subgraph CLAUDE[Claude Code]
-      P1[Phase 1 스펙]
-      GATE{{사용자 확인}}
-      P15[Phase 1.5 테스트]
-      P3[Phase 3 QA]
-      P4[Phase 4 커밋]
-      REP[harness-report]
-      DONE["complete_issue<br/>(이 세션에도 issue-board MCP 연결 시만)"]
-      P45[Phase 4.5 패턴]
-    end
-    subgraph CURSOR[Cursor]
-      P2[Phase 2 cursor-agent]
-    end
-    P0 --> P1 --> GATE --> P15 --> P2 --> P3
-    P3 -->|PASS| P4 --> REP --> STORE
-    P3 -->|FAIL| P2
-    REP --> DONE
-    P4 --> P45
-    AMEND([이슈 N번 수정]) -.-> P0
-  end
-
-  DONE -.완료 반영.-> IBA
-  DONE -.-> NOTION[("Notion 완료")]
+flowchart LR
+  IBP["/ib-plan 승인"] --> IBW["/ib-wireframe"] --> IBA["/ib-approve"]
+  IBA --> SEED[(".harness/issues/N.yaml 시딩")]
 ```
 
-**세션 1과 세션 2는 서로 다른 Claude Code 실행**이다 — 보통 시점도 다르고(기획은 미리, 개발은 나중에), 개발 세션은 다른 사람이 다른 cwd에서 시작할 수도 있다. 둘을 잇는 유일한 통로는 ①`.harness/issues/N.yaml` 파일(세션 1 → 세션 2, 필수)과 ②`complete_issue` MCP 호출(세션 2 → 세션 1/Notion, 선택) 뿐이라 **세션 2 쪽에 issue-board MCP(`.mcp.json`)가 연결돼 있지 않으면 완료 훅만 조용히 스킵되고 개발 자체는 그대로 끝난다.**
+### 2) 개발 세션 — 이슈 기반 개발 (별도 실행)
+
+```mermaid
+flowchart TB
+  SEED[(".harness/issues/N.yaml<br/>세션 1에서 시딩됨")] ==파일로 인계==> P0
+  START(["이슈 N번 개발해줘"]) --> P0
+  subgraph ISSUE["이슈 · 프로젝트 단위"]
+    P0[Phase 0 ISSUE_ID]
+    STORE[(.harness/issues/N.yaml)]
+  end
+  subgraph CLAUDE[Claude Code]
+    P1[Phase 1 스펙]
+    GATE{{사용자 확인}}
+    P15[Phase 1.5 테스트]
+    P3[Phase 3 QA]
+    P4[Phase 4 커밋]
+    REP[harness-report]
+    DONE["complete_issue<br/>(이 세션에도 issue-board MCP 연결 시만)"]
+    P45[Phase 4.5 패턴]
+  end
+  subgraph CURSOR[Cursor]
+    P2[Phase 2 cursor-agent]
+  end
+  P0 --> P1 --> GATE --> P15 --> P2 --> P3
+  P3 -->|PASS| P4 --> REP --> STORE
+  P3 -->|FAIL| P2
+  REP --> DONE
+  P4 --> P45
+  AMEND([이슈 N번 수정]) -.-> P0
+  DONE -.완료 반영.-> IB[("Issue Board(세션 1)<br/>dev_approved → done")]
+  DONE -.-> NOTION[("Notion 완료")]
+```
 
 | Phase | 산출물 |
 |-------|--------|
@@ -145,8 +146,16 @@ phase2: cursor-agent   # cursor-agent | claude
 `apps/issue-board`(대시보드, Next.js) + `apps/issue-board-mcp`(백엔드, Node/TS) 2개 앱으로 구성. 백엔드는 SQLite에 기획·이슈·와이어프레임·디자인시스템을 저장하고 REST(`/api/*`)와 MCP(`/mcp`)를 함께 제공한다.
 
 ```bash
-cd apps/issue-board-mcp && npm install && npm run dev   # :4000 (REST /api/*, MCP /mcp)
-cd apps/issue-board && npm install && npm run dev       # :5173 (대시보드)
+# 최초 1회: 각 앱 의존성 설치
+cd apps/issue-board-mcp && npm install && cd ../issue-board && npm install && cd ../..
+
+# 루트에서 한 번에 실행 (concurrently)
+npm install   # 최초 1회 — concurrently 설치
+npm run start:all   # mcp :4000 (REST /api/*, MCP /mcp) + board :5173 (대시보드) + pattern :3100 (패턴 뷰어)
+
+# 개별 실행이 필요하면
+cd apps/issue-board-mcp && npm run dev   # :4000
+cd apps/issue-board && npm run dev       # :5173
 ```
 
 **현재 탭 (4개):** 기획 · 이슈 · 와이어프레임 · 디자인시스템 — 팀 패턴 탭은 아직 없음 (개발 시점 2차로 이연)
