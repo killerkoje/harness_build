@@ -41,29 +41,45 @@ bash install.sh --sync-patterns /path/to/your-project   # 팀 패턴 갱신
 
 ```mermaid
 flowchart TB
-  START([사용자 지시]) --> P0
-  subgraph ISSUE["이슈 · 프로젝트 단위"]
-    P0[Phase 0 ISSUE_ID]
-    STORE[(.harness/issues/N.yaml)]
+  subgraph S1["세션 1 · Issue Board 세션 (기획자)"]
+    IBP["/ib-plan 승인"] --> IBW["/ib-wireframe"] --> IBA["/ib-approve"]
+    IBA --> SEED[(".harness/issues/N.yaml 시딩")]
   end
-  subgraph CLAUDE[Claude Code]
-    P1[Phase 1 스펙]
-    GATE{{사용자 확인}}
-    P15[Phase 1.5 테스트]
-    P3[Phase 3 QA]
-    P4[Phase 4 커밋]
-    REP[harness-report]
-    P45[Phase 4.5 패턴]
+
+  SEED ==파일로 인계==> P0
+
+  subgraph S2["세션 2 · 개발 세션 (별도 실행, 시점도 다름)"]
+    START(["이슈 N번 개발해줘"]) --> P0
+    subgraph ISSUE["이슈 · 프로젝트 단위"]
+      P0[Phase 0 ISSUE_ID]
+      STORE[(.harness/issues/N.yaml)]
+    end
+    subgraph CLAUDE[Claude Code]
+      P1[Phase 1 스펙]
+      GATE{{사용자 확인}}
+      P15[Phase 1.5 테스트]
+      P3[Phase 3 QA]
+      P4[Phase 4 커밋]
+      REP[harness-report]
+      DONE["complete_issue<br/>(이 세션에도 issue-board MCP 연결 시만)"]
+      P45[Phase 4.5 패턴]
+    end
+    subgraph CURSOR[Cursor]
+      P2[Phase 2 cursor-agent]
+    end
+    P0 --> P1 --> GATE --> P15 --> P2 --> P3
+    P3 -->|PASS| P4 --> REP --> STORE
+    P3 -->|FAIL| P2
+    REP --> DONE
+    P4 --> P45
+    AMEND([이슈 N번 수정]) -.-> P0
   end
-  subgraph CURSOR[Cursor]
-    P2[Phase 2 cursor-agent]
-  end
-  P0 --> P1 --> GATE --> P15 --> P2 --> P3
-  P3 -->|PASS| P4 --> REP --> STORE
-  P3 -->|FAIL| P2
-  P4 --> P45
-  AMEND([이슈 N번 수정]) -.-> P0
+
+  DONE -.완료 반영.-> IBA
+  DONE -.-> NOTION[("Notion 완료")]
 ```
+
+**세션 1과 세션 2는 서로 다른 Claude Code 실행**이다 — 보통 시점도 다르고(기획은 미리, 개발은 나중에), 개발 세션은 다른 사람이 다른 cwd에서 시작할 수도 있다. 둘을 잇는 유일한 통로는 ①`.harness/issues/N.yaml` 파일(세션 1 → 세션 2, 필수)과 ②`complete_issue` MCP 호출(세션 2 → 세션 1/Notion, 선택) 뿐이라 **세션 2 쪽에 issue-board MCP(`.mcp.json`)가 연결돼 있지 않으면 완료 훅만 조용히 스킵되고 개발 자체는 그대로 끝난다.**
 
 | Phase | 산출물 |
 |-------|--------|
@@ -71,7 +87,9 @@ flowchart TB
 | 1 | `01_spec.md` |
 | 2 | `02_implementation.md` |
 | 3 | `03_qa_report.md` |
-| 4 | 커밋 → `harness-report.sh` → `.harness/issues/` |
+| 4 | 커밋 → `harness-report.sh` → `.harness/issues/` → (연결 시) `complete_issue` → 이슈보드 `done` + Notion `완료` |
+
+`.harness/issues/N.yaml`은 Issue Board(`/ib-approve`)가 먼저 시딩해두면 Phase 0이 `runs: []`를 최초 실행(`kind: initial`)으로 읽는다. issue-board 없이 `dev` 파이프라인만 써도(신규 기능 요청) 그대로 동작 — 이 경우 Phase 0이 새 `ISSUE_ID`를 발급하고, Phase 4의 완료 훅은 issue-board MCP가 안 보이면 조용히 스킵된다.
 
 상세·Issue Board 연동: [docs/dev-pipeline.md](docs/dev-pipeline.md)
 
