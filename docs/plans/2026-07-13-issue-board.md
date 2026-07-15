@@ -8,7 +8,7 @@
 
 **Tech Stack:** Node 20 + TypeScript 5, better-sqlite3, express, zod, vitest + supertest, `@modelcontextprotocol/sdk`, Next.js 15 + React 19 + Tailwind 4 (기존 apps/harness-hub와 동일 버전대).
 
-**참고 문서:** `docs/superpowers/specs/2026-07-13-issue-board-design.md`
+**참고 문서:** `docs/specs/2026-07-13-issue-board-design.md`
 
 ---
 
