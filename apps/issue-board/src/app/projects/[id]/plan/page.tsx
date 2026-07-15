@@ -1,7 +1,8 @@
 // src/app/projects/[id]/plan/page.tsx
 import ConnectionErrorBanner from '@/components/ConnectionErrorBanner'
 import PlanView from '@/components/PlanView'
-import { fetchIssues, fetchPlan, fetchLatestPlan } from '@/lib/api'
+import PlanRoundSwitcher from '@/components/PlanRoundSwitcher'
+import { fetchIssues, fetchPlans } from '@/lib/api'
 
 export default async function PlanPage({
   params,
@@ -12,26 +13,31 @@ export default async function PlanPage({
 }) {
   const { id } = await params
   const { planId: planIdQuery } = await searchParams
+  const projectId = Number(id)
 
   try {
-    let planId = planIdQuery ? Number(planIdQuery) : null
-    if (!planId) {
-      const issues = await fetchIssues(Number(id))
-      planId = issues.find((i) => i.planId != null)?.planId ?? null
+    const [plans, issues] = await Promise.all([fetchPlans(projectId), fetchIssues(projectId)])
+
+    if (plans.length === 0) {
+      return (
+        <p className="text-sm text-zinc-400">기획이 아직 없습니다. `/ib-plan`으로 먼저 생성하세요.</p>
+      )
     }
-    if (!planId) {
-      // No issues yet (plan is still draft, pre-approval) — fall back to the
-      // project's most recently updated plan instead of reporting "none".
-      const latest = await fetchLatestPlan(Number(id))
-      if (!latest) {
-        return (
-          <p className="text-sm text-zinc-400">기획이 아직 없습니다. `/ib-plan`으로 먼저 생성하세요.</p>
-        )
-      }
-      return <PlanView plan={latest} />
-    }
-    const plan = await fetchPlan(planId)
-    return <PlanView plan={plan} />
+
+    const requestedId = planIdQuery ? Number(planIdQuery) : null
+    const selectedPlan = plans.find((p) => p.id === requestedId) ?? plans[plans.length - 1]
+
+    return (
+      <div>
+        <PlanRoundSwitcher
+          projectId={projectId}
+          plans={plans}
+          issues={issues}
+          selectedPlanId={selectedPlan.id}
+        />
+        <PlanView plan={selectedPlan} />
+      </div>
+    )
   } catch {
     return <ConnectionErrorBanner />
   }
