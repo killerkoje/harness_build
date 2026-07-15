@@ -21,6 +21,6 @@ export function planIssueProgress(
 ): { done: number; total: number } | null {
   const planIssues = issues.filter((i) => i.planId === planId)
   if (planIssues.length === 0) return null
-  const done = planIssues.filter((i) => i.status === 'dev_approved' || i.status === 'done').length
+  const done = planIssues.filter((i) => i.status === 'done').length
   return { done, total: planIssues.length }
 }

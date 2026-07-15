@@ -52,14 +52,14 @@ describe('plan-rounds', () => {
     expect(roundIndexOf(plans, null)).toBe(-1)
   })
 
-  it('planIssueProgress counts dev_approved and done issues as complete', () => {
+  it('planIssueProgress counts only done issues as complete, not dev_approved', () => {
     const issues = [
       makeIssue(1, 10, 'planned'),
       makeIssue(2, 10, 'dev_approved'),
       makeIssue(3, 10, 'done'),
       makeIssue(4, 20, 'planned'),
     ]
-    expect(planIssueProgress(10, issues)).toEqual({ done: 2, total: 3 })
+    expect(planIssueProgress(10, issues)).toEqual({ done: 1, total: 3 })
   })
 
   it('planIssueProgress returns null when the plan has no issues', () => {
