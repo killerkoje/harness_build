@@ -1,8 +1,15 @@
 // src/components/IssueList.tsx
 'use client'
 
-import { useState } from 'react'
-import { NOTION_STATUS_OPTIONS, setIssueNotionStatus, type Issue, type NotionStatus } from '@/lib/api'
+import { useMemo, useState } from 'react'
+import {
+  NOTION_STATUS_OPTIONS,
+  setIssueNotionStatus,
+  type Issue,
+  type NotionStatus,
+  type Plan,
+} from '@/lib/api'
+import { roundIndexOf, roundLabel, roundShortLabel } from '@/lib/plan-rounds'
 
 const STATUS_LABEL: Record<Issue['status'], string> = {
   planned: '기획됨',
@@ -18,9 +25,23 @@ const STATUS_STYLE: Record<Issue['status'], string> = {
   done: 'bg-indigo-50 text-indigo-700',
 }
 
-export default function IssueList({ issues, projectId }: { issues: Issue[]; projectId: number }) {
+export default function IssueList({
+  issues,
+  plans,
+  projectId,
+}: {
+  issues: Issue[]
+  plans: Plan[]
+  projectId: number
+}) {
   const [items, setItems] = useState(issues)
   const [error, setError] = useState<string | null>(null)
+  const [roundFilter, setRoundFilter] = useState<number | 'all'>('all')
+
+  const filteredItems = useMemo(
+    () => (roundFilter === 'all' ? items : items.filter((i) => i.planId === roundFilter)),
+    [items, roundFilter]
+  )
 
   if (items.length === 0) {
     return <p className="text-sm text-zinc-400">이슈가 없습니다. 기획을 먼저 확정하세요.</p>
@@ -38,43 +59,74 @@ export default function IssueList({ issues, projectId }: { issues: Issue[]; proj
   }
 
   return (
-    <ul className="space-y-2 max-w-2xl">
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      {items.map((issue) => (
-        <li key={issue.id} className="border border-zinc-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-sm text-indigo-700">#{issue.number}</span>
-            <span className="font-medium text-sm flex-1">{issue.title}</span>
-            <span className={`text-xs px-2 py-0.5 rounded ${STATUS_STYLE[issue.status]}`}>
-              {STATUS_LABEL[issue.status]}
-            </span>
-          </div>
-          <p className="text-xs text-zinc-500">{issue.description}</p>
-          <div className="flex items-center gap-2 mt-2">
-            <a
-              href={`/projects/${projectId}/wireframe?issueId=${issue.id}`}
-              className="text-xs text-indigo-600"
-            >
-              와이어프레임 보기 →
-            </a>
-            <label className="text-xs text-zinc-400 ml-auto">
-              Notion 상태
-              <select
-                className="ml-1 text-xs border border-zinc-200 rounded px-1 py-0.5 text-zinc-700"
-                value={issue.notionStatus ?? ''}
-                onChange={(e) => handleNotionStatusChange(issue.id, e.target.value)}
-              >
-                <option value="">자동 ({STATUS_LABEL[issue.status]} 기준)</option>
-                {NOTION_STATUS_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </li>
-      ))}
-    </ul>
+    <div className="max-w-2xl">
+      {plans.length > 1 && (
+        <label className="block text-xs text-zinc-500 mb-3">
+          기획 차수
+          <select
+            className="ml-2 text-xs border border-zinc-200 rounded px-2 py-1 text-zinc-700"
+            value={roundFilter}
+            onChange={(e) => setRoundFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+          >
+            <option value="all">전체</option>
+            {plans.map((plan, index) => (
+              <option key={plan.id} value={plan.id}>
+                {roundLabel(index)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
+      {filteredItems.length === 0 ? (
+        <p className="text-sm text-zinc-400">해당 차수의 이슈가 없습니다.</p>
+      ) : (
+        <ul className="space-y-2">
+          {filteredItems.map((issue) => {
+            const roundIndex = roundIndexOf(plans, issue.planId)
+            return (
+              <li key={issue.id} className="border border-zinc-200 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-mono text-sm text-indigo-700">#{issue.number}</span>
+                  {roundIndex >= 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-500">
+                      {roundShortLabel(roundIndex)}
+                    </span>
+                  )}
+                  <span className="font-medium text-sm flex-1">{issue.title}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded ${STATUS_STYLE[issue.status]}`}>
+                    {STATUS_LABEL[issue.status]}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500">{issue.description}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <a
+                    href={`/projects/${projectId}/wireframe?issueId=${issue.id}`}
+                    className="text-xs text-indigo-600"
+                  >
+                    와이어프레임 보기 →
+                  </a>
+                  <label className="text-xs text-zinc-400 ml-auto">
+                    Notion 상태
+                    <select
+                      className="ml-1 text-xs border border-zinc-200 rounded px-1 py-0.5 text-zinc-700"
+                      value={issue.notionStatus ?? ''}
+                      onChange={(e) => handleNotionStatusChange(issue.id, e.target.value)}
+                    >
+                      <option value="">자동 ({STATUS_LABEL[issue.status]} 기준)</option>
+                      {NOTION_STATUS_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
   )
 }
