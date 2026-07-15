@@ -58,6 +58,38 @@ export function getProject(db: Database.Database, id: number): Project | null {
   return row ? rowToProject(row) : null
 }
 
+export function listProjects(db: Database.Database): Project[] {
+  ensureDescriptionColumn(db)
+  const rows = db.prepare('SELECT * FROM projects ORDER BY id ASC').all()
+  return rows.map(rowToProject)
+}
+
+/**
+ * Deletes a project and everything scoped to it. Tables don't have
+ * ON DELETE CASCADE set up, so child rows are removed bottom-up by hand
+ * inside one transaction: wireframes -> issues -> plan_snapshots -> plans
+ * -> design_systems -> the project row itself.
+ */
+export function deleteProject(db: Database.Database, id: number): boolean {
+  const existing = db.prepare('SELECT id FROM projects WHERE id = ?').get(id)
+  if (!existing) return false
+
+  const run = db.transaction((projectId: number) => {
+    db.prepare(
+      `DELETE FROM wireframes WHERE issue_id IN (SELECT id FROM issues WHERE project_id = ?)`
+    ).run(projectId)
+    db.prepare(
+      `DELETE FROM plan_snapshots WHERE plan_id IN (SELECT id FROM plans WHERE project_id = ?)`
+    ).run(projectId)
+    db.prepare('DELETE FROM issues WHERE project_id = ?').run(projectId)
+    db.prepare('DELETE FROM plans WHERE project_id = ?').run(projectId)
+    db.prepare('DELETE FROM design_systems WHERE project_id = ?').run(projectId)
+    db.prepare('DELETE FROM projects WHERE id = ?').run(projectId)
+  })
+  run(id)
+  return true
+}
+
 export function getProjectByRootPath(db: Database.Database, rootPath: string): Project | null {
   ensureDescriptionColumn(db)
   const row = db.prepare('SELECT * FROM projects WHERE root_path = ?').get(rootPath)

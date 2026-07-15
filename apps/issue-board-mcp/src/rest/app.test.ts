@@ -32,6 +32,31 @@ describe('REST API', () => {
     expect(res.body.id).toBe(project.id)
   })
 
+  it('GET /api/projects lists every registered project', async () => {
+    const p1 = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const otherRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'issue-board-rest-'))
+    const p2 = (await request(app).post('/api/projects').send({ rootPath: otherRoot })).body
+
+    const res = await request(app).get('/api/projects')
+    expect(res.status).toBe(200)
+    expect(res.body.map((p: { id: number }) => p.id)).toEqual(expect.arrayContaining([p1.id, p2.id]))
+  })
+
+  it('DELETE /api/projects/:id removes the project', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+
+    const res = await request(app).delete(`/api/projects/${project.id}`)
+    expect(res.status).toBe(204)
+
+    const getRes = await request(app).get(`/api/projects/${project.id}`)
+    expect(getRes.status).toBe(404)
+  })
+
+  it('DELETE /api/projects/:id returns 404 for a nonexistent project', async () => {
+    const res = await request(app).delete('/api/projects/999999')
+    expect(res.status).toBe(404)
+  })
+
   it('CORS: responds to a cross-origin GET with Access-Control-Allow-Origin', async () => {
     const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
     const res = await request(app)

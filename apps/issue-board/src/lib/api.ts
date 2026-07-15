@@ -17,6 +17,13 @@ export interface Issue {
   updatedAt: string
 }
 
+export interface Project {
+  id: number
+  rootPath: string
+  name: string
+  description: string
+}
+
 export interface WireframeScreen {
   name: string
   route: string | null
@@ -66,6 +73,15 @@ const BASE_URL = process.env.NEXT_PUBLIC_ISSUE_BOARD_API_URL ?? 'http://localhos
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(`request failed: ${res.status}`)
   return res.json() as Promise<T>
+}
+
+export async function fetchProjects(): Promise<Project[]> {
+  return json(await fetch(`${BASE_URL}/api/projects`))
+}
+
+export async function deleteProject(projectId: number): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/projects/${projectId}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`request failed: ${res.status}`)
 }
 
 export async function fetchIssues(projectId: number): Promise<Issue[]> {

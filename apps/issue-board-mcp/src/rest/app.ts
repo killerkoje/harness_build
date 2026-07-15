@@ -2,7 +2,7 @@
 import express from 'express'
 import cors from 'cors'
 import type Database from 'better-sqlite3'
-import { getOrCreateProject, getProject } from '../models/projects.js'
+import { getOrCreateProject, getProject, listProjects, deleteProject } from '../models/projects.js'
 import {
   createPlan,
   createPlanFromMarkdown,
@@ -49,10 +49,20 @@ export function createApp(db: Database.Database) {
     res.json(project)
   })
 
+  app.get('/api/projects', (_req, res) => {
+    res.json(listProjects(db))
+  })
+
   app.get('/api/projects/:id', (req, res) => {
     const project = getProject(db, Number(req.params.id))
     if (!project) return res.status(404).json({ error: 'not found' })
     res.json(project)
+  })
+
+  app.delete('/api/projects/:id', (req, res) => {
+    const deleted = deleteProject(db, Number(req.params.id))
+    if (!deleted) return res.status(404).json({ error: 'not found' })
+    res.status(204).end()
   })
 
   app.post('/api/projects/:projectId/plans', (req, res) => {
