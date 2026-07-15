@@ -1,0 +1,39 @@
+version: 1
+patterns:
+- id: client-transition-action-button
+  description: 서버 액션을 트리거하는 단일 목적 버튼/폼 컴포넌트는 'use client' + useTransition으로 구현한다.
+    isPending으로 버튼을 disable하고, 서버 결과(result.ok / result.value)로만 로컬 상태를 갱신한다(낙관적 UI
+    없음). MenuItemForm에서 시작해 review-form, favorite-button, reorder-button까지 동일 골격을
+    반복 사용한다.
+  example: "'use client'\nimport { useState, useTransition } from 'react'\n\nexport\
+    \ function XxxButton({ id }: { id: number }) {\n  const [isPending, startTransition]\
+    \ = useTransition()\n  const [error, setError] = useState<string | null>(null)\n\
+    \n  function handleClick() {\n    setError(null)\n    startTransition(async ()\
+    \ => {\n      const result = await xxxAction(id)\n      if (!result.ok) {\n  \
+    \      setError(result.error)\n        return\n      }\n      // 서버 결과로만 상태 갱신\
+    \ — 낙관적 업데이트 없음\n    })\n  }\n\n  return <button disabled={isPending} onClick={handleClick}>...</button>\n\
+    }\n"
+  reason: 서버 액션 트리거 버튼의 pending/에러 처리를 useTransition으로 통일해 낙관적 업데이트로 인한 상태 불일치를 방지
+  observed: 4
+  last_seen: '2026-07-15'
+  source:
+  - team
+  confidence: high
+  deprecated: false
+- id: nested-interactive-in-link-card
+  description: 카드 전체가 <Link>로 감싸인 목록 아이템 내부에 별도 인터랙티브 버튼(찜, 즐겨찾기 등)을 넣을 때는 클릭 핸들러에서
+    event.preventDefault() + event.stopPropagation()을 호출해 상위 Link 네비게이션과의 충돌을 막는다.
+    같은 컴포넌트를 Link가 없는 상세 페이지에서도 재사용할 수 있도록 preventDefault/stopPropagation은 버튼 쪽에 두고,
+    위치(absolute 등)는 호출부(카드 wrapper)에서 지정해 버튼을 위치 비의존으로 유지한다.
+  example: "// favorite-button.tsx\nfunction handleClick(event: React.MouseEvent<HTMLButtonElement>)\
+    \ {\n  event.preventDefault()\n  event.stopPropagation()\n  startTransition(async\
+    \ () => {\n    const result = await toggleFavoriteAction(restaurantId)\n    if\
+    \ (result.ok) setFavorited(result.favorited)\n  })\n}\n// restaurant-card.tsx:\
+    \ 카드 전체가 <Link>, FavoriteButton은 wrapper div에 absolute 배치\n"
+  reason: Link로 감싼 카드 내부의 중첩 인터랙티브 요소가 상위 네비게이션과 충돌하는 것을 방지
+  observed: 1
+  last_seen: '2026-07-15'
+  source:
+  - team
+  confidence: high
+  deprecated: false

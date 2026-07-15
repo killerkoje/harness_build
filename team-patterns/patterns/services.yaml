@@ -1,14 +1,49 @@
 version: 1
 patterns:
-  - id: api-error-throw
-    description: API 레이어는 실패 시 Error를 throw하고 UI/라우터에서 처리한다.
-    example: |
-      if (!res.ok) {
-        throw new Error(`API error: ${res.status}`)
-      }
-    reason: 에러 처리 일관성
-    observed: 1
-    last_seen: "2026-07-08"
-    source: [team]
-    confidence: high
-    deprecated: false
+- id: api-error-throw
+  description: API 레이어는 실패 시 Error를 throw하고 UI/라우터에서 처리한다.
+  example: "if (!res.ok) {\n  throw new Error(`API error: ${res.status}`)\n}\n"
+  reason: 에러 처리 일관성
+  observed: 1
+  last_seen: '2026-07-08'
+  source:
+  - team
+  confidence: high
+  deprecated: false
+- id: server-side-ownership-reverify
+  description: 서비스 레이어는 클라이언트가 보낸 id/입력을 신뢰하지 않고, 세션 userId 또는 기존 row(orders 등)를 다시
+    조회해 소유권·상태를 서버에서 재검증한다. 액션은 인자로 orderId/restaurantId만 넘기고, restaurantId 같은 파생값은
+    입력(input)에 절대 담지 않는다 — 재조회한 row에서 파생시켜 저장한다.
+  example: "// review-service.ts — createReview\nconst order = db.prepare(\n  `SELECT\
+    \ user_id, restaurant_id, status FROM orders WHERE id = ?`\n).get(orderId)\nif\
+    \ (!order || order.user_id !== userId) throw new Error('ORDER_NOT_FOUND')\nif\
+    \ (order.status !== 'completed') throw new Error('ORDER_NOT_COMPLETED')\nconst\
+    \ restaurantId = order.restaurant_id // 클라 입력이 아니라 재조회 row에서 파생\n\n// order-service.ts\
+    \ — reorder: 소유권 검증을 getOrder 재사용으로 대체(중복 검증 없음)\nconst order = getOrder(userId,\
+    \ orderId)\nif (!order) return null\n\n// favorite-service.ts — 액션 시그니처에 userId\
+    \ 파라미터 없음, getSession().userId만 사용\n"
+  reason: 클라이언트 입력을 신뢰하지 않고 서버에서 소유권·상태를 재검증해 IDOR/권한 우회를 방지
+  observed: 3
+  last_seen: '2026-07-15'
+  source:
+  - team
+  confidence: high
+  deprecated: false
+- id: unique-constraint-dual-defense
+  description: 중복 방지가 필요한 리소스(1회성 리뷰, 찜 등)는 DB UNIQUE 제약과 서비스 레이어의 사전 SELECT 체크를 함께
+    둔다. 사전 체크로 일반 케이스를 빠르게 거르고, INSERT 시 UNIQUE 위반(SQLITE_CONSTRAINT_UNIQUE)을 catch해
+    동시성 경합까지 동일한 에러 코드로 매핑한다 — 사전 체크만으로는 레이스 컨디션을 막지 못하므로 DB 제약이 최종 방어선이 된다.
+  example: "// lib/db/client.ts\nCREATE TABLE IF NOT EXISTS reviews (\n  ...\n  order_id\
+    \ INTEGER NOT NULL UNIQUE,\n  ...\n)\n\n// review-service.ts — createReview\n\
+    const existing = db.prepare(`SELECT id FROM reviews WHERE order_id = ?`).get(orderId)\n\
+    if (existing) throw new Error('ALREADY_REVIEWED')\ntry {\n  db.prepare(`INSERT\
+    \ INTO reviews (...) VALUES (...)`).run(...)\n} catch (error) {\n  if (isUniqueViolation(error))\
+    \ throw new Error('ALREADY_REVIEWED')\n  throw error\n}\n\n// favorites 테이블도 UNIQUE(user_id,\
+    \ restaurant_id)로 동일 원칙 적용\n"
+  reason: 사전 체크만으로는 동시 요청 시 레이스 컨디션을 막지 못하므로 DB UNIQUE 제약을 최종 방어선으로 병행
+  observed: 2
+  last_seen: '2026-07-15'
+  source:
+  - team
+  confidence: high
+  deprecated: false
