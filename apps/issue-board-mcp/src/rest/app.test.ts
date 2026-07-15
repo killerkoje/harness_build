@@ -57,6 +57,26 @@ describe('REST API', () => {
     expect(res.status).toBe(404)
   })
 
+  it('PATCH /api/projects/:id/dev-url sets the dev server URL', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+
+    const res = await request(app)
+      .patch(`/api/projects/${project.id}/dev-url`)
+      .send({ devUrl: 'http://localhost:3000' })
+    expect(res.status).toBe(200)
+    expect(res.body.devUrl).toBe('http://localhost:3000')
+
+    const getRes = await request(app).get(`/api/projects/${project.id}`)
+    expect(getRes.body.devUrl).toBe('http://localhost:3000')
+  })
+
+  it('PATCH /api/projects/:id/dev-url returns 404 for a nonexistent project', async () => {
+    const res = await request(app)
+      .patch('/api/projects/999999/dev-url')
+      .send({ devUrl: 'http://localhost:3000' })
+    expect(res.status).toBe(404)
+  })
+
   it('CORS: responds to a cross-origin GET with Access-Control-Allow-Origin', async () => {
     const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
     const res = await request(app)

@@ -17,6 +17,7 @@ function rowToProject(row: any): Project {
     rootPath: row.root_path ?? row.rootPath,
     name: row.name,
     description: row.description ?? '',
+    devUrl: row.dev_url ?? row.devUrl ?? null,
   }
 }
 
@@ -88,6 +89,17 @@ export function deleteProject(db: Database.Database, id: number): boolean {
   })
   run(id)
   return true
+}
+
+export function updateProjectDevUrl(
+  db: Database.Database,
+  id: number,
+  devUrl: string | null
+): Project | null {
+  const existing = db.prepare('SELECT id FROM projects WHERE id = ?').get(id)
+  if (!existing) return null
+  db.prepare('UPDATE projects SET dev_url = ? WHERE id = ?').run(devUrl, id)
+  return getProject(db, id)
 }
 
 export function getProjectByRootPath(db: Database.Database, rootPath: string): Project | null {

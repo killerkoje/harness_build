@@ -2,7 +2,13 @@
 import express from 'express'
 import cors from 'cors'
 import type Database from 'better-sqlite3'
-import { getOrCreateProject, getProject, listProjects, deleteProject } from '../models/projects.js'
+import {
+  getOrCreateProject,
+  getProject,
+  listProjects,
+  deleteProject,
+  updateProjectDevUrl,
+} from '../models/projects.js'
 import {
   createPlan,
   createPlanFromMarkdown,
@@ -63,6 +69,12 @@ export function createApp(db: Database.Database) {
     const deleted = deleteProject(db, Number(req.params.id))
     if (!deleted) return res.status(404).json({ error: 'not found' })
     res.status(204).end()
+  })
+
+  app.patch('/api/projects/:id/dev-url', (req, res) => {
+    const project = updateProjectDevUrl(db, Number(req.params.id), req.body.devUrl ?? null)
+    if (!project) return res.status(404).json({ error: 'not found' })
+    res.json(project)
   })
 
   app.post('/api/projects/:projectId/plans', (req, res) => {

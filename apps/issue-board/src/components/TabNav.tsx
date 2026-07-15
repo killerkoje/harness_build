@@ -14,7 +14,7 @@ export default function TabNav({ projectId }: { projectId: number }) {
   const pathname = usePathname()
 
   return (
-    <nav className="flex gap-0.5 sm:gap-1 border-b border-zinc-200 px-2 sm:px-4 md:px-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <nav className="flex flex-1 min-w-0 gap-0.5 sm:gap-1 px-2 sm:px-4 md:px-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {TABS.map((tab) => {
         const isActive = pathname.endsWith(`/${tab.href}`)
         return (

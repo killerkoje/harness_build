@@ -27,6 +27,7 @@ export interface Project {
   rootPath: string
   name: string
   description?: string
+  devUrl: string | null
 }
 
 export interface Plan {

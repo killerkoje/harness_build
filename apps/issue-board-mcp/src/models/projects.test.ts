@@ -2,7 +2,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type Database from 'better-sqlite3'
 import { createDb } from '../db.js'
-import { getOrCreateProject, getProject, listProjects, deleteProject } from './projects.js'
+import {
+  getOrCreateProject,
+  getProject,
+  listProjects,
+  deleteProject,
+  updateProjectDevUrl,
+} from './projects.js'
 import { createPlan, approvePlanAndCreateIssues } from './plans.js'
 import { getIssue } from './issues.js'
 import { upsertWireframe, getWireframeByIssue } from './wireframes.js'
@@ -33,6 +39,24 @@ describe('projects model', () => {
 
   it('deleteProject returns false for an unknown id', () => {
     expect(deleteProject(db, 999)).toBe(false)
+  })
+
+  it('new projects have a null devUrl until set', () => {
+    const project = getOrCreateProject(db, '/tmp/proj-dev-url')
+    expect(project.devUrl).toBeNull()
+  })
+
+  it('updateProjectDevUrl sets and clears the dev server URL', () => {
+    const project = getOrCreateProject(db, '/tmp/proj-dev-url-2')
+    const updated = updateProjectDevUrl(db, project.id, 'http://localhost:3000')
+    expect(updated?.devUrl).toBe('http://localhost:3000')
+
+    const cleared = updateProjectDevUrl(db, project.id, null)
+    expect(cleared?.devUrl).toBeNull()
+  })
+
+  it('updateProjectDevUrl returns null for an unknown id', () => {
+    expect(updateProjectDevUrl(db, 999, 'http://localhost:3000')).toBeNull()
   })
 
   it('deleteProject removes the project and all of its plans/issues/wireframes/design system', async () => {
