@@ -80,6 +80,13 @@ export function getLatestPlanForProject(db: Database.Database, projectId: number
   return row ? rowToPlan(row) : null
 }
 
+export function listPlansByProject(db: Database.Database, projectId: number): Plan[] {
+  const rows = db
+    .prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY id ASC')
+    .all(projectId) as any[]
+  return rows.map(rowToPlan)
+}
+
 export function updatePlanSections(db: Database.Database, id: number, sections: PlanSections): void {
   db.prepare('UPDATE plans SET sections = ?, updated_at = ? WHERE id = ?').run(
     JSON.stringify(sections),

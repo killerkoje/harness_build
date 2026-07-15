@@ -10,6 +10,7 @@ import {
   snapshotPlan,
   getPlan,
   listSnapshots,
+  listPlansByProject,
   approvePlanAndCreateIssues,
 } from './plans.js'
 import { listIssuesByProject } from './issues.js'
@@ -70,5 +71,15 @@ describe('plans model', () => {
   it('approvePlanAndCreateIssues throws for a nonexistent plan and creates no issues', async () => {
     await expect(approvePlanAndCreateIssues(db, 999999)).rejects.toThrow()
     expect(listIssuesByProject(db, projectId)).toHaveLength(0)
+  })
+
+  it('listPlansByProject returns all plans for a project ordered by creation (id ASC)', () => {
+    const p1 = createPlan(db, projectId, '1차', sections)
+    const p2 = createPlan(db, projectId, '2차', sections)
+    expect(listPlansByProject(db, projectId).map((p) => p.id)).toEqual([p1.id, p2.id])
+  })
+
+  it('listPlansByProject returns an empty array for a project with no plans', () => {
+    expect(listPlansByProject(db, projectId)).toEqual([])
   })
 })
