@@ -14,6 +14,7 @@ import {
   createPlanFromMarkdown,
   getPlan,
   getLatestPlanForProject,
+  listPlansByProject,
   approvePlanAndCreateIssues,
   syncIssuesFromPlan,
 } from '../models/plans.js'
@@ -96,6 +97,10 @@ export function createApp(db: Database.Database) {
     const plan = getLatestPlanForProject(db, Number(req.params.projectId))
     if (!plan) return res.status(404).json({ error: 'not found' })
     res.json(plan)
+  })
+
+  app.get('/api/projects/:projectId/plans', (req, res) => {
+    res.json(listPlansByProject(db, Number(req.params.projectId)))
   })
 
   app.post('/api/plans/:id/approve', asyncHandler(async (req, res) => {

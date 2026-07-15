@@ -239,4 +239,28 @@ describe('REST API', () => {
     expect(get.body.components[0].issueNumbers).toEqual([4])
     expect(get.body.tokens.color.brand.primary).toBe('#111111')
   })
+
+  it('GET /api/projects/:projectId/plans lists all plans for a project in creation order', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const planBody = {
+      sections: { overview: 'o', targetUsers: 't', mvpFeatures: [], outOfScope: 'x' },
+    }
+    const p1 = (
+      await request(app).post(`/api/projects/${project.id}/plans`).send({ ...planBody, title: '1차' })
+    ).body
+    const p2 = (
+      await request(app).post(`/api/projects/${project.id}/plans`).send({ ...planBody, title: '2차' })
+    ).body
+
+    const res = await request(app).get(`/api/projects/${project.id}/plans`)
+    expect(res.status).toBe(200)
+    expect(res.body.map((p: { id: number }) => p.id)).toEqual([p1.id, p2.id])
+  })
+
+  it('GET /api/projects/:projectId/plans returns an empty array for a project with no plans', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const res = await request(app).get(`/api/projects/${project.id}/plans`)
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual([])
+  })
 })
