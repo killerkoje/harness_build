@@ -1,6 +1,6 @@
 // src/lib/api.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fetchIssues, approveIssue, fetchProjects, deleteProject } from './api.js'
+import { fetchIssues, approveIssue, fetchProjects, deleteProject, fetchPlans } from './api.js'
 
 describe('api client', () => {
   beforeEach(() => {
@@ -37,5 +37,12 @@ describe('api client', () => {
   it('deleteProject throws when the request fails', async () => {
     ;(fetch as any).mockResolvedValue({ ok: false, status: 404 })
     await expect(deleteProject(999)).rejects.toThrow('request failed: 404')
+  })
+
+  it('fetchPlans calls GET /api/projects/:id/plans and returns parsed json', async () => {
+    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => [{ id: 1, title: 'p1' }] })
+    const plans = await fetchPlans(42)
+    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/projects/42/plans')
+    expect(plans).toEqual([{ id: 1, title: 'p1' }])
   })
 })

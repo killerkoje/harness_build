@@ -113,6 +113,10 @@ export async function fetchLatestPlan(projectId: number): Promise<Plan | null> {
   return json(res)
 }
 
+export async function fetchPlans(projectId: number): Promise<Plan[]> {
+  return json(await fetch(`${BASE_URL}/api/projects/${projectId}/plans`))
+}
+
 export async function fetchWireframe(issueId: number): Promise<Wireframe | null> {
   const res = await fetch(`${BASE_URL}/api/issues/${issueId}/wireframe`)
   if (res.status === 404) return null
