@@ -27,7 +27,7 @@
 **Files:**
 - Modify: `harness_global/.claude/commands/ib-plan.md`
 
-- [ ] **Step 1: MVP 표 템플릿에 "근거" 컬럼 추가**
+- [x] **Step 1: MVP 표 템플릿에 "근거" 컬럼 추가**
 
 `harness_global/.claude/commands/ib-plan.md`에서 (기획서 마크다운 템플릿 코드 블록 안, 현재 70~74번 줄) 아래 텍스트를:
 
@@ -50,7 +50,7 @@
 적지 말고, 아래 "우선순위 채점 기준" 절의 규칙을 따른다.)
 ```
 
-- [ ] **Step 2: 채점 규칙 절 추가**
+- [x] **Step 2: 채점 규칙 절 추가**
 
 같은 파일에서, 기획서 템플릿 코드 블록이 끝나고 이어지는 안내 불릿 목록 마지막 줄(현재 103번 줄) 아래에 새 절을 추가한다. 아래 텍스트를:
 
@@ -89,14 +89,14 @@
 ### 4) 보드에 적재
 ```
 
-- [ ] **Step 3: 육안 검토**
+- [x] **Step 3: 육안 검토**
 
 `harness_global/.claude/commands/ib-plan.md` 전체를 다시 읽어 확인한다:
 - `### 1)` ~ `### 5)` 섹션 헤딩과 그 안의 하위 번호(`1.`/`2.`/`3.` 등)가 깨지지 않았는지
 - 기획서 마크다운 템플릿 코드 블록(```로 감싼 부분)이 여전히 올바르게 열리고 닫히는지
 - 새로 추가한 채점 규칙 절이 "### 4) 보드에 적재" 헤딩 앞, 코드 블록 밖에 있는지 (코드 블록 안에 프롬프트 지침이 섞여 들어가면 기획서 산출물에 그대로 출력돼버림 — 반드시 코드 블록 밖에 있어야 한다)
 
-- [ ] **Step 4: 커밋**
+- [x] **Step 4: 커밋**
 
 ```bash
 git add harness_global/.claude/commands/ib-plan.md
@@ -111,7 +111,7 @@ git commit -m "docs(ib-plan): score MVP priority against 8 weighted criteria ins
 
 이 태스크는 실제 `/ib-plan` LLM 세션을 돌리지 않고, 서버가 4컬럼 표를 정말로 안전하게 처리하는지 REST API를 직접 호출해 확인한다 (설계 문서의 핵심 전제 — "서버는 3번째 컬럼까지만 파싱하고 4번째는 무시한다" — 를 실증한다).
 
-- [ ] **Step 1: 서버 기동**
+- [x] **Step 1: 서버 기동**
 
 ```bash
 cd apps/issue-board-mcp && npm run dev
@@ -124,7 +124,7 @@ curl -sf http://localhost:4000/api/projects >/dev/null 2>&1 && echo "mcp up" || 
 ```
 Expected: `mcp up`
 
-- [ ] **Step 2: 4컬럼 MVP 표가 포함된 기획서를 `content`로 생성**
+- [x] **Step 2: 4컬럼 MVP 표가 포함된 기획서를 `content`로 생성**
 
 ```bash
 mkdir -p /tmp/priority-scoring-test
@@ -174,7 +174,7 @@ markdown includes 근거 column: true
 
 이 결과가 설계 문서의 핵심 전제를 증명한다: `mvpFeatures`(구조화 데이터, 이슈 생성에 쓰임)에는 "근거" 컬럼 내용이 전혀 섞이지 않고 정확히 3개 필드만 파싱됐고, 동시에 `sections.markdown`(대시보드가 그대로 렌더하는 원문)에는 "근거" 컬럼이 그대로 살아있다.
 
-- [ ] **Step 3: 승인 → 이슈 생성까지 정상 동작하는지 확인**
+- [x] **Step 3: 승인 → 이슈 생성까지 정상 동작하는지 확인**
 
 ```bash
 PLAN_ID=$(echo "$PLAN" | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).id))")
@@ -193,7 +193,7 @@ issues: [ '1:로그인:높음', '2:테마 변경:낮음' ]
 
 이슈의 `priority`/`title`이 "근거" 컬럼과 무관하게 정확히 반영됐는지 확인한다.
 
-- [ ] **Step 4: 정리**
+- [x] **Step 4: 정리**
 
 ```bash
 curl -s -X DELETE "http://localhost:4000/api/projects/$PID" -o /dev/null -w "delete status: %{http_code}\n"
