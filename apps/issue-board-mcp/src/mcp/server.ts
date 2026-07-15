@@ -275,7 +275,8 @@ export function createMcpServer(db: Database.Database): McpServer {
 
   server.tool(
     'upsert_design_system',
-    '프로젝트의 디자인 시스템(토큰·컴포넌트 카탈로그·패키지 경로)을 저장한다. Turborepo packages/ui + Storybook 메타를 포함한다',
+    '프로젝트의 디자인 시스템(컬러 토큰·패키지 경로)을 저장한다. Turborepo packages/ui + Storybook 메타를 포함한다. ' +
+      '컴포넌트 카탈로그는 프론트 재량으로 수시로 바뀌므로 선택 항목이다',
     {
       projectRoot: z.string(),
       name: z.string(),
@@ -283,14 +284,16 @@ export function createMcpServer(db: Database.Database): McpServer {
       packageName: z.string(),
       storybookPath: z.string(),
       tokens: z.record(z.string(), z.unknown()),
-      components: z.array(
-        z.object({
-          name: z.string(),
-          packageExport: z.string(),
-          description: z.string(),
-          issueNumbers: z.array(z.number()),
-        })
-      ),
+      components: z
+        .array(
+          z.object({
+            name: z.string(),
+            packageExport: z.string(),
+            description: z.string(),
+            issueNumbers: z.array(z.number()),
+          })
+        )
+        .optional(),
     },
     async ({ projectRoot, name, version, packageName, storybookPath, tokens, components }) => {
       const project = getOrCreateProject(db, projectRoot)

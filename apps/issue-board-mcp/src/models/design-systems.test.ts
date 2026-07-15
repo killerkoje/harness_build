@@ -40,6 +40,19 @@ describe('design-systems', () => {
     expect((fetched?.tokens as any).color.brand.primary).toBe('#111111')
   })
 
+  it('defaults components to an empty array when omitted', () => {
+    const created = upsertDesignSystem(db, projectId, {
+      name: 'Musinsa Store DS',
+      version: '0.1.0',
+      packageName: '@musinsa/ui',
+      storybookPath: 'apps/docs',
+      tokens: { color: { brand: { primary: '#111111' } } },
+    })
+
+    expect(created.components).toEqual([])
+    expect(getDesignSystemByProject(db, projectId)?.components).toEqual([])
+  })
+
   it('updates in place on second upsert (one DS per project)', () => {
     upsertDesignSystem(db, projectId, {
       name: 'A',

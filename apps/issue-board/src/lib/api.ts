@@ -66,7 +66,7 @@ export interface DesignSystem {
   packageName: string
   storybookPath: string
   tokens: Record<string, unknown>
-  components: DesignSystemComponent[]
+  components?: DesignSystemComponent[]
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_ISSUE_BOARD_API_URL ?? 'http://localhost:4000'

@@ -240,6 +240,32 @@ describe('REST API', () => {
     expect(get.body.tokens.color.brand.primary).toBe('#111111')
   })
 
+  it('PUT design-system without components defaults to an empty array', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const put = await request(app).put(`/api/projects/${project.id}/design-system`).send({
+      name: 'Musinsa Store DS',
+      version: '0.1.0',
+      packageName: '@musinsa/ui',
+      storybookPath: 'apps/docs',
+      tokens: { color: { brand: { primary: '#111111' } } },
+    })
+    expect(put.status).toBe(200)
+    expect(put.body.components).toEqual([])
+  })
+
+  it('PUT design-system with a non-array components field is rejected', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const put = await request(app).put(`/api/projects/${project.id}/design-system`).send({
+      name: 'Musinsa Store DS',
+      version: '0.1.0',
+      packageName: '@musinsa/ui',
+      storybookPath: 'apps/docs',
+      tokens: {},
+      components: 'not-an-array',
+    })
+    expect(put.status).toBe(400)
+  })
+
   it('GET /api/projects/:projectId/plans lists all plans for a project in creation order', async () => {
     const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
     const planBody = {

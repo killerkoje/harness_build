@@ -34,13 +34,14 @@ export function upsertDesignSystem(
     packageName: string
     storybookPath: string
     tokens: Record<string, unknown>
-    components: DesignSystemComponent[]
+    components?: DesignSystemComponent[]
   }
 ): DesignSystem {
+  const components = input.components ?? []
   const existing = getDesignSystemByProject(db, projectId)
   const now = new Date().toISOString()
   const tokensJson = JSON.stringify(input.tokens)
-  const componentsJson = JSON.stringify(input.components)
+  const componentsJson = JSON.stringify(components)
 
   if (existing) {
     db.prepare(
@@ -87,7 +88,7 @@ export function upsertDesignSystem(
     packageName: input.packageName,
     storybookPath: input.storybookPath,
     tokens: input.tokens,
-    components: input.components,
+    components,
     createdAt: now,
     updatedAt: now,
   }

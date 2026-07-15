@@ -12,15 +12,7 @@ function flattenColors(
   )
 }
 
-export default function DesignSystemView({
-  ds,
-  projectId,
-  issueIdByNumber,
-}: {
-  ds: DesignSystem
-  projectId: number
-  issueIdByNumber: Record<number, number>
-}) {
+export default function DesignSystemView({ ds }: { ds: DesignSystem }) {
   const brandColors = flattenColors((ds.tokens as any)?.color?.brand ?? {})
   const semanticColors = flattenColors((ds.tokens as any)?.color?.semantic ?? {}).slice(0, 6)
 
@@ -65,49 +57,6 @@ export default function DesignSystemView({
               <div className="px-2 py-1.5 space-y-0.5">
                 <p className="text-[11px] font-mono text-zinc-500 truncate">{c.key}</p>
                 <p className="text-xs font-medium">{c.value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-zinc-500">컴포넌트 ↔ 이슈</h2>
-        <div className="border border-zinc-200 rounded-xl divide-y divide-zinc-100 overflow-hidden">
-          {ds.components.map((comp) => (
-            <div key={comp.name} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">{comp.name}</p>
-                <p className="text-xs text-zinc-500">{comp.description}</p>
-                <code className="text-[11px] text-indigo-700">{comp.packageExport}</code>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {comp.issueNumbers.length === 0 ? (
-                  <span className="text-xs text-zinc-400">이슈 미연결</span>
-                ) : (
-                  comp.issueNumbers.map((n) => {
-                    const issueId = issueIdByNumber[n]
-                    if (!issueId) {
-                      return (
-                        <span
-                          key={n}
-                          className="text-xs px-2 py-0.5 rounded bg-zinc-100 text-zinc-500"
-                        >
-                          #{n}
-                        </span>
-                      )
-                    }
-                    return (
-                      <a
-                        key={n}
-                        href={`/projects/${projectId}/wireframe?issueId=${issueId}`}
-                        className="text-xs px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-                      >
-                        #{n}
-                      </a>
-                    )
-                  })
-                )}
               </div>
             </div>
           ))}

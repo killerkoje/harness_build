@@ -164,8 +164,8 @@ cd apps/issue-board && npm run dev       # :5173
 |----|--------|
 | 기획 | `plans` (+ `plan_snapshots`) |
 | 이슈 | `issues` (`planned` → `wireframed` → `dev_approved` → `done`) |
-| 디자인시스템 | `design_systems` (토큰·컴포넌트 카탈로그·`@scope/ui` / Storybook 메타) |
-| 와이어프레임 | `wireframes` (이슈당 screens JSON, `region.component`로 DS 컴포넌트 표기) |
+| 디자인시스템 | `design_systems` (컬러 토큰·`@scope/ui` / Storybook 메타. 컴포넌트 카탈로그는 선택 항목) |
+| 와이어프레임 | `wireframes` (이슈당 screens JSON, 최종 HTML 산출물) |
 
 ### 커맨드 흐름
 
@@ -183,9 +183,9 @@ cd apps/issue-board && npm run dev       # :5173
 
 **기획 개정 연동:** 이미 승인된 기획을 수정한 뒤 `update_plan(..., approved)` 또는 MCP `sync_plan_issues` → 이슈 create/update, 변경분은 와이어 무효화(`planned`) → `/ib-wireframe` 재실행 → 필요 시 `/ib-approve` 재승인. (표에서 빠진 기능 행은 이슈를 삭제하지 않고 orphaned로만 보고)
 
-디자인시스템은 [Turborepo design-system](https://github.com/vercel/turborepo/tree/main/examples/design-system)처럼 `packages/ui` + Storybook(`apps/docs`)을 소스 오브 트루스로 두고, 보드는 조회·이슈 매핑용이다. (개발용 목데이터 시드 스크립트는 제거됨 — REST API로 직접 기획/이슈/디자인시스템을 적재한다.)
+디자인시스템은 [Turborepo design-system](https://github.com/vercel/turborepo/tree/main/examples/design-system)처럼 `packages/ui` + Storybook(`apps/docs`)을 소스 오브 트루스로 두고, 보드는 컬러 토큰 조회용이다. (개발용 목데이터 시드 스크립트는 제거됨 — REST API로 직접 기획/이슈/디자인시스템을 적재한다.) 컴포넌트 카탈로그는 프론트 재량으로 수시로 바뀔 수 있다고 보고 DS 등록 대상에서 뺐다 — `upsert_design_system`의 `components`는 선택 필드로만 남아 있다.
 
-와이어프레임 탭은 `region.component`로 표기된 디자인시스템 컴포넌트를 실제 목업 UI(폰 프레임, 카드/버튼 등)로 렌더링한다 (`apps/issue-board/src/components/wireframe-preview/`).
+와이어프레임 탭은 이슈당 등록된 `screens[].html`을 iframe으로 그대로 렌더링한다 (`apps/issue-board/src/components/wireframe-preview/`). `/ib-wireframe`은 DS 컬러 토큰만 참고해 마크업을 새로 그리며, 컴포넌트 이름표는 달지 않는다.
 
 `/ib-plan`은 기획 초반에 **플랫폼(웹/앱(모바일)/데스크톱/CLI)을 필수로 확인**하고 기획서 §1에 `**플랫폼:**` 줄로 고정 기록한다. `/ib-wireframe`은 이 값을 그대로 읽어 프레임(브라우저/폰/터미널)을 정하며, 별도로 추론하지 않는다.
 

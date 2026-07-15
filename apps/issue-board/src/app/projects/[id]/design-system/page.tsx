@@ -1,7 +1,7 @@
 // src/app/projects/[id]/design-system/page.tsx
 import ConnectionErrorBanner from '@/components/ConnectionErrorBanner'
 import DesignSystemView from '@/components/DesignSystemView'
-import { fetchDesignSystem, fetchIssues } from '@/lib/api'
+import { fetchDesignSystem } from '@/lib/api'
 
 export default async function DesignSystemPage({
   params,
@@ -12,10 +12,7 @@ export default async function DesignSystemPage({
   const projectId = Number(id)
 
   try {
-    const [ds, issues] = await Promise.all([
-      fetchDesignSystem(projectId),
-      fetchIssues(projectId).catch(() => []),
-    ])
+    const ds = await fetchDesignSystem(projectId)
     if (!ds) {
       return (
         <p className="text-sm text-zinc-400">
@@ -25,10 +22,7 @@ export default async function DesignSystemPage({
         </p>
       )
     }
-    const issueIdByNumber = Object.fromEntries(issues.map((i) => [i.number, i.id]))
-    return (
-      <DesignSystemView ds={ds} projectId={projectId} issueIdByNumber={issueIdByNumber} />
-    )
+    return <DesignSystemView ds={ds} />
   } catch {
     return <ConnectionErrorBanner />
   }

@@ -196,7 +196,14 @@ export function createApp(db: Database.Database) {
     if (!project) return res.status(404).json({ error: 'not found' })
 
     const { name, version, packageName, storybookPath, tokens, components } = req.body ?? {}
-    if (!name || !version || !packageName || !storybookPath || tokens == null || !Array.isArray(components)) {
+    if (
+      !name ||
+      !version ||
+      !packageName ||
+      !storybookPath ||
+      tokens == null ||
+      (components !== undefined && !Array.isArray(components))
+    ) {
       return res.status(400).json({ error: 'invalid body' })
     }
 

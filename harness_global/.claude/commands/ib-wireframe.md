@@ -18,8 +18,8 @@ $ARGUMENTS
 ### 1) 컨텍스트 로드 (필수)
 
 1. `list_issues({ projectRoot })` 로 이슈 목록 확보
-2. `get_design_system({ projectRoot })` 로 DS 토큰·컴포넌트·issueNumbers 매핑 확보  
-   - DS가 없으면 **여기서 멈추고** 사용자에게 `upsert_design_system` / 시드부터 하라고 안내
+2. `get_design_system({ projectRoot })` 로 DS 컬러 토큰 확보 (컴포넌트 카탈로그는 선택 항목 — 있으면 참고, 없어도 진행)  
+   - DS 자체가 없으면 **여기서 멈추고** 사용자에게 `upsert_design_system` / 시드부터 하라고 안내
 3. 대상 이슈마다 `get_issue_by_number` 또는 목록에서 `id`(PK) 확인 — `create_wireframe`에는 **내부 id**를 넘긴다
 
 ### 2) 와이어 설계 규칙
@@ -45,10 +45,18 @@ $ARGUMENTS
   - 표기가 없는 구 기획서(마이그레이션 이전)만 예외적으로 **기본값 = 데스크톱 대시보드**,
     단 이슈/기획 본문에 모바일 요구가 명시돼 있으면 폰 프레임으로 그린다
 - **이슈 description** = 이 화면이 해결하는 것
-- DS 토큰(색상·폰트 등)이 있으면 인라인 스타일 또는 `<style>` 블록에 반영하고, DS components 중 `issueNumbers`에 이 이슈 번호가 들어 있는 컴포넌트를 이름으로 라벨링해 우선 배치
+- DS 컬러 토큰이 있으면 인라인 스타일 또는 `<style>` 블록에 반영한다. 컴포넌트 이름표는 달지 않는다 — 컴포넌트 카탈로그는 프론트 재량으로 수시로 바뀌므로 DS 소스오브트루스로 보지 않는다
 - 박스만 나열하지 말고 **실제 화면 흐름**(헤더→본문→CTA)이 보이게 마크업 순서를 잡는다
 - 이슈 하나에 화면이 여러 개면(예: 목록+상세) `screens`를 2개 이상
 - 목업 프리뷰 단계 없이 이 HTML이 바로 최종 산출물이다
+
+**인터랙션 (vanilla JS만 사용, 라이브러리/프레임워크 금지):**
+
+- 화면 성격에 맞는 기본 인터랙션을 `<script>` 태그에 순수 JS(DOM API)로 구현한다 — React/jQuery/Alpine 등 어떤 라이브러리도 CDN으로 불러오지 않는다
+- iframe이 `sandbox="allow-scripts"`라 스크립트는 그대로 동작한다
+- 예시: 탭·토글 전환, 드롭다운/모달 열고 닫기, 폼 입력값에 따른 버튼 활성/비활성, 별점·체크박스·좋아요 클릭 시 상태 변경, 카운터 증감, 아코디언 펼치기/접기 — 이슈 화면에 실제로 해당하는 것만 골라 넣는다 (없는 인터랙션을 억지로 추가하지 않는다)
+- 상태는 DOM 클래스 토글/속성 변경 수준으로 충분하다 — 별도 상태관리, 번들러, 빌드 스텝이 필요한 방식은 쓰지 않는다
+- 서버 통신(fetch/axios 등)은 하지 않는다 — 목업이므로 클라이언트 로컬 상태만 다룬다
 
 ### 3) 적재
 
@@ -57,7 +65,7 @@ $ARGUMENTS
 
 ### 4) 보고
 
-- 이슈 `#number` / `issueId` / screen 수 / 사용한 DS 컴포넌트 목록
+- 이슈 `#number` / `issueId` / screen 수
 - 대시보드: `http://localhost:5173/projects/<projectId>/wireframe?issueId=<id>`
 - 다음: 검토 후 `/ib-approve <번호>`
 
@@ -72,4 +80,3 @@ $ARGUMENTS
 
 - issue-board MCP(`http://localhost:4000/mcp`) 필수
 - 실제 프로덕션 코드/Storybook 구현 금지 — 산출물은 와이어 `html` 적재뿐
-- DS에 없는 컴포넌트명을 지어내지 마라. 없으면 라벨만 쓰고 보고에 “DS 미등재”를 적어라
