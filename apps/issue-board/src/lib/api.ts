@@ -13,7 +13,10 @@ export interface Issue {
   status: 'planned' | 'wireframed' | 'dev_approved' | 'done'
   notionPageId: string | null
   notionStatus: NotionStatus | null
-  subtaskProgress: { total: number; done: number } | null
+  // GET /api/projects/:id/issues에서만 채워진다 — 단건 조회(getIssue 기반)
+  // 라우트들의 응답에는 이 키 자체가 없다. 상태 갱신 시 전체 교체 대신
+  // { ...prev, ...updated } 형태로 병합해서 값을 잃지 않도록 한다.
+  subtaskProgress?: { total: number; done: number } | null
   createdAt: string
   updatedAt: string
 }

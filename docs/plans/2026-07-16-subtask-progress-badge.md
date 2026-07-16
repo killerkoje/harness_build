@@ -445,7 +445,10 @@ export interface Issue {
   status: 'planned' | 'wireframed' | 'dev_approved' | 'done'
   notionPageId: string | null
   notionStatus: NotionStatus | null
-  subtaskProgress: { total: number; done: number } | null
+  // GET /api/projects/:id/issues에서만 채워진다 — getIssue 기반 단건 조회
+  // 라우트(승인/완료/Notion상태 변경 등)의 응답에는 이 키 자체가 없다.
+  // 그래서 optional(`?:`)로 선언한다 — 없으면 undefined가 되는 게 타입상으로도 맞다.
+  subtaskProgress?: { total: number; done: number } | null
   createdAt: string
   updatedAt: string
 }
@@ -454,7 +457,9 @@ export interface Issue {
 - [ ] **Step 2: 타입 체크로 확인**
 
 Run: `cd apps/issue-board && npx tsc --noEmit`
-Expected: 에러 없음 (아직 이 필드를 사용하는 코드가 없으므로 통과해야 정상)
+Expected: 에러 없음. `plan-rounds.test.ts`의 `makeIssue()` 헬퍼처럼 `Issue` 객체를 리터럴로 완전히 구성하는 테스트가 있다면 `subtaskProgress`가 optional이므로 그 필드를 안 넣어도 에러가 안 나야 한다(넣고 싶으면 `null`로 넣어도 무방).
+
+**중요 — Task 7과의 연결점:** 이 필드가 `GET /api/projects/:id/issues`에만 있고 다른 이슈 응답에는 없기 때문에, `IssueList.tsx`에서 단건 응답(예: `setIssueNotionStatus`의 반환값)으로 이슈를 갱신할 때 **절대 통째로 교체하면 안 된다** — `subtaskProgress`가 없는 객체로 덮어쓰면 배지가 사라진다. Task 7의 `handleNotionStatusChange`는 `{ ...prev, ...updated }` 형태로 병합해서 이 문제를 피한다(Task 7 코드에 이미 반영됨).
 
 - [ ] **Step 3: 커밋**
 
@@ -672,7 +677,9 @@ export default function IssueList({
     setError(null)
     try {
       const updated = await setIssueNotionStatus(issueId, notionStatus)
-      setItems((prev) => prev.map((i) => (i.id === issueId ? updated : i)))
+      // setIssueNotionStatus의 응답(getIssue 기반)에는 subtaskProgress 키가 아예 없다.
+      // 통째로 교체(updated)하면 그 이슈의 진행도 배지가 사라진다 — 병합으로 기존 값을 보존한다.
+      setItems((prev) => prev.map((i) => (i.id === issueId ? { ...i, ...updated } : i)))
     } catch {
       setError('Notion 상태 변경에 실패했습니다. 잠시 후 다시 시도하세요.')
     }
