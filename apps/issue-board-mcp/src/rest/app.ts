@@ -173,6 +173,7 @@ export function createApp(db: Database.Database) {
 
   app.put('/api/subtasks/:id', (req, res) => {
     const { title, done } = req.body ?? {}
+    if (title !== undefined && !title) return res.status(400).json({ error: 'title required' })
     const updated = updateSubtask(db, Number(req.params.id), { title, done })
     if (!updated) return res.status(404).json({ error: 'not found' })
     res.json(updated)
