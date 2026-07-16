@@ -289,4 +289,89 @@ describe('REST API', () => {
     expect(res.status).toBe(200)
     expect(res.body).toEqual([])
   })
+
+  it('subtask CRUD: create, list, toggle done, rename, delete', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const plan = (
+      await request(app)
+        .post(`/api/projects/${project.id}/plans`)
+        .send({
+          title: 'p',
+          sections: {
+            overview: 'o',
+            targetUsers: 't',
+            mvpFeatures: [{ priority: '높음', title: '로그인', description: 'd' }],
+            outOfScope: 'x',
+          },
+        })
+    ).body
+    await request(app).post(`/api/plans/${plan.id}/approve`)
+    const issue = (await request(app).get(`/api/projects/${project.id}/issues`)).body[0]
+
+    const created = await request(app)
+      .post(`/api/issues/${issue.id}/subtasks`)
+      .send({ title: 'API 라우터 추가' })
+    expect(created.status).toBe(200)
+    expect(created.body.title).toBe('API 라우터 추가')
+    expect(created.body.done).toBe(false)
+
+    const listRes = await request(app).get(`/api/issues/${issue.id}/subtasks`)
+    expect(listRes.status).toBe(200)
+    expect(listRes.body).toHaveLength(1)
+
+    const toggled = await request(app).put(`/api/subtasks/${created.body.id}`).send({ done: true })
+    expect(toggled.status).toBe(200)
+    expect(toggled.body.done).toBe(true)
+    expect(toggled.body.title).toBe('API 라우터 추가')
+
+    const renamed = await request(app)
+      .put(`/api/subtasks/${created.body.id}`)
+      .send({ title: '라우터 추가 (완료)' })
+    expect(renamed.status).toBe(200)
+    expect(renamed.body.title).toBe('라우터 추가 (완료)')
+    expect(renamed.body.done).toBe(true)
+
+    const del = await request(app).delete(`/api/subtasks/${created.body.id}`)
+    expect(del.status).toBe(204)
+
+    const afterDelete = await request(app).get(`/api/issues/${issue.id}/subtasks`)
+    expect(afterDelete.body).toHaveLength(0)
+  })
+
+  it('GET /api/issues/:id/subtasks returns 404 for a nonexistent issue', async () => {
+    const res = await request(app).get('/api/issues/999999/subtasks')
+    expect(res.status).toBe(404)
+  })
+
+  it('POST /api/issues/:id/subtasks returns 400 without a title', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const plan = (
+      await request(app)
+        .post(`/api/projects/${project.id}/plans`)
+        .send({
+          title: 'p',
+          sections: {
+            overview: 'o',
+            targetUsers: 't',
+            mvpFeatures: [{ priority: '높음', title: '로그인', description: 'd' }],
+            outOfScope: 'x',
+          },
+        })
+    ).body
+    await request(app).post(`/api/plans/${plan.id}/approve`)
+    const issue = (await request(app).get(`/api/projects/${project.id}/issues`)).body[0]
+
+    const res = await request(app).post(`/api/issues/${issue.id}/subtasks`).send({})
+    expect(res.status).toBe(400)
+  })
+
+  it('PUT /api/subtasks/:id returns 404 for a nonexistent subtask', async () => {
+    const res = await request(app).put('/api/subtasks/999999').send({ done: true })
+    expect(res.status).toBe(404)
+  })
+
+  it('DELETE /api/subtasks/:id returns 404 for a nonexistent subtask', async () => {
+    const res = await request(app).delete('/api/subtasks/999999')
+    expect(res.status).toBe(404)
+  })
 })
