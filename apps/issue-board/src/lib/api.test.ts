@@ -1,6 +1,16 @@
 // src/lib/api.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fetchIssues, approveIssue, fetchProjects, deleteProject, fetchPlans } from './api.js'
+import {
+  fetchIssues,
+  approveIssue,
+  fetchProjects,
+  deleteProject,
+  fetchPlans,
+  fetchSubtasks,
+  createSubtask,
+  updateSubtask,
+  deleteSubtask,
+} from './api.js'
 
 describe('api client', () => {
   beforeEach(() => {
@@ -44,5 +54,40 @@ describe('api client', () => {
     const plans = await fetchPlans(42)
     expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/projects/42/plans')
     expect(plans).toEqual([{ id: 1, title: 'p1' }])
+  })
+
+  it('fetchSubtasks calls GET /api/issues/:id/subtasks and returns parsed json', async () => {
+    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => [{ id: 1, title: 't', done: false }] })
+    const subtasks = await fetchSubtasks(7)
+    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/issues/7/subtasks')
+    expect(subtasks).toEqual([{ id: 1, title: 't', done: false }])
+  })
+
+  it('createSubtask calls POST /api/issues/:id/subtasks with the title', async () => {
+    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({ id: 1, title: '새 태스크', done: false }) })
+    const subtask = await createSubtask(7, '새 태스크')
+    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/issues/7/subtasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: '새 태스크' }),
+    })
+    expect(subtask.title).toBe('새 태스크')
+  })
+
+  it('updateSubtask calls PUT /api/subtasks/:id with partial fields', async () => {
+    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({ id: 1, title: 't', done: true }) })
+    const updated = await updateSubtask(1, { done: true })
+    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/subtasks/1', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ done: true }),
+    })
+    expect(updated.done).toBe(true)
+  })
+
+  it('deleteSubtask calls DELETE /api/subtasks/:id', async () => {
+    ;(fetch as any).mockResolvedValue({ ok: true })
+    await deleteSubtask(1)
+    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/subtasks/1', { method: 'DELETE' })
   })
 })

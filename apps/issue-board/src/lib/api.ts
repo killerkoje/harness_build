@@ -142,3 +142,42 @@ export async function fetchDesignSystem(projectId: number): Promise<DesignSystem
   if (res.status === 404) return null
   return json(res)
 }
+
+export interface Subtask {
+  id: number
+  issueId: number
+  title: string
+  done: boolean
+}
+
+export async function fetchSubtasks(issueId: number): Promise<Subtask[]> {
+  return json(await fetch(`${BASE_URL}/api/issues/${issueId}/subtasks`))
+}
+
+export async function createSubtask(issueId: number, title: string): Promise<Subtask> {
+  return json(
+    await fetch(`${BASE_URL}/api/issues/${issueId}/subtasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    })
+  )
+}
+
+export async function updateSubtask(
+  id: number,
+  fields: { title?: string; done?: boolean }
+): Promise<Subtask> {
+  return json(
+    await fetch(`${BASE_URL}/api/subtasks/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields),
+    })
+  )
+}
+
+export async function deleteSubtask(id: number): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/subtasks/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`request failed: ${res.status}`)
+}
