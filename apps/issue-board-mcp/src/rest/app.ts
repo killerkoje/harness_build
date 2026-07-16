@@ -27,7 +27,14 @@ import {
   setIssueNotionStatus,
 } from '../models/issues.js'
 import { upsertWireframe, getWireframeByIssue } from '../models/wireframes.js'
-import { listSubtasksByIssue, createSubtask, updateSubtask, deleteSubtask } from '../models/subtasks.js'
+import {
+  listSubtasksByIssue,
+  createSubtask,
+  getSubtask,
+  updateSubtask,
+  deleteSubtask,
+  maybeAutoCompleteIssue,
+} from '../models/subtasks.js'
 import { getDesignSystemByProject, upsertDesignSystem } from '../models/design-systems.js'
 import { pushIssueToNotion } from '../models/notion.js'
 import { NOTION_STATUS_OPTIONS } from '../types.js'
@@ -171,19 +178,23 @@ export function createApp(db: Database.Database) {
     res.json(createSubtask(db, issueId, title))
   })
 
-  app.put('/api/subtasks/:id', (req, res) => {
+  app.put('/api/subtasks/:id', asyncHandler(async (req, res) => {
     const { title, done } = req.body ?? {}
     if (title !== undefined && !title) return res.status(400).json({ error: 'title required' })
     const updated = updateSubtask(db, Number(req.params.id), { title, done })
     if (!updated) return res.status(404).json({ error: 'not found' })
+    await maybeAutoCompleteIssue(db, updated.issueId)
     res.json(updated)
-  })
+  }))
 
-  app.delete('/api/subtasks/:id', (req, res) => {
-    const deleted = deleteSubtask(db, Number(req.params.id))
-    if (!deleted) return res.status(404).json({ error: 'not found' })
+  app.delete('/api/subtasks/:id', asyncHandler(async (req, res) => {
+    const id = Number(req.params.id)
+    const existing = getSubtask(db, id)
+    if (!existing) return res.status(404).json({ error: 'not found' })
+    deleteSubtask(db, id)
+    await maybeAutoCompleteIssue(db, existing.issueId)
     res.status(204).end()
-  })
+  }))
 
   app.post('/api/issues/:id/approve', asyncHandler(async (req, res) => {
     const issueId = Number(req.params.id)
