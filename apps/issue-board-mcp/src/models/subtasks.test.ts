@@ -4,7 +4,7 @@ import type Database from 'better-sqlite3'
 import { createDb } from '../db.js'
 import { getOrCreateProject } from './projects.js'
 import { createPlan } from './plans.js'
-import { createIssuesFromPlan } from './issues.js'
+import { createIssuesFromPlan, getIssue } from './issues.js'
 import {
   listSubtasksByIssue,
   createSubtask,
@@ -12,6 +12,7 @@ import {
   getSubtask,
   updateSubtask,
   deleteSubtask,
+  maybeAutoCompleteIssue,
 } from './subtasks.js'
 import type { PlanSections } from '../types.js'
 
@@ -69,5 +70,44 @@ describe('subtasks model', () => {
     expect(deleteSubtask(db, subtask.id)).toBe(true)
     expect(getSubtask(db, subtask.id)).toBeNull()
     expect(deleteSubtask(db, subtask.id)).toBe(false)
+  })
+
+  describe('maybeAutoCompleteIssue', () => {
+    it('sets the issue status to done when every subtask is done', async () => {
+      const a = createSubtask(db, issueId, '하나')
+      const b = createSubtask(db, issueId, '둘')
+      updateSubtask(db, a.id, { done: true })
+      updateSubtask(db, b.id, { done: true })
+
+      await maybeAutoCompleteIssue(db, issueId)
+
+      expect(getIssue(db, issueId)?.status).toBe('done')
+    })
+
+    it('does nothing while some subtasks are still open', async () => {
+      const a = createSubtask(db, issueId, '하나')
+      createSubtask(db, issueId, '둘')
+      updateSubtask(db, a.id, { done: true })
+
+      await maybeAutoCompleteIssue(db, issueId)
+
+      expect(getIssue(db, issueId)?.status).toBe('planned')
+    })
+
+    it('does nothing when the issue has no subtasks at all', async () => {
+      await maybeAutoCompleteIssue(db, issueId)
+      expect(getIssue(db, issueId)?.status).toBe('planned')
+    })
+
+    it('is a no-op when the issue is already done', async () => {
+      const a = createSubtask(db, issueId, '하나')
+      updateSubtask(db, a.id, { done: true })
+      await maybeAutoCompleteIssue(db, issueId)
+      expect(getIssue(db, issueId)?.status).toBe('done')
+
+      // Re-running after it's already done must not throw or change anything.
+      await maybeAutoCompleteIssue(db, issueId)
+      expect(getIssue(db, issueId)?.status).toBe('done')
+    })
   })
 })

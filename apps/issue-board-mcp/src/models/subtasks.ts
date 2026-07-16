@@ -1,6 +1,7 @@
 // src/models/subtasks.ts
 import type Database from 'better-sqlite3'
 import type { Subtask } from '../types.js'
+import { getIssue, completeIssue } from './issues.js'
 
 function rowToSubtask(row: any): Subtask {
   return {
@@ -73,4 +74,14 @@ export function updateSubtask(
 export function deleteSubtask(db: Database.Database, id: number): boolean {
   const result = db.prepare('DELETE FROM issue_subtasks WHERE id = ?').run(id)
   return result.changes > 0
+}
+
+export async function maybeAutoCompleteIssue(db: Database.Database, issueId: number): Promise<void> {
+  const subtasks = listSubtasksByIssue(db, issueId)
+  if (subtasks.length === 0) return
+  const allDone = subtasks.every((s) => s.done)
+  if (!allDone) return
+  const issue = getIssue(db, issueId)
+  if (!issue || issue.status === 'done') return
+  await completeIssue(db, issueId)
 }
