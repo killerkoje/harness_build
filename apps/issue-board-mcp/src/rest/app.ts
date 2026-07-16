@@ -19,7 +19,7 @@ import {
   syncIssuesFromPlan,
 } from '../models/plans.js'
 import {
-  listIssuesByProject,
+  listIssuesByProjectWithProgress,
   getIssue,
   setIssueStatus,
   approveIssueForDev,
@@ -130,7 +130,7 @@ export function createApp(db: Database.Database) {
   }))
 
   app.get('/api/projects/:projectId/issues', (req, res) => {
-    res.json(listIssuesByProject(db, Number(req.params.projectId)))
+    res.json(listIssuesByProjectWithProgress(db, Number(req.params.projectId)))
   })
 
   app.get('/api/issues/:id', (req, res) => {
