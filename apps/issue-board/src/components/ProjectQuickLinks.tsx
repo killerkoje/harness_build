@@ -34,7 +34,7 @@ export default function ProjectQuickLinks({ projectId, devUrl }: Props) {
   return (
     <div className="flex shrink-0 items-center gap-1.5 px-2 sm:px-4 md:px-6 py-1.5">
       <a
-        href={PATTERN_VIEWER_URL}
+        href={`${PATTERN_VIEWER_URL}/patterns?projectId=${projectId}`}
         target="_blank"
         rel="noopener noreferrer"
         className="shrink-0 rounded-md border border-zinc-200 px-2.5 py-1 text-xs text-zinc-600 hover:bg-zinc-50 whitespace-nowrap"
