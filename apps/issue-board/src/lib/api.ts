@@ -13,6 +13,7 @@ export interface Issue {
   status: 'planned' | 'wireframed' | 'dev_approved' | 'done'
   notionPageId: string | null
   notionStatus: NotionStatus | null
+  subtaskProgress: { total: number; done: number } | null
   createdAt: string
   updatedAt: string
 }
