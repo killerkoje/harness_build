@@ -33,7 +33,7 @@
 **Files:**
 - Create: `apps/pattern-viewer/src/lib/issue-board-client.ts`
 
-- [ ] **Step 1: 구현**
+- [x] **Step 1: 구현**
 
 `apps/pattern-viewer/src/lib/issue-board-client.ts` 새로 작성:
 
@@ -65,12 +65,12 @@ export async function fetchProjects(): Promise<Project[]> {
 
 `Project` 인터페이스는 `apps/issue-board-mcp/src/types.ts`의 `Project`와 동일한 필드다 (id, rootPath, name, description?, devUrl).
 
-- [ ] **Step 2: 타입 체크**
+- [x] **Step 2: 타입 체크**
 
 Run: `cd apps/pattern-viewer && npx tsc --noEmit`
 Expected: 에러 없음
 
-- [ ] **Step 3: 커밋**
+- [x] **Step 3: 커밋**
 
 ```bash
 git add apps/pattern-viewer/src/lib/issue-board-client.ts
@@ -84,7 +84,7 @@ git commit -m "feat(pattern-viewer): add issue-board-mcp REST client"
 **Files:**
 - Create: `apps/pattern-viewer/src/components/ProjectPicker.tsx`
 
-- [ ] **Step 1: 구현**
+- [x] **Step 1: 구현**
 
 `apps/pattern-viewer/src/components/ProjectPicker.tsx` 새로 작성:
 
@@ -132,12 +132,12 @@ export default function ProjectPicker({
 
 이 컴포넌트는 순수 링크 네비게이션만 쓰므로 `'use client'`가 필요 없다 (issue-board의 `PlanRoundSwitcher.tsx`와 같은 패턴).
 
-- [ ] **Step 2: 타입 체크**
+- [x] **Step 2: 타입 체크**
 
 Run: `cd apps/pattern-viewer && npx tsc --noEmit`
 Expected: 에러 없음 (이 컴포넌트는 아직 아무 곳에서도 import 안 됨 — Task 3에서 연결)
 
-- [ ] **Step 3: 커밋**
+- [x] **Step 3: 커밋**
 
 ```bash
 git add apps/pattern-viewer/src/components/ProjectPicker.tsx
@@ -151,7 +151,7 @@ git commit -m "feat(pattern-viewer): add project picker screen"
 **Files:**
 - Modify: `apps/pattern-viewer/src/app/patterns/page.tsx`
 
-- [ ] **Step 1: 전체 교체**
+- [x] **Step 1: 전체 교체**
 
 `apps/pattern-viewer/src/app/patterns/page.tsx`의 전체 내용을 아래로 교체한다 (현재 내용은 `PATTERNS_DIR` 환경변수 하나로 고정된 디렉토리를 읽는 9줄짜리 동기 컴포넌트 — 이걸 통째로 비동기·프로젝트 인지 버전으로 바꾼다):
 
@@ -220,12 +220,12 @@ export default async function Home({
 
 `loadPatterns()`는 이미 대상 디렉토리(`team/`, `local/`, 또는 `patternsDir` 자체)가 없으면 빈 배열을 반환하도록 방어돼 있다 (`apps/pattern-viewer/src/lib/patterns.ts`의 `fs.existsSync` 체크) — 하네스 미설치 프로젝트(`.harness/patterns` 없음)를 골라도 에러 없이 빈 화면이 뜬다. 이 부분은 코드 변경 불필요, 그대로 재사용.
 
-- [ ] **Step 2: 타입 체크**
+- [x] **Step 2: 타입 체크**
 
 Run: `cd apps/pattern-viewer && npx tsc --noEmit`
 Expected: 에러 없음
 
-- [ ] **Step 3: 커밋**
+- [x] **Step 3: 커밋**
 
 ```bash
 git add apps/pattern-viewer/src/app/patterns/page.tsx
@@ -239,7 +239,7 @@ git commit -m "feat(pattern-viewer): route pattern loading by projectId instead 
 **Files:**
 - Modify: `apps/pattern-viewer/.env.local.example`
 
-- [ ] **Step 1: 교체**
+- [x] **Step 1: 교체**
 
 `apps/pattern-viewer/.env.local.example`의 전체 내용을:
 
@@ -260,7 +260,7 @@ ISSUE_BOARD_API_URL=http://localhost:4000
 
 이 파일이 문서화하던 `PATTERNS_DIR`은 Task 3에서 코드상 제거됐으므로, 예시 파일도 실제 동작과 맞춰 갱신한다. (참고: 로컬의 실제 `.env.local`은 `.gitignore` 대상이라 이 커밋으로 건드리지 않는다 — 사용자가 원하면 직접 갱신.)
 
-- [ ] **Step 2: 커밋**
+- [x] **Step 2: 커밋**
 
 ```bash
 git add apps/pattern-viewer/.env.local.example
@@ -274,7 +274,7 @@ git commit -m "docs(pattern-viewer): document ISSUE_BOARD_API_URL, drop stale PA
 **Files:**
 - Modify: `apps/issue-board/src/components/ProjectQuickLinks.tsx`
 
-- [ ] **Step 1: 링크 수정**
+- [x] **Step 1: 링크 수정**
 
 `apps/issue-board/src/components/ProjectQuickLinks.tsx`에서 (현재 36~43번 줄) 아래 텍스트를:
 
@@ -304,12 +304,12 @@ git commit -m "docs(pattern-viewer): document ISSUE_BOARD_API_URL, drop stale PA
 
 `projectId`는 이미 이 컴포넌트의 props로 들어와 있다 (15번 줄 `export default function ProjectQuickLinks({ projectId, devUrl }: Props)`) — 새로 끌어올 것 없이 그대로 쓴다.
 
-- [ ] **Step 2: 타입 체크**
+- [x] **Step 2: 타입 체크**
 
 Run: `cd apps/issue-board && npx tsc --noEmit`
 Expected: 에러 없음
 
-- [ ] **Step 3: 커밋**
+- [x] **Step 3: 커밋**
 
 ```bash
 git add apps/issue-board/src/components/ProjectQuickLinks.tsx
@@ -328,7 +328,7 @@ git commit -m "feat(issue-board): link 패턴확인 button to the current projec
 
 이 둘의 대비가 정확히 이번 버그의 재현/수정 확인 시나리오다: 수정 전에는 pattern-viewer가 어떤 프로젝트에서 접속하든 `.env.local`에 하드코딩된 `AX_TEAM_TEST`의 패턴만 보여줬다.
 
-- [ ] **Step 1: 세 서버 기동 확인**
+- [x] **Step 1: 세 서버 기동 확인**
 
 ```bash
 curl -sf http://localhost:4000/api/projects -o /dev/null -w "issue-board-mcp: %{http_code}\n" || echo "issue-board-mcp 안 떠 있음 — cd apps/issue-board-mcp && npm run dev"
@@ -338,7 +338,7 @@ curl -sf http://localhost:3100 -o /dev/null -w "pattern-viewer: %{http_code}\n" 
 
 세 개 다 200이 아니면 안 떠 있는 것부터 각자 터미널에서 기동하고 포트가 뜰 때까지 기다린다 (`i=0; until curl -sf http://localhost:<port> >/dev/null 2>&1 || [ $i -ge 30 ]; do sleep 1; i=$((i+1)); done` 패턴 사용).
 
-- [ ] **Step 2: 서로 다른 프로젝트가 서로 다른 패턴을 보여주는지 확인**
+- [x] **Step 2: 서로 다른 프로젝트가 서로 다른 패턴을 보여주는지 확인**
 
 Run:
 ```bash
@@ -351,18 +351,18 @@ Expected: 첫 번째 줄은 `AX_TEAM_TEST`를 포함, 두 번째 줄은 `ib-test
 - `http://localhost:3100/patterns?projectId=1` → 상단에 "AX_TEAM_TEST" 표시, 아래에 `hooks`/`components`/`services`/`naming` 등 실제 패턴 카드가 보임
 - `http://localhost:3100/patterns?projectId=4` → 상단에 "ib-test-project" 표시, 패턴 카드는 없음(빈 상태) — **AX_TEAM_TEST의 패턴이 섞여 나오면 이번 수정이 실패한 것**
 
-- [ ] **Step 3: projectId 없이 접속 시 선택 화면 확인**
+- [x] **Step 3: projectId 없이 접속 시 선택 화면 확인**
 
 `http://localhost:3100/patterns`를 브라우저로 열어 "프로젝트를 선택하세요" 화면이 뜨는지, `AX_TEAM_TEST`/`ib-test-project` 두 카드가 보이는지, 하나를 클릭하면 `?projectId=`가 붙은 URL로 이동해 해당 프로젝트 패턴 화면이 뜨는지 확인한다.
 
-- [ ] **Step 4: 존재하지 않는 projectId 확인**
+- [x] **Step 4: 존재하지 않는 projectId 확인**
 
 `http://localhost:3100/patterns?projectId=999`를 열어 "프로젝트(id=999)를 찾을 수 없습니다" 안내와 함께 프로젝트 목록 화면이 뜨는지 확인한다 (에러로 죽지 않아야 한다).
 
-- [ ] **Step 5: issue-board 대시보드에서 실제 클릭 경로 확인**
+- [x] **Step 5: issue-board 대시보드에서 실제 클릭 경로 확인**
 
 `http://localhost:5173/projects/4`(ib-test-project) 아무 탭이나 열어서 상단 "패턴확인" 버튼을 클릭 — 새 탭이 `http://localhost:3100/patterns?projectId=4`로 열리고 빈 상태가 뜨는지 확인한다. `http://localhost:5173/projects/1`(AX_TEAM_TEST, 등록돼 있다면)에서도 같은 버튼을 눌러 이번엔 실제 패턴이 뜨는지 확인한다.
 
-- [ ] **Step 6: 결과 보고**
+- [x] **Step 6: 결과 보고**
 
 문제 없으면 완료 보고. 문제가 있으면 어떤 시나리오에서 무엇이 어긋났는지 기록하고 해당 Task로 돌아가 수정한다.
