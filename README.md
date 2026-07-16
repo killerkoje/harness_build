@@ -7,7 +7,7 @@
 
 > **AX 팀 패턴:** `저장해줘` → `local/` · `팀에 올려줘` → `team-patterns/` PR · `install.sh --sync-patterns`
 
-**현재 버전:** `v0.9.0` (`harness_global/VERSION`)
+**현재 버전:** `v0.10.0` (`harness_global/VERSION`)
 
 ---
 
@@ -151,7 +151,7 @@ cd apps/issue-board-mcp && npm install && cd ../issue-board && npm install && cd
 
 # 루트에서 한 번에 실행 (concurrently)
 npm install   # 최초 1회 — concurrently 설치
-npm run start:all   # mcp :4000 (REST /api/*, MCP /mcp) + board :5173 (대시보드) + pattern :3100 (패턴 뷰어)
+npm run start:all   # mcp :4000 (REST /api/*, MCP /mcp) + board :5173 (대시보드) + pattern :3100 (패턴 뷰어, 프로젝트별 분리)
 
 # 개별 실행이 필요하면
 cd apps/issue-board-mcp && npm run dev   # :4000
@@ -162,8 +162,8 @@ cd apps/issue-board && npm run dev       # :5173
 
 | 탭 | 데이터 |
 |----|--------|
-| 기획 | `plans` (+ `plan_snapshots`) |
-| 이슈 | `issues` (`planned` → `wireframed` → `dev_approved` → `done`) |
+| 기획 | `plans` (+ `plan_snapshots`) — 프로젝트당 여러 개 가능. 생성 순서(id ASC)로 1차/2차/3차... 라운드가 자동 계산되며, 기획 탭에 라운드 스위처(칩)로 표시된다 |
+| 이슈 | `issues` (`planned` → `wireframed` → `dev_approved` → `done`). 이슈 탭에서 기획 차수(1차/2차/...)로 필터링 가능 — 라운드 진행률(N/M 완료)은 내부 `status`가 아니라 **유효 Notion 상태**(수동 오버라이드 우선, 없으면 `status` 자동 매핑) 기준 |
 | 디자인시스템 | `design_systems` (컬러 토큰·`@scope/ui` / Storybook 메타. 컴포넌트 카탈로그는 선택 항목) |
 | 와이어프레임 | `wireframes` (이슈당 screens JSON, 최종 HTML 산출물) |
 
@@ -183,11 +183,17 @@ cd apps/issue-board && npm run dev       # :5173
 
 **기획 개정 연동:** 이미 승인된 기획을 수정한 뒤 `update_plan(..., approved)` 또는 MCP `sync_plan_issues` → 이슈 create/update, 변경분은 와이어 무효화(`planned`) → `/ib-wireframe` 재실행 → 필요 시 `/ib-approve` 재승인. (표에서 빠진 기능 행은 이슈를 삭제하지 않고 orphaned로만 보고)
 
+**다음 라운드(N차기획):** `/ib-plan`은 시작할 때 항상 `get_project_context`로 이전 라운드 존재 여부를 먼저 확인한다. 이전 라운드가 있으면 (아직 `draft`이거나 이슈가 다 안 끝났으면) 새 라운드 시작 전에 사용자에게 확인만 하고 막지는 않으며, 직전 라운드의 "범위 밖" 항목을 이번 라운드 후보로 참고 제시한다. 새 라운드는 그냥 `create_plan`으로 만들면 되고 제목에 차수를 적을 필요는 없다 — 대시보드가 자동 계산한다.
+
+**우선순위 채점:** MVP 기능표의 우선순위(`높음`/`보통`/`낮음`)는 감이 아니라 8개 기준(사용자 가치·핵심 흐름 연결성·운영 가능성·데이터·정책 기반·리스크·개발 난이도·검증 효과·대체 가능성)을 각 0/1/2점으로 채점해 합산(0~16점)한 뒤 정한다. 표에 "근거" 컬럼을 추가해 근거를 1~2개 기준 요약 + 점수로 남긴다(예: `핵심흐름 필수·대체불가 (13/16)`). 서버 파서는 표의 앞 3컬럼(우선순위/기능/설명)만 구조화해 이슈로 쓰고 "근거" 컬럼은 무시하므로 이 변경에 애플리케이션 코드 수정은 필요 없다.
+
 디자인시스템은 [Turborepo design-system](https://github.com/vercel/turborepo/tree/main/examples/design-system)처럼 `packages/ui` + Storybook(`apps/docs`)을 소스 오브 트루스로 두고, 보드는 컬러 토큰 조회용이다. (개발용 목데이터 시드 스크립트는 제거됨 — REST API로 직접 기획/이슈/디자인시스템을 적재한다.) 컴포넌트 카탈로그는 프론트 재량으로 수시로 바뀔 수 있다고 보고 DS 등록 대상에서 뺐다 — `upsert_design_system`의 `components`는 선택 필드로만 남아 있다.
 
 와이어프레임 탭은 이슈당 등록된 `screens[].html`을 iframe으로 그대로 렌더링한다 (`apps/issue-board/src/components/wireframe-preview/`). `/ib-wireframe`은 DS 컬러 토큰만 참고해 마크업을 새로 그리며, 컴포넌트 이름표는 달지 않는다.
 
 `/ib-plan`은 기획 초반에 **플랫폼(웹/앱(모바일)/데스크톱/CLI)을 필수로 확인**하고 기획서 §1에 `**플랫폼:**` 줄로 고정 기록한다. `/ib-wireframe`은 이 값을 그대로 읽어 프레임(브라우저/폰/터미널)을 정하며, 별도로 추론하지 않는다.
+
+대시보드의 "패턴확인" 버튼은 `apps/pattern-viewer`(:3100)를 **지금 보고 있는 프로젝트 id**로 열어(`?projectId=`), 그 프로젝트의 `.harness/patterns`만 보여준다. `projectId` 없이 직접 접속하면 issue-board-mcp에 등록된 프로젝트 목록에서 고르는 화면이 뜬다.
 
 스택: Next.js 15 · React 19 · Tailwind v4 · TS (대시보드) / Node 20 · TypeScript · better-sqlite3 · express · `@modelcontextprotocol/sdk` (백엔드)
 
@@ -238,3 +244,4 @@ harness_build/
 | v0.7.0 | Issue Board 신설 (기획/이슈/와이어프레임, SQLite+REST+MCP), `/ib-plan`·`/ib-approve` 커맨드, Harness Hub 대체 |
 | v0.8.0 | 디자인시스템 탭·`design_systems` 테이블, `/ib-wireframe`, 기획 개정 시 `sync_plan_issues` (이슈/와이어 연동) |
 | v0.9.0 | Notion 단방향 동기화(우선순위·상태 매핑, 수동 오버라이드), 이슈 `done` 상태 + `/dev` 완료 훅, `/ib-plan` 플랫폼(웹/앱/데스크톱/CLI) 필수 확인 |
+| v0.10.0 | 기획 라운드(N차기획) — 프로젝트당 여러 기획, 라운드 스위처·이슈 차수 필터(Notion 상태 기준 진행률), `/ib-plan` 8기준 MVP 우선순위 채점, 패턴뷰어 프로젝트별(`projectId`) 분리 |
