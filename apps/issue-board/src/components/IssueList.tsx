@@ -26,6 +26,12 @@ const STATUS_STYLE: Record<Issue['status'], string> = {
   done: 'bg-indigo-50 text-indigo-700',
 }
 
+function progressLabel(progress: NonNullable<Issue['subtaskProgress']>): string {
+  if (progress.done === progress.total) return '완료'
+  const percent = Math.round((progress.done / progress.total) * 100)
+  return `${percent}% (${progress.done}/${progress.total})`
+}
+
 export default function IssueList({
   issues,
   plans,
@@ -54,7 +60,9 @@ export default function IssueList({
     setError(null)
     try {
       const updated = await setIssueNotionStatus(issueId, notionStatus)
-      setItems((prev) => prev.map((i) => (i.id === issueId ? updated : i)))
+      // setIssueNotionStatus의 응답(getIssue 기반)에는 subtaskProgress 키가 아예 없다.
+      // 통째로 교체(updated)하면 그 이슈의 진행도 배지가 사라진다 — 병합으로 기존 값을 보존한다.
+      setItems((prev) => prev.map((i) => (i.id === issueId ? { ...i, ...updated } : i)))
     } catch {
       setError('Notion 상태 변경에 실패했습니다. 잠시 후 다시 시도하세요.')
     }
@@ -67,6 +75,18 @@ export default function IssueList({
       else next.add(issueId)
       return next
     })
+  }
+
+  function updateIssueProgress(issueId: number, progress: Issue['subtaskProgress']) {
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id !== issueId) return i
+        // 하위 태스크가 전부 완료되면 백엔드가 이슈 status도 자동으로 done으로
+        // 바꾼다(maybeAutoCompleteIssue) — 화면도 같은 방향으로만 맞춰준다.
+        const autoDone = progress != null && progress.done === progress.total && i.status !== 'done'
+        return { ...i, subtaskProgress: progress, status: autoDone ? 'done' : i.status }
+      })
+    )
   }
 
   return (
@@ -113,12 +133,20 @@ export default function IssueList({
                     </span>
                   )}
                   <span className="font-medium text-sm flex-1">{issue.title}</span>
+                  {issue.subtaskProgress && (
+                    <span className="text-xs text-zinc-400">{progressLabel(issue.subtaskProgress)}</span>
+                  )}
                   <span className={`text-xs px-2 py-0.5 rounded ${STATUS_STYLE[issue.status]}`}>
                     {STATUS_LABEL[issue.status]}
                   </span>
                 </div>
                 <p className="text-xs text-zinc-500">{issue.description}</p>
-                {isExpanded && <IssueSubtasks issueId={issue.id} />}
+                {isExpanded && (
+                  <IssueSubtasks
+                    issueId={issue.id}
+                    onProgressChange={(progress) => updateIssueProgress(issue.id, progress)}
+                  />
+                )}
                 <div className="flex items-center gap-2 mt-2">
                   <a
                     href={`/projects/${projectId}/wireframe?issueId=${issue.id}`}
