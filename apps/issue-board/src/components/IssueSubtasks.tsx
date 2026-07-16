@@ -4,7 +4,19 @@
 import { useEffect, useState } from 'react'
 import { createSubtask, deleteSubtask, fetchSubtasks, updateSubtask, type Subtask } from '@/lib/api'
 
-export default function IssueSubtasks({ issueId }: { issueId: number }) {
+type Progress = { total: number; done: number } | null
+
+function computeProgress(list: Subtask[]): Progress {
+  return list.length === 0 ? null : { total: list.length, done: list.filter((s) => s.done).length }
+}
+
+export default function IssueSubtasks({
+  issueId,
+  onProgressChange,
+}: {
+  issueId: number
+  onProgressChange?: (progress: Progress) => void
+}) {
   const [subtasks, setSubtasks] = useState<Subtask[] | null>(null)
   const [loadError, setLoadError] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -12,15 +24,21 @@ export default function IssueSubtasks({ issueId }: { issueId: number }) {
 
   useEffect(() => {
     fetchSubtasks(issueId)
-      .then(setSubtasks)
+      .then((data) => {
+        setSubtasks(data)
+        onProgressChange?.(computeProgress(data))
+      })
       .catch(() => setLoadError(true))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issueId])
 
   async function handleToggle(subtask: Subtask) {
     setActionError(null)
     try {
       const updated = await updateSubtask(subtask.id, { done: !subtask.done })
-      setSubtasks((prev) => prev?.map((s) => (s.id === subtask.id ? updated : s)) ?? null)
+      const next = (subtasks ?? []).map((s) => (s.id === subtask.id ? updated : s))
+      setSubtasks(next)
+      onProgressChange?.(computeProgress(next))
     } catch {
       setActionError('하위 태스크 상태 변경에 실패했습니다.')
     }
@@ -30,7 +48,9 @@ export default function IssueSubtasks({ issueId }: { issueId: number }) {
     setActionError(null)
     try {
       await deleteSubtask(id)
-      setSubtasks((prev) => prev?.filter((s) => s.id !== id) ?? null)
+      const next = (subtasks ?? []).filter((s) => s.id !== id)
+      setSubtasks(next)
+      onProgressChange?.(computeProgress(next))
     } catch {
       setActionError('하위 태스크 삭제에 실패했습니다.')
     }
@@ -42,7 +62,9 @@ export default function IssueSubtasks({ issueId }: { issueId: number }) {
     setActionError(null)
     try {
       const created = await createSubtask(issueId, title)
-      setSubtasks((prev) => [...(prev ?? []), created])
+      const next = [...(subtasks ?? []), created]
+      setSubtasks(next)
+      onProgressChange?.(computeProgress(next))
       setNewTitle('')
     } catch {
       setActionError('하위 태스크 추가에 실패했습니다.')
