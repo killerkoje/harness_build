@@ -27,6 +27,7 @@ import {
   setIssueStatus,
 } from '../models/issues.js'
 import { upsertWireframe } from '../models/wireframes.js'
+import { createSubtasksBulk } from '../models/subtasks.js'
 import { upsertDesignSystem, getDesignSystemByProject } from '../models/design-systems.js'
 import { isNotionConfigured } from '../models/notion.js'
 
@@ -270,6 +271,20 @@ export function createMcpServer(db: Database.Database): McpServer {
         return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
       }
       return { content: [{ type: 'text', text: JSON.stringify(updated) }] }
+    }
+  )
+
+  server.tool(
+    'add_subtasks',
+    '이슈에 개발자용 하위 태스크(체크리스트)를 여러 개 한 번에 추가한다. 이미 있는 하위 태스크는 건드리지 않고 뒤에 이어붙인다',
+    { issueId: z.number(), titles: z.array(z.string()) },
+    async ({ issueId, titles }) => {
+      const issue = getIssue(db, issueId)
+      if (!issue) {
+        return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
+      }
+      const subtasks = createSubtasksBulk(db, issueId, titles)
+      return { content: [{ type: 'text', text: JSON.stringify(subtasks) }] }
     }
   )
 
