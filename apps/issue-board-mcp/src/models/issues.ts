@@ -94,6 +94,29 @@ export function listIssuesByProject(db: Database.Database, projectId: number): I
   return rows.map(rowToIssue)
 }
 
+export function listIssuesByProjectWithProgress(
+  db: Database.Database,
+  projectId: number
+): (Issue & { subtaskProgress: { total: number; done: number } | null })[] {
+  const rows = db
+    .prepare(
+      `SELECT i.*,
+              COUNT(s.id) AS subtask_total,
+              SUM(CASE WHEN s.done THEN 1 ELSE 0 END) AS subtask_done
+       FROM issues i
+       LEFT JOIN issue_subtasks s ON s.issue_id = i.id
+       WHERE i.project_id = ?
+       GROUP BY i.id
+       ORDER BY i.number ASC`
+    )
+    .all(projectId) as any[]
+  return rows.map((row) => ({
+    ...rowToIssue(row),
+    subtaskProgress:
+      row.subtask_total > 0 ? { total: row.subtask_total, done: row.subtask_done } : null,
+  }))
+}
+
 export function setIssueStatus(db: Database.Database, id: number, status: IssueStatus): void {
   db.prepare('UPDATE issues SET status = ?, updated_at = ? WHERE id = ?').run(
     status,

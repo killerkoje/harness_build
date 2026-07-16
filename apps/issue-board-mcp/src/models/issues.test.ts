@@ -15,7 +15,9 @@ import {
   setIssueStatus,
   approveIssueForDev,
   completeIssue,
+  listIssuesByProjectWithProgress,
 } from './issues.js'
+import { createSubtask, updateSubtask } from './subtasks.js'
 import type { PlanSections } from '../types.js'
 
 const sections: PlanSections = {
@@ -71,6 +73,30 @@ describe('issues model', () => {
     createIssuesFromPlan(db, projectId, planId, sections.mvpFeatures)
     const list = listIssuesByProject(db, projectId)
     expect(list.map((i) => i.number)).toEqual([1, 2])
+  })
+
+  describe('listIssuesByProjectWithProgress', () => {
+    it('reports null subtaskProgress when an issue has no subtasks', () => {
+      createIssuesFromPlan(db, projectId, planId, [sections.mvpFeatures[0]])
+      const [withProgress] = listIssuesByProjectWithProgress(db, projectId)
+      expect(withProgress.subtaskProgress).toBeNull()
+    })
+
+    it('reports total/done counts when subtasks exist', () => {
+      const [issue] = createIssuesFromPlan(db, projectId, planId, [sections.mvpFeatures[0]])
+      createSubtask(db, issue.id, '하나')
+      const second = createSubtask(db, issue.id, '둘')
+      updateSubtask(db, second.id, { done: true })
+
+      const [withProgress] = listIssuesByProjectWithProgress(db, projectId)
+      expect(withProgress.subtaskProgress).toEqual({ total: 2, done: 1 })
+    })
+
+    it('keeps the same number ordering as listIssuesByProject', () => {
+      createIssuesFromPlan(db, projectId, planId, sections.mvpFeatures)
+      const list = listIssuesByProjectWithProgress(db, projectId)
+      expect(list.map((i) => i.number)).toEqual([1, 2])
+    })
   })
 
   it('is atomic: a failure partway through the loop leaves no partial rows', () => {
