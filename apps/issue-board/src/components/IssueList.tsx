@@ -10,6 +10,7 @@ import {
   type Plan,
 } from '@/lib/api'
 import { roundIndexOf, roundLabel, roundShortLabel } from '@/lib/plan-rounds'
+import IssueSubtasks from './IssueSubtasks'
 
 const STATUS_LABEL: Record<Issue['status'], string> = {
   planned: '기획됨',
@@ -37,6 +38,7 @@ export default function IssueList({
   const [items, setItems] = useState(issues)
   const [error, setError] = useState<string | null>(null)
   const [roundFilter, setRoundFilter] = useState<number | 'all'>('all')
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set())
 
   const filteredItems = useMemo(
     () => (roundFilter === 'all' ? items : items.filter((i) => i.planId === roundFilter)),
@@ -56,6 +58,15 @@ export default function IssueList({
     } catch {
       setError('Notion 상태 변경에 실패했습니다. 잠시 후 다시 시도하세요.')
     }
+  }
+
+  function toggleExpanded(issueId: number) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(issueId)) next.delete(issueId)
+      else next.add(issueId)
+      return next
+    })
   }
 
   return (
@@ -84,9 +95,17 @@ export default function IssueList({
         <ul className="space-y-2">
           {filteredItems.map((issue) => {
             const roundIndex = roundIndexOf(plans, issue.planId)
+            const isExpanded = expandedIds.has(issue.id)
             return (
               <li key={issue.id} className="border border-zinc-200 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-1">
+                  <button
+                    onClick={() => toggleExpanded(issue.id)}
+                    className="text-zinc-400 hover:text-zinc-700 w-4 shrink-0"
+                    aria-label={isExpanded ? '하위 태스크 접기' : '하위 태스크 펼치기'}
+                  >
+                    {isExpanded ? '▼' : '▶'}
+                  </button>
                   <span className="font-mono text-sm text-indigo-700">#{issue.number}</span>
                   {roundIndex >= 0 && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-500">
@@ -99,6 +118,7 @@ export default function IssueList({
                   </span>
                 </div>
                 <p className="text-xs text-zinc-500">{issue.description}</p>
+                {isExpanded && <IssueSubtasks issueId={issue.id} />}
                 <div className="flex items-center gap-2 mt-2">
                   <a
                     href={`/projects/${projectId}/wireframe?issueId=${issue.id}`}
