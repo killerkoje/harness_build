@@ -79,6 +79,15 @@ export interface Wireframe {
   updatedAt: string
 }
 
+export interface Subtask {
+  id: number
+  issueId: number
+  title: string
+  done: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 /** Turborepo design-system 스타일 패키지 메타 + 토큰/컴포넌트 카탈로그 */
 export interface DesignSystemComponent {
   name: string
