@@ -52,4 +52,18 @@ describe('parsePlanMarkdown', () => {
     expect(sections.overview).toContain('목적')
     expect(sections.outOfScope).toContain('라이브')
   })
+
+  it('stops a section at the next heading even without a space after ##', () => {
+    const noSpaceHeading = `## 3. 핵심 기능 (MVP)
+| 우선순위 | 기능 | 설명 |
+| --- | --- | --- |
+| 높음 | 홈 피드 | 배너 |
+##4. 범위 밖 (Out of Scope)
+| 낮음 | 범위밖기능 | 이건 섞이면 안 됨 |
+`
+    const sections = parsePlanMarkdown(noSpaceHeading)
+    expect(sections.mvpFeatures).toEqual([
+      { priority: '높음', title: '홈 피드', description: '배너' },
+    ])
+  })
 })

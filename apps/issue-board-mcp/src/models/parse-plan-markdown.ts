@@ -8,7 +8,7 @@ function sectionBody(md: string, headingRe: RegExp): string {
   if (!m || m.index === undefined) return ''
   const start = m.index + m[0].length
   const rest = md.slice(start)
-  const next = rest.search(/\n##\s+\d+\./)
+  const next = rest.search(/\n##\s*\d+\./)
   return (next === -1 ? rest : rest.slice(0, next)).trim()
 }
 
