@@ -13,6 +13,7 @@ import { createPlan, approvePlanAndCreateIssues } from './plans.js'
 import { getIssue } from './issues.js'
 import { upsertWireframe, getWireframeByIssue } from './wireframes.js'
 import { upsertDesignSystem, getDesignSystemByProject } from './design-systems.js'
+import { createSubtask, listSubtasksByIssue } from './subtasks.js'
 
 describe('projects model', () => {
   let db: Database.Database
@@ -90,5 +91,23 @@ describe('projects model', () => {
     expect(remainingIssues).toHaveLength(0)
     const remainingSnapshots = db.prepare('SELECT * FROM plan_snapshots WHERE plan_id = ?').all(plan.id)
     expect(remainingSnapshots).toHaveLength(0)
+  })
+
+  it('deleteProject succeeds even when its issues have subtasks', async () => {
+    const project = getOrCreateProject(db, '/tmp/proj-subtasks')
+    const plan = createPlan(db, project.id, 'p', {
+      overview: 'o',
+      targetUsers: 't',
+      mvpFeatures: [{ priority: '높음', title: '로그인', description: 'd' }],
+      outOfScope: 'x',
+    })
+    const { issues } = await approvePlanAndCreateIssues(db, plan.id)
+    createSubtask(db, issues[0].id, '서브태스크 1')
+
+    expect(deleteProject(db, project.id)).toBe(true)
+
+    expect(getProject(db, project.id)).toBeNull()
+    expect(getIssue(db, issues[0].id)).toBeNull()
+    expect(listSubtasksByIssue(db, issues[0].id)).toHaveLength(0)
   })
 })

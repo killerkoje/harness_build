@@ -68,8 +68,8 @@ export function listProjects(db: Database.Database): Project[] {
 /**
  * Deletes a project and everything scoped to it. Tables don't have
  * ON DELETE CASCADE set up, so child rows are removed bottom-up by hand
- * inside one transaction: wireframes -> issues -> plan_snapshots -> plans
- * -> design_systems -> the project row itself.
+ * inside one transaction: wireframes -> issue_subtasks -> issues ->
+ * plan_snapshots -> plans -> design_systems -> the project row itself.
  */
 export function deleteProject(db: Database.Database, id: number): boolean {
   const existing = db.prepare('SELECT id FROM projects WHERE id = ?').get(id)
@@ -78,6 +78,9 @@ export function deleteProject(db: Database.Database, id: number): boolean {
   const run = db.transaction((projectId: number) => {
     db.prepare(
       `DELETE FROM wireframes WHERE issue_id IN (SELECT id FROM issues WHERE project_id = ?)`
+    ).run(projectId)
+    db.prepare(
+      `DELETE FROM issue_subtasks WHERE issue_id IN (SELECT id FROM issues WHERE project_id = ?)`
     ).run(projectId)
     db.prepare(
       `DELETE FROM plan_snapshots WHERE plan_id IN (SELECT id FROM plans WHERE project_id = ?)`
