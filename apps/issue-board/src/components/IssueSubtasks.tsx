@@ -109,7 +109,9 @@ export default function IssueSubtasks({
             type="button"
             onClick={() => setNoteSubtaskId(subtask.id)}
             className={`text-sm px-1 shrink-0 ${
-              subtask.notes ? 'text-indigo-500 hover:text-indigo-700' : 'text-zinc-300 hover:text-zinc-500'
+              subtask.notes
+                ? 'text-indigo-500 hover:text-indigo-700 opacity-100'
+                : 'text-zinc-300 hover:text-zinc-500 opacity-30 hover:opacity-60'
             }`}
             aria-label="작업 로그"
           >
