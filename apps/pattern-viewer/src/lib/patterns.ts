@@ -38,21 +38,74 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const CATEGORY_ORDER = ['hooks', 'components', 'services', 'schemas', 'routers', 'dto', 'naming']
 
+// Coerces one raw YAML entry into a safe Pattern, or drops it if it has no id.
+// Pattern YAML files are written by the harness pipeline, not hand-authored,
+// so a partially-written or schema-drifted entry must not crash the viewer.
+function sanitizePattern(raw: unknown, origin: 'team' | 'local' | undefined): Pattern | null {
+  if (!raw || typeof raw !== 'object') return null
+  const p = raw as Record<string, unknown>
+  if (typeof p.id !== 'string' || p.id.length === 0) return null
+
+  return {
+    id: p.id,
+    description: typeof p.description === 'string' ? p.description : '',
+    example: typeof p.example === 'string' ? p.example : '',
+    reason: typeof p.reason === 'string' ? p.reason : '',
+    observed: typeof p.observed === 'number' ? p.observed : 0,
+    last_seen: typeof p.last_seen === 'string' ? p.last_seen : '',
+    source: Array.isArray(p.source) ? p.source.filter((s): s is string => typeof s === 'string') : [],
+    confidence:
+      p.confidence === 'high' || p.confidence === 'medium' || p.confidence === 'low'
+        ? p.confidence
+        : 'low',
+    deprecated: typeof p.deprecated === 'boolean' ? p.deprecated : false,
+    origin,
+  }
+}
+
+// Parses one pattern YAML file's contents. Never throws: malformed YAML,
+// a non-array `patterns` field, or an unreadable file all resolve to [].
+function parsePatternFile(raw: string, origin: 'team' | 'local' | undefined): Pattern[] {
+  let parsed: unknown
+  try {
+    parsed = yaml.load(raw)
+  } catch {
+    return []
+  }
+
+  const patternsField = (parsed as { patterns?: unknown } | null | undefined)?.patterns
+  if (!Array.isArray(patternsField)) return []
+
+  return patternsField
+    .map((p) => sanitizePattern(p, origin))
+    .filter((p): p is Pattern => p !== null)
+}
+
+function readPatternFile(dir: string, file: string, origin: 'team' | 'local' | undefined): Pattern[] {
+  try {
+    const raw = fs.readFileSync(path.join(dir, file), 'utf-8')
+    return parsePatternFile(raw, origin)
+  } catch {
+    return []
+  }
+}
+
 function loadPatternsFromDir(dir: string, origin: 'team' | 'local'): CategoryPatterns[] {
   if (!fs.existsSync(dir)) return []
 
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.yaml'))
+  let files: string[]
+  try {
+    files = fs.readdirSync(dir).filter((f) => f.endsWith('.yaml'))
+  } catch {
+    return []
+  }
 
   return files.map((file) => {
     const category = file.replace('.yaml', '')
-    const raw = fs.readFileSync(path.join(dir, file), 'utf-8')
-    const parsed = yaml.load(raw) as PatternFile
-    const patterns = (parsed?.patterns ?? []).map((p) => ({ ...p, origin }))
-
     return {
       category,
       label: CATEGORY_LABELS[category] ?? category,
-      patterns,
+      patterns: readPatternFile(dir, file, origin),
     }
   })
 }
@@ -84,31 +137,32 @@ function mergeCategories(team: CategoryPatterns[], local: CategoryPatterns[]): C
 }
 
 export function loadPatterns(patternsDir: string): CategoryPatterns[] {
-  const teamDir = path.join(patternsDir, 'team')
-  const localDir = path.join(patternsDir, 'local')
+  try {
+    const teamDir = path.join(patternsDir, 'team')
+    const localDir = path.join(patternsDir, 'local')
 
-  if (fs.existsSync(teamDir) || fs.existsSync(localDir)) {
-    return mergeCategories(
-      loadPatternsFromDir(teamDir, 'team'),
-      loadPatternsFromDir(localDir, 'local')
-    )
+    if (fs.existsSync(teamDir) || fs.existsSync(localDir)) {
+      return mergeCategories(
+        loadPatternsFromDir(teamDir, 'team'),
+        loadPatternsFromDir(localDir, 'local')
+      )
+    }
+
+    if (!fs.existsSync(patternsDir)) return []
+
+    const files = fs.readdirSync(patternsDir).filter((f) => f.endsWith('.yaml'))
+
+    return files
+      .map((file) => {
+        const category = file.replace('.yaml', '')
+        return {
+          category,
+          label: CATEGORY_LABELS[category] ?? category,
+          patterns: readPatternFile(patternsDir, file, undefined),
+        }
+      })
+      .sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category))
+  } catch {
+    return []
   }
-
-  if (!fs.existsSync(patternsDir)) return []
-
-  const files = fs.readdirSync(patternsDir).filter((f) => f.endsWith('.yaml'))
-
-  return files
-    .map((file) => {
-      const category = file.replace('.yaml', '')
-      const raw = fs.readFileSync(path.join(patternsDir, file), 'utf-8')
-      const parsed = yaml.load(raw) as PatternFile
-
-      return {
-        category,
-        label: CATEGORY_LABELS[category] ?? category,
-        patterns: parsed?.patterns ?? [],
-      }
-    })
-    .sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category))
 }

@@ -28,8 +28,8 @@ function ConfidenceBadge({ confidence }: { confidence: Pattern['confidence'] }) 
 }
 
 function SourceBadge({ source, origin }: { source: string[]; origin?: Pattern['origin'] }) {
-  const isUserApproved = source.includes('user_approved')
-  const isTeam = source.includes('team') || origin === 'team'
+  const isUserApproved = (source ?? []).includes('user_approved')
+  const isTeam = (source ?? []).includes('team') || origin === 'team'
   const label = isUserApproved ? '✓ approved' : isTeam ? 'team' : 'qa_pass'
   const style = isUserApproved
     ? 'bg-violet-50 text-violet-700 border border-violet-200'
@@ -135,9 +135,9 @@ export default function PatternViewer({ categories }: Props) {
     const q = query.toLowerCase()
     return allPatterns.filter(
       (p) =>
-        p.id.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        p.reason.toLowerCase().includes(q)
+        (p.id ?? '').toLowerCase().includes(q) ||
+        (p.description ?? '').toLowerCase().includes(q) ||
+        (p.reason ?? '').toLowerCase().includes(q)
     )
   }, [query, allPatterns, isSearching])
 
@@ -262,7 +262,7 @@ export default function PatternViewer({ categories }: Props) {
                 <div className="flex justify-between text-xs">
                   <span className="text-zinc-400">approved</span>
                   <span className="text-emerald-600 font-semibold">
-                    {allPatterns.filter(p => p.source.includes('user_approved')).length}
+                    {allPatterns.filter(p => (p.source ?? []).includes('user_approved')).length}
                   </span>
                 </div>
               </div>
