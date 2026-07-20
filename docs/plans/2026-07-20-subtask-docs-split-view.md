@@ -855,3 +855,629 @@ curl -sf http://localhost:5173 -o /dev/null -w "issue-board: %{http_code}\n" || 
 - [ ] **Step 3: 결과 보고**
 
 문제 없으면 완료 보고. 문제가 있으면 어떤 화면에서 무엇이 어긋났는지 기록하고 해당 Task로 돌아가 수정한다.
+
+---
+
+# 부록: 라우팅 → 오버레이 전환 (2차 정정)
+
+> Task 1~6까지 구현한 뒤 사용자가 다시 정정: "라우팅이 아니라 사이드바(오버레이)로, 그리고 하위 태스크 문서 진입점은 뱃지 형태로." 참고: `docs/specs/2026-07-20-subtask-docs-split-view-design.md`의 "최종 결정" 섹션. 아래 Task R1~R5가 최종 구현이다 — 위의 Task 1~6은 그 중간 산출물(`IssueDocsBoard.tsx` 등)을 그대로 재사용하되 페이지가 아니라 오버레이로 형태만 바꾼다.
+
+## Task R1: `page.tsx` — 라우팅 분기 되돌리기
+
+**Files:**
+- Modify: `apps/issue-board/src/app/projects/[id]/issues/page.tsx`
+
+- [ ] **Step 1: 전체 교체**
+
+`apps/issue-board/src/app/projects/[id]/issues/page.tsx`의 전체 내용을 아래로 교체한다 (검색 파라미터 분기, `IssueDocsBoard` import 제거 — 원래의 단순한 형태로 복귀):
+
+```tsx
+// src/app/projects/[id]/issues/page.tsx
+import ConnectionErrorBanner from '@/components/ConnectionErrorBanner'
+import IssueList from '@/components/IssueList'
+import { fetchIssues, fetchPlans } from '@/lib/api'
+
+export default async function IssuesPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const projectId = Number(id)
+
+  try {
+    const [issues, plans] = await Promise.all([fetchIssues(projectId), fetchPlans(projectId)])
+    return <IssueList issues={issues} plans={plans} />
+  } catch {
+    return <ConnectionErrorBanner />
+  }
+}
+```
+
+- [ ] **Step 2: 커밋**
+
+```bash
+git add "apps/issue-board/src/app/projects/[id]/issues/page.tsx"
+git commit -m "revert(issue-board): drop issueId/subtaskId routing, docs UI moves to an in-page overlay"
+```
+
+(타입 체크는 Task R2까지 끝나야 전체가 다시 맞는다 — `IssueList`가 아직 `projectId`를 요구하는 상태라 이 시점엔 에러가 남아있는 게 정상이다. Task R2에서 해결된다.)
+
+---
+
+## Task R2: `IssueList.tsx` — `projectId` 되돌리기
+
+**Files:**
+- Modify: `apps/issue-board/src/components/IssueList.tsx`
+
+- [ ] **Step 1: `projectId` prop 제거**
+
+`apps/issue-board/src/components/IssueList.tsx`에서 아래 텍스트를:
+
+```tsx
+export default function IssueList({
+  issues,
+  plans,
+  projectId,
+}: {
+  issues: Issue[]
+  plans: Plan[]
+  projectId: number
+}) {
+```
+
+아래로 교체한다:
+
+```tsx
+export default function IssueList({
+  issues,
+  plans,
+}: {
+  issues: Issue[]
+  plans: Plan[]
+}) {
+```
+
+- [ ] **Step 2: `IssueSubtasks` 호출부에서 `projectId` 전달 제거**
+
+같은 파일에서 아래 텍스트를:
+
+```tsx
+                {isExpanded && (
+                  <IssueSubtasks
+                    issueId={issue.id}
+                    projectId={projectId}
+                    onProgressChange={(progress) => updateIssueProgress(issue.id, progress)}
+                  />
+                )}
+```
+
+아래로 교체한다:
+
+```tsx
+                {isExpanded && (
+                  <IssueSubtasks
+                    issueId={issue.id}
+                    onProgressChange={(progress) => updateIssueProgress(issue.id, progress)}
+                  />
+                )}
+```
+
+- [ ] **Step 3: 타입 체크**
+
+Run: `cd apps/issue-board && npx tsc --noEmit`
+Expected: `IssueSubtasks.tsx`가 아직 `projectId`를 필수로 요구하고 있어서(Task R4에서 고침) 에러가 날 수 있다 — `IssueList`/`page.tsx` 관련 에러는 없어야 한다(둘 다 이제 `projectId`를 안 쓰므로).
+
+- [ ] **Step 4: 커밋**
+
+```bash
+git add apps/issue-board/src/components/IssueList.tsx
+git commit -m "revert(issue-board): remove projectId plumbing from IssueList (no longer needed without routing)"
+```
+
+---
+
+## Task R3: `SubtaskDocsOverlay.tsx` 신규 (+ `IssueDocsBoard.tsx` 삭제)
+
+**Files:**
+- Delete: `apps/issue-board/src/components/IssueDocsBoard.tsx`
+- Create: `apps/issue-board/src/components/SubtaskDocsOverlay.tsx`
+
+- [ ] **Step 1: `IssueDocsBoard.tsx` 삭제**
+
+```bash
+git rm apps/issue-board/src/components/IssueDocsBoard.tsx
+```
+
+- [ ] **Step 2: `SubtaskDocsOverlay.tsx` 작성**
+
+`apps/issue-board/src/components/SubtaskDocsOverlay.tsx` 새로 작성 (기존 `IssueDocsBoard`의 리사이저·탭·저장·미리보기 로직을 재사용하되, 페이지가 아니라 백드롭+모달 오버레이로, `issue`/`projectId` 없이 `subtasks`/`initialSubtaskId`만 받는다):
+
+```tsx
+'use client'
+
+// src/components/SubtaskDocsOverlay.tsx
+import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { updateSubtask, type Subtask } from '@/lib/api'
+
+const MIN_LIST_WIDTH = 220
+const DOC_PANE_MIN_MARGIN = 320
+
+export default function SubtaskDocsOverlay({
+  subtasks,
+  initialSubtaskId,
+  onClose,
+  onSaved,
+}: {
+  subtasks: Subtask[]
+  initialSubtaskId: number
+  onClose: () => void
+  onSaved: (updated: Subtask) => void
+}) {
+  const initial = subtasks.find((s) => s.id === initialSubtaskId) ?? subtasks[0] ?? null
+  const [selectedId, setSelectedId] = useState<number | null>(initial?.id ?? null)
+  const [draft, setDraft] = useState(initial?.notes ?? '')
+  const [mode, setMode] = useState<'edit' | 'preview'>('edit')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [listWidth, setListWidth] = useState(280)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const draggingRef = useRef(false)
+
+  const selected = subtasks.find((s) => s.id === selectedId) ?? null
+  const dirty = selected != null && draft !== selected.notes
+
+  function selectSubtask(id: number) {
+    if (id === selectedId) return
+    if (dirty && !window.confirm('저장되지 않은 문서 변경이 있습니다. 이동할까요?')) return
+    const target = subtasks.find((s) => s.id === id)
+    setSelectedId(id)
+    setDraft(target?.notes ?? '')
+    setMode('edit')
+    setSaveError(null)
+  }
+
+  function handleClose() {
+    if (dirty && !window.confirm('저장되지 않은 문서 변경이 있습니다. 닫을까요?')) return
+    onClose()
+  }
+
+  async function handleSave() {
+    if (!selected) return
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const updated = await updateSubtask(selected.id, { notes: draft })
+      onSaved(updated)
+    } catch {
+      setSaveError('저장에 실패했습니다. 다시 시도하세요.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
+        if (dirty) void handleSave()
+      } else if (e.key === 'Escape') {
+        handleClose()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, draft, selected])
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!draggingRef.current || !containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const raw = e.clientX - rect.left
+      const max = rect.width - DOC_PANE_MIN_MARGIN
+      setListWidth(Math.max(MIN_LIST_WIDTH, Math.min(max, raw)))
+    }
+    function onMouseUp() {
+      draggingRef.current = false
+    }
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [])
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4" onClick={handleClose}>
+      <div
+        ref={containerRef}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-4xl h-[80vh] bg-white rounded-xl shadow-xl border border-zinc-200 flex overflow-hidden"
+      >
+        <div
+          style={{ width: listWidth }}
+          className="shrink-0 border-r border-zinc-200 overflow-y-auto p-2 space-y-1.5 bg-zinc-50"
+        >
+          {subtasks.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => selectSubtask(s.id)}
+              className={`w-full text-left border rounded-lg p-2.5 bg-white ${
+                s.id === selectedId ? 'border-indigo-500 ring-2 ring-indigo-100' : 'border-zinc-200'
+              }`}
+            >
+              <div className="flex items-start gap-2 mb-1.5">
+                <span className={`flex-1 text-[13px] ${s.done ? 'line-through text-zinc-400' : 'text-zinc-800'}`}>
+                  {s.title}
+                </span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${
+                    s.done ? 'bg-indigo-50 text-indigo-700' : 'bg-zinc-100 text-zinc-500'
+                  }`}
+                >
+                  {s.done ? '완료' : '미완료'}
+                </span>
+              </div>
+              <span
+                className={`inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded border ${
+                  s.notes ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-zinc-200 text-zinc-400'
+                }`}
+              >
+                {s.notes && <span className="w-1 h-1 rounded-full bg-indigo-500" />}
+                {s.notes ? '문서 있음' : '문서 없음'}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div
+          onMouseDown={(e) => {
+            e.preventDefault()
+            draggingRef.current = true
+          }}
+          className="w-1.5 shrink-0 cursor-col-resize bg-zinc-100 hover:bg-indigo-500 transition-colors"
+        />
+
+        <div className="flex-1 min-w-0 flex flex-col">
+          {selected && (
+            <>
+              <div className="border-b border-zinc-200 px-4 py-2.5 shrink-0 flex items-center gap-2">
+                <h2 className="text-sm font-semibold flex-1 truncate">{selected.title}</h2>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${
+                    selected.done ? 'bg-indigo-50 text-indigo-700' : 'bg-zinc-100 text-zinc-500'
+                  }`}
+                >
+                  {selected.done ? '완료' : '미완료'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="text-zinc-400 hover:text-zinc-700 text-sm px-1 shrink-0"
+                  aria-label="닫기"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="flex border-b border-zinc-200 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMode('edit')}
+                  className={`text-xs px-3.5 py-2 border-b-2 ${
+                    mode === 'edit'
+                      ? 'border-indigo-600 text-indigo-700 font-medium'
+                      : 'border-transparent text-zinc-500'
+                  }`}
+                >
+                  편집
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('preview')}
+                  className={`text-xs px-3.5 py-2 border-b-2 ${
+                    mode === 'preview'
+                      ? 'border-indigo-600 text-indigo-700 font-medium'
+                      : 'border-transparent text-zinc-500'
+                  }`}
+                >
+                  미리보기
+                </button>
+              </div>
+
+              <div className="flex-1 min-h-0 p-4">
+                {mode === 'edit' ? (
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="문서를 마크다운으로 작성하세요"
+                    className="w-full h-full text-sm border border-zinc-200 rounded-lg p-3.5 font-mono resize-none outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                  />
+                ) : (
+                  <div className="w-full h-full overflow-y-auto border border-zinc-200 rounded-lg p-5 text-sm">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ children }) => <p className="my-1.5 leading-relaxed text-zinc-700">{children}</p>,
+                        ul: ({ children }) => (
+                          <ul className="my-1.5 ml-4 list-disc space-y-0.5 text-zinc-700">{children}</ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="my-1.5 ml-4 list-decimal space-y-0.5 text-zinc-700">{children}</ol>
+                        ),
+                        strong: ({ children }) => <strong className="font-semibold text-zinc-900">{children}</strong>,
+                        code: ({ children }) => <code className="text-xs bg-zinc-100 rounded px-1 py-0.5">{children}</code>,
+                      }}
+                    >
+                      {draft || '_아직 작성된 내용이 없습니다._'}
+                    </ReactMarkdown>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-zinc-200 px-4 py-2.5 flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={!dirty || saving}
+                  className="text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white disabled:opacity-40"
+                >
+                  {saving ? '저장 중...' : '저장'}
+                </button>
+                {saveError ? (
+                  <span className="text-xs text-red-600">{saveError}</span>
+                ) : (
+                  <span className={`text-xs ${dirty ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    {dirty ? '수정됨' : '저장됨 ✓'}
+                  </span>
+                )}
+                <span className="text-[11px] text-zinc-400 ml-auto">⌘/Ctrl+S 저장 · Esc 닫기</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 3: 타입 체크**
+
+Run: `cd apps/issue-board && npx tsc --noEmit`
+Expected: `SubtaskDocsOverlay.tsx` 자체는 에러 없음. `IssueSubtasks.tsx`가 아직 이 컴포넌트를 안 쓰므로(Task R4에서 연결) 관련 에러는 없어야 하지만, `IssueSubtasks.tsx`가 여전히 `projectId`를 필수로 요구하고 `IssueList.tsx`가 더 이상 안 넘기는 상태라 그 에러는 남아있을 수 있다(Task R4에서 해결).
+
+- [ ] **Step 4: 커밋**
+
+```bash
+git add apps/issue-board/src/components/IssueDocsBoard.tsx apps/issue-board/src/components/SubtaskDocsOverlay.tsx
+git commit -m "feat(issue-board): replace IssueDocsBoard page with SubtaskDocsOverlay modal"
+```
+
+---
+
+## Task R4: `IssueSubtasks.tsx` — 뱃지 진입점 + 오버레이 연결
+
+**Files:**
+- Modify: `apps/issue-board/src/components/IssueSubtasks.tsx`
+
+- [ ] **Step 1: 전체 교체**
+
+`apps/issue-board/src/components/IssueSubtasks.tsx`의 전체 내용을 아래로 교체한다 (`projectId` prop과 `<a>` 링크 제거, `openSubtaskId` state + 뱃지 버튼 + `SubtaskDocsOverlay` 렌더 추가):
+
+```tsx
+'use client'
+
+// src/components/IssueSubtasks.tsx
+import { useEffect, useRef, useState } from 'react'
+import { createSubtask, deleteSubtask, fetchSubtasks, updateSubtask, type Subtask } from '@/lib/api'
+import SubtaskDocsOverlay from './SubtaskDocsOverlay'
+
+type Progress = { total: number; done: number } | null
+
+const BOX = 'bg-white border border-zinc-200 rounded-xl p-4'
+
+const SUBTASK_STATUS = {
+  open: { label: '미완료', style: 'bg-zinc-100 text-zinc-600' },
+  done: { label: '완료', style: 'bg-indigo-50 text-indigo-700' },
+} as const
+
+function computeProgress(list: Subtask[]): Progress {
+  return list.length === 0 ? null : { total: list.length, done: list.filter((s) => s.done).length }
+}
+
+export default function IssueSubtasks({
+  issueId,
+  onProgressChange,
+}: {
+  issueId: number
+  onProgressChange?: (progress: Progress) => void
+}) {
+  const [subtasks, setSubtasks] = useState<Subtask[] | null>(null)
+  const [loadError, setLoadError] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [newTitle, setNewTitle] = useState('')
+  const [openSubtaskId, setOpenSubtaskId] = useState<number | null>(null)
+  const addingRef = useRef(false)
+
+  useEffect(() => {
+    fetchSubtasks(issueId)
+      .then(setSubtasks)
+      .catch(() => setLoadError(true))
+  }, [issueId])
+
+  useEffect(() => {
+    if (subtasks !== null) onProgressChange?.(computeProgress(subtasks))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtasks])
+
+  async function handleStatusChange(subtask: Subtask, done: boolean) {
+    if (subtask.done === done) return
+    setActionError(null)
+    try {
+      const updated = await updateSubtask(subtask.id, { done })
+      setSubtasks((prev) => prev?.map((s) => (s.id === subtask.id ? updated : s)) ?? null)
+    } catch {
+      setActionError('하위 태스크 상태 변경에 실패했습니다.')
+    }
+  }
+
+  async function handleDelete(id: number) {
+    setActionError(null)
+    try {
+      await deleteSubtask(id)
+      setSubtasks((prev) => prev?.filter((s) => s.id !== id) ?? null)
+    } catch {
+      setActionError('하위 태스크 삭제에 실패했습니다.')
+    }
+  }
+
+  async function handleAdd() {
+    const title = newTitle.trim()
+    if (!title || addingRef.current) return
+    addingRef.current = true
+    setNewTitle('')
+    setActionError(null)
+    try {
+      const created = await createSubtask(issueId, title)
+      setSubtasks((prev) => [...(prev ?? []), created])
+    } catch {
+      setActionError('하위 태스크 추가에 실패했습니다.')
+      setNewTitle(title)
+    } finally {
+      addingRef.current = false
+    }
+  }
+
+  if (loadError) {
+    return <p className={`text-xs text-red-600 ml-6 ${BOX}`}>하위 태스크를 불러오지 못했습니다.</p>
+  }
+  if (subtasks === null) {
+    return <p className="text-xs text-zinc-400 ml-6">불러오는 중...</p>
+  }
+
+  return (
+    <div>
+      <ul className="ml-6 space-y-2 list-none">
+        {actionError && <li className={`text-xs text-red-600 ${BOX}`}>{actionError}</li>}
+        {subtasks.map((subtask) => (
+          <li key={subtask.id} className={`group ${BOX} flex items-center gap-2`}>
+            <span
+              className={
+                subtask.done
+                  ? 'line-through text-zinc-400 text-sm flex-1 min-w-0'
+                  : 'text-sm text-zinc-800 flex-1 min-w-0'
+              }
+            >
+              {subtask.title}
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpenSubtaskId(subtask.id)}
+              className={`inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded border shrink-0 ${
+                subtask.notes
+                  ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                  : 'border-zinc-200 text-zinc-400'
+              }`}
+            >
+              {subtask.notes && <span className="w-1 h-1 rounded-full bg-indigo-500" />}
+              {subtask.notes ? '문서 있음' : '문서 없음'}
+            </button>
+            <select
+              value={subtask.done ? 'done' : 'open'}
+              onChange={(e) => handleStatusChange(subtask, e.target.value === 'done')}
+              className={`text-xs px-2 py-1.5 rounded cursor-pointer shrink-0 ${
+                subtask.done ? SUBTASK_STATUS.done.style : SUBTASK_STATUS.open.style
+              }`}
+              aria-label={`${subtask.title} 상태`}
+            >
+              <option value="open">{SUBTASK_STATUS.open.label}</option>
+              <option value="done">{SUBTASK_STATUS.done.label}</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => handleDelete(subtask.id)}
+              className="opacity-0 group-hover:opacity-100 text-zinc-300 hover:text-red-500 text-sm px-1 shrink-0"
+              aria-label="삭제"
+            >
+              ×
+            </button>
+          </li>
+        ))}
+        <li className={BOX}>
+          <input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
+              e.preventDefault()
+              void handleAdd()
+            }}
+            placeholder="+ 새 하위 항목"
+            className="w-full text-sm text-zinc-500 placeholder:text-zinc-400 bg-transparent outline-none"
+          />
+        </li>
+      </ul>
+      {openSubtaskId !== null && (
+        <SubtaskDocsOverlay
+          subtasks={subtasks}
+          initialSubtaskId={openSubtaskId}
+          onClose={() => setOpenSubtaskId(null)}
+          onSaved={(updated) => {
+            setSubtasks((prev) => prev?.map((s) => (s.id === updated.id ? updated : s)) ?? null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: 타입 체크**
+
+Run: `cd apps/issue-board && npx tsc --noEmit`
+Expected: 에러 없음 (지금까지 남아있던 `projectId` 관련 에러 전부 해결됨 — 이제 아무도 `projectId`를 쓰지 않는다)
+
+- [ ] **Step 3: 프론트 전체 테스트**
+
+Run: `cd apps/issue-board && npx vitest run`
+Expected: 전체 PASS
+
+- [ ] **Step 4: 커밋**
+
+```bash
+git add apps/issue-board/src/components/IssueSubtasks.tsx
+git commit -m "feat(issue-board): open SubtaskDocsOverlay from a badge-style entry point per subtask row"
+```
+
+---
+
+## Task R5: 수동 브라우저 검증 (오버레이 버전)
+
+**Files:** 없음 (검증 전용)
+
+- [ ] **Step 1: 서버 기동 확인**
+
+```bash
+curl -sf http://localhost:4000/api/projects -o /dev/null -w "issue-board-mcp: %{http_code}\n" || echo "cd apps/issue-board-mcp && npm run dev"
+curl -sf http://localhost:5173 -o /dev/null -w "issue-board: %{http_code}\n" || echo "cd apps/issue-board && npm run dev"
+```
+
+- [ ] **Step 2: 대시보드에서 확인**
+
+`http://localhost:5173/projects/<projectId>/issues`를 열어:
+
+- 이슈를 펼치면 각 하위 태스크 행에 "문서 있음"/"문서 없음" 뱃지가 보이는지, 문서 유무에 따라 스타일(테두리·배경·점)이 실제로 다르게 보이는지 (색상이 아니라 배경/테두리 조합이라 이모지 색상 이슈 없이 확실히 구분돼야 함)
+- 뱃지를 클릭하면 **URL이 바뀌지 않고** 같은 페이지 위에 오버레이(백드롭+모달)가 뜨는지
+- 여러 하위 태스크가 있는 이슈에서, 첫 번째가 아닌 다른 하위 태스크의 뱃지를 클릭 → 오버레이가 정확히 그 하위 태스크를 선택한 상태로 열리는지(다른 항목이 열리지 않는지)
+- 좌측 리스트에서 다른 하위 태스크 클릭 → 우측 패널이 바뀌는지
+- 편집 탭에서 마크다운 입력 → 저장 → "저장됨 ✓" 표시, 뱃지가 "문서 있음"으로 바뀌는지(오버레이를 닫은 뒤 체크리스트에서 확인)
+- 미리보기 탭 렌더링, `⌘/Ctrl+S` 저장, 저장 안 한 채 다른 하위 태스크로 전환 시 confirm 확인
+- 리사이저 드래그 동작
+- ×버튼, 배경(백드롭) 클릭, `Esc` 키 각각으로 닫히는지 (미저장 상태면 confirm 뜨는지)
+- 새로고침 후에도 저장한 문서 내용이 유지되는지 (뱃지 다시 클릭해서 확인)
+
+- [ ] **Step 3: 결과 보고**
+
+문제 없으면 완료 보고. 문제가 있으면 어떤 화면에서 무엇이 어긋났는지 기록하고 해당 Task로 돌아가 수정한다.
