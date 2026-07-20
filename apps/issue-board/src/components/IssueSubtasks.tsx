@@ -75,7 +75,9 @@ export default function IssueSubtasks({
       setSubtasks((prev) => [...(prev ?? []), created])
     } catch {
       setActionError('하위 태스크 추가에 실패했습니다.')
-      setNewTitle(title)
+      // 그 사이 사용자가 이미 다음 항목을 입력하기 시작했다면 그 텍스트를
+      // 덮어쓰지 않는다 — 입력창이 비어 있을 때만 실패한 제목으로 되돌린다.
+      setNewTitle((current) => (current === '' ? title : current))
     } finally {
       addingRef.current = false
     }
