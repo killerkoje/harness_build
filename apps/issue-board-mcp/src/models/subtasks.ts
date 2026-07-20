@@ -9,6 +9,7 @@ function rowToSubtask(row: any): Subtask {
     issueId: row.issue_id,
     title: row.title,
     done: Boolean(row.done),
+    notes: row.notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -38,6 +39,7 @@ export function createSubtask(db: Database.Database, issueId: number, title: str
     issueId,
     title,
     done: false,
+    notes: '',
     createdAt: now,
     updatedAt: now,
   }

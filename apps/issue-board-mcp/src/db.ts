@@ -96,5 +96,10 @@ export function createDb(filename: string): Database.Database {
     db.exec('ALTER TABLE projects ADD COLUMN dev_url TEXT')
   }
 
+  const subtaskCols = db.prepare('PRAGMA table_info(issue_subtasks)').all() as { name: string }[]
+  if (!subtaskCols.some((c) => c.name === 'notes')) {
+    db.exec("ALTER TABLE issue_subtasks ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+  }
+
   return db
 }

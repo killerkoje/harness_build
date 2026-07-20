@@ -84,6 +84,7 @@ export interface Subtask {
   issueId: number
   title: string
   done: boolean
+  notes: string
   createdAt: string
   updatedAt: string
 }
