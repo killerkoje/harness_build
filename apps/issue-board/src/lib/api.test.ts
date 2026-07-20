@@ -85,6 +85,20 @@ describe('api client', () => {
     expect(updated.done).toBe(true)
   })
 
+  it('updateSubtask forwards the notes field', async () => {
+    ;(fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 1, title: 't', done: false, notes: '메모' }),
+    })
+    const updated = await updateSubtask(1, { notes: '메모' })
+    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/subtasks/1', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: '메모' }),
+    })
+    expect(updated.notes).toBe('메모')
+  })
+
   it('deleteSubtask calls DELETE /api/subtasks/:id', async () => {
     ;(fetch as any).mockResolvedValue({ ok: true })
     await deleteSubtask(1)

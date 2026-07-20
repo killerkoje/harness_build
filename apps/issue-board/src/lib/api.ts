@@ -164,6 +164,7 @@ export interface Subtask {
   issueId: number
   title: string
   done: boolean
+  notes: string
 }
 
 export async function fetchSubtasks(issueId: number): Promise<Subtask[]> {
@@ -182,7 +183,7 @@ export async function createSubtask(issueId: number, title: string): Promise<Sub
 
 export async function updateSubtask(
   id: number,
-  fields: { title?: string; done?: boolean }
+  fields: { title?: string; done?: boolean; notes?: string }
 ): Promise<Subtask> {
   return json(
     await fetch(`${BASE_URL}/api/subtasks/${id}`, {
