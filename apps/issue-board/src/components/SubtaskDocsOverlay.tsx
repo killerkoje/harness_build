@@ -9,8 +9,14 @@ import { updateSubtask, type Subtask } from '@/lib/api'
 const MIN_LIST_WIDTH = 220
 const DOC_PANE_MIN_MARGIN = 320
 const MIN_PANEL_WIDTH = 560
-const DEFAULT_PANEL_WIDTH = 900
 const PANEL_WIDTH_MARGIN = 80
+const INITIAL_PANEL_WIDTH_RATIO = 0.6
+
+function getInitialPanelWidth(): number {
+  if (typeof window === 'undefined') return MIN_PANEL_WIDTH
+  const max = window.innerWidth - PANEL_WIDTH_MARGIN
+  return Math.max(MIN_PANEL_WIDTH, Math.min(max, window.innerWidth * INITIAL_PANEL_WIDTH_RATIO))
+}
 
 export default function SubtaskDocsOverlay({
   subtasks,
@@ -30,7 +36,7 @@ export default function SubtaskDocsOverlay({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [listWidth, setListWidth] = useState(280)
-  const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
+  const [panelWidth, setPanelWidth] = useState(getInitialPanelWidth)
   const [entered, setEntered] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const draggingListRef = useRef(false)
