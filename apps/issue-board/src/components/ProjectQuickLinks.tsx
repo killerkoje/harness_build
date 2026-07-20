@@ -41,7 +41,7 @@ export default function ProjectQuickLinks({ projectId, devUrl }: Props) {
           title={devHref}
           className="shrink-0 rounded-md border border-zinc-200 px-2.5 py-1 text-xs text-zinc-600 hover:bg-zinc-50 whitespace-nowrap"
         >
-          개발 프로젝트
+          프로젝트
         </a>
       ) : (
         <span
@@ -49,7 +49,7 @@ export default function ProjectQuickLinks({ projectId, devUrl }: Props) {
           title="dev 서버 URL 없음"
           className="shrink-0 cursor-not-allowed rounded-md border border-zinc-100 px-2.5 py-1 text-xs text-zinc-300 whitespace-nowrap"
         >
-          개발 프로젝트 없음
+          프로젝트 미구현
         </span>
       )}
     </div>
