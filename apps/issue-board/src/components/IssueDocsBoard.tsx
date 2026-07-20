@@ -13,14 +13,18 @@ export default function IssueDocsBoard({
   projectId,
   issue,
   subtasks: initialSubtasks,
+  initialSubtaskId,
 }: {
   projectId: number
   issue: Issue
   subtasks: Subtask[]
+  initialSubtaskId?: number
 }) {
+  const initialSelected =
+    initialSubtasks.find((s) => s.id === initialSubtaskId) ?? initialSubtasks[0] ?? null
   const [subtasks, setSubtasks] = useState(initialSubtasks)
-  const [selectedId, setSelectedId] = useState<number | null>(initialSubtasks[0]?.id ?? null)
-  const [draft, setDraft] = useState(initialSubtasks[0]?.notes ?? '')
+  const [selectedId, setSelectedId] = useState<number | null>(initialSelected?.id ?? null)
+  const [draft, setDraft] = useState(initialSelected?.notes ?? '')
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
