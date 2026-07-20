@@ -106,7 +106,7 @@ export default function IssueSubtasks({
             <button
               type="button"
               onClick={() => setOpenSubtaskId(subtask.id)}
-              className={`inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded border shrink-0 ${
+              className={`inline-flex items-center gap-1 text-xs px-2 py-1.5 rounded border shrink-0 ${
                 subtask.notes
                   ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
                   : 'border-zinc-200 text-zinc-400'
