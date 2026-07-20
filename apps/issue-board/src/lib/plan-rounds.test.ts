@@ -17,7 +17,8 @@ function makeIssue(
   id: number,
   planId: number | null,
   status: Issue['status'],
-  notionStatus: NotionStatus | null = null
+  notionStatus: NotionStatus | null = null,
+  subtaskProgress: Issue['subtaskProgress'] = null
 ): Issue {
   return {
     id,
@@ -30,7 +31,7 @@ function makeIssue(
     status,
     notionPageId: null,
     notionStatus,
-    subtaskProgress: null,
+    subtaskProgress,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   }
@@ -58,23 +59,29 @@ describe('plan-rounds', () => {
     expect(roundIndexOf(plans, null)).toBe(-1)
   })
 
-  it('planIssueProgress counts an issue as complete when its status auto-maps to Notion 완료', () => {
+  it('planIssueProgress counts an issue complete when all subtasks are done', () => {
+    const issues = [
+      makeIssue(1, 10, 'dev_approved', null, { total: 3, done: 3 }),
+      makeIssue(2, 10, 'dev_approved', null, { total: 2, done: 1 }),
+      makeIssue(3, 20, 'dev_approved', null, { total: 1, done: 1 }),
+    ]
+    expect(planIssueProgress(10, issues)).toEqual({ done: 1, total: 2 })
+  })
+
+  it('planIssueProgress counts status=done when the issue has no subtasks', () => {
     const issues = [
       makeIssue(1, 10, 'planned'),
-      makeIssue(2, 10, 'dev_approved'),
-      makeIssue(3, 10, 'done'),
-      makeIssue(4, 20, 'planned'),
+      makeIssue(2, 10, 'done'),
+      makeIssue(3, 10, 'dev_approved'),
     ]
     expect(planIssueProgress(10, issues)).toEqual({ done: 1, total: 3 })
   })
 
-  it('planIssueProgress counts a manually-overridden Notion status of 완료 even if status is not done', () => {
-    const issues = [makeIssue(1, 10, 'dev_approved', '완료'), makeIssue(2, 10, 'planned')]
-    expect(planIssueProgress(10, issues)).toEqual({ done: 1, total: 2 })
-  })
-
-  it('planIssueProgress does not count status=done if the Notion status was manually overridden away from 완료', () => {
-    const issues = [makeIssue(1, 10, 'done', '보류'), makeIssue(2, 10, 'planned')]
+  it('planIssueProgress ignores notionStatus override — completion follows subtasks or status', () => {
+    const issues = [
+      makeIssue(1, 10, 'dev_approved', '완료', { total: 2, done: 0 }),
+      makeIssue(2, 10, 'planned', '완료'),
+    ]
     expect(planIssueProgress(10, issues)).toEqual({ done: 0, total: 2 })
   })
 

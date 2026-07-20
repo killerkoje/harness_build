@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react'
 import { type Issue, type Plan } from '@/lib/api'
-import { roundIndexOf, roundLabel, roundShortLabel } from '@/lib/plan-rounds'
+import { roundIndexOf, roundLabel, roundShortLabel, isIssueComplete } from '@/lib/plan-rounds'
 import IssueSubtasks from './IssueSubtasks'
 
 function progressLabel(progress: NonNullable<Issue['subtaskProgress']>): string {
@@ -12,7 +12,7 @@ function progressLabel(progress: NonNullable<Issue['subtaskProgress']>): string 
 }
 
 function allSubtasksDone(issue: Issue): boolean {
-  return issue.subtaskProgress != null && issue.subtaskProgress.done === issue.subtaskProgress.total
+  return isIssueComplete(issue) && issue.subtaskProgress != null
 }
 
 export default function IssueList({
