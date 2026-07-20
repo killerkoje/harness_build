@@ -3,6 +3,7 @@
 // src/components/IssueSubtasks.tsx
 import { useEffect, useRef, useState } from 'react'
 import { createSubtask, deleteSubtask, fetchSubtasks, updateSubtask, type Subtask } from '@/lib/api'
+import SubtaskDocsOverlay from './SubtaskDocsOverlay'
 
 type Progress = { total: number; done: number } | null
 
@@ -19,17 +20,16 @@ function computeProgress(list: Subtask[]): Progress {
 
 export default function IssueSubtasks({
   issueId,
-  projectId,
   onProgressChange,
 }: {
   issueId: number
-  projectId: number
   onProgressChange?: (progress: Progress) => void
 }) {
   const [subtasks, setSubtasks] = useState<Subtask[] | null>(null)
   const [loadError, setLoadError] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [newTitle, setNewTitle] = useState('')
+  const [openSubtaskId, setOpenSubtaskId] = useState<number | null>(null)
   const addingRef = useRef(false)
 
   useEffect(() => {
@@ -89,59 +89,77 @@ export default function IssueSubtasks({
   }
 
   return (
-    <ul className="ml-6 space-y-2 list-none">
-      {actionError && <li className={`text-xs text-red-600 ${BOX}`}>{actionError}</li>}
-      {subtasks.map((subtask) => (
-        <li key={subtask.id} className={`group ${BOX} flex items-center gap-2`}>
-          <span
-            className={
-              subtask.done
-                ? 'line-through text-zinc-400 text-sm flex-1 min-w-0'
-                : 'text-sm text-zinc-800 flex-1 min-w-0'
-            }
-          >
-            {subtask.title}
-          </span>
-          <a
-            href={`/projects/${projectId}/issues?issueId=${issueId}&subtaskId=${subtask.id}`}
-            className="text-xs text-indigo-600 shrink-0"
-          >
-            문서
-          </a>
-          <select
-            value={subtask.done ? 'done' : 'open'}
-            onChange={(e) => handleStatusChange(subtask, e.target.value === 'done')}
-            className={`text-xs px-2 py-1.5 rounded cursor-pointer shrink-0 ${
-              subtask.done ? SUBTASK_STATUS.done.style : SUBTASK_STATUS.open.style
-            }`}
-            aria-label={`${subtask.title} 상태`}
-          >
-            <option value="open">{SUBTASK_STATUS.open.label}</option>
-            <option value="done">{SUBTASK_STATUS.done.label}</option>
-          </select>
-          <button
-            type="button"
-            onClick={() => handleDelete(subtask.id)}
-            className="opacity-0 group-hover:opacity-100 text-zinc-300 hover:text-red-500 text-sm px-1 shrink-0"
-            aria-label="삭제"
-          >
-            ×
-          </button>
+    <div>
+      <ul className="ml-6 space-y-2 list-none">
+        {actionError && <li className={`text-xs text-red-600 ${BOX}`}>{actionError}</li>}
+        {subtasks.map((subtask) => (
+          <li key={subtask.id} className={`group ${BOX} flex items-center gap-2`}>
+            <span
+              className={
+                subtask.done
+                  ? 'line-through text-zinc-400 text-sm flex-1 min-w-0'
+                  : 'text-sm text-zinc-800 flex-1 min-w-0'
+              }
+            >
+              {subtask.title}
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpenSubtaskId(subtask.id)}
+              className={`inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded border shrink-0 ${
+                subtask.notes
+                  ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                  : 'border-zinc-200 text-zinc-400'
+              }`}
+            >
+              {subtask.notes && <span className="w-1 h-1 rounded-full bg-indigo-500" />}
+              {subtask.notes ? '문서 있음' : '문서 없음'}
+            </button>
+            <select
+              value={subtask.done ? 'done' : 'open'}
+              onChange={(e) => handleStatusChange(subtask, e.target.value === 'done')}
+              className={`text-xs px-2 py-1.5 rounded cursor-pointer shrink-0 ${
+                subtask.done ? SUBTASK_STATUS.done.style : SUBTASK_STATUS.open.style
+              }`}
+              aria-label={`${subtask.title} 상태`}
+            >
+              <option value="open">{SUBTASK_STATUS.open.label}</option>
+              <option value="done">{SUBTASK_STATUS.done.label}</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => handleDelete(subtask.id)}
+              className="opacity-0 group-hover:opacity-100 text-zinc-300 hover:text-red-500 text-sm px-1 shrink-0"
+              aria-label="삭제"
+            >
+              ×
+            </button>
+          </li>
+        ))}
+        <li className={BOX}>
+          <input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
+              e.preventDefault()
+              void handleAdd()
+            }}
+            placeholder="+ 새 하위 항목"
+            className="w-full text-sm text-zinc-500 placeholder:text-zinc-400 bg-transparent outline-none"
+          />
         </li>
-      ))}
-      <li className={BOX}>
-        <input
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
-            e.preventDefault()
-            void handleAdd()
+      </ul>
+      {openSubtaskId !== null && (
+        <SubtaskDocsOverlay
+          subtasks={subtasks}
+          initialSubtaskId={openSubtaskId}
+          onClose={() => setOpenSubtaskId(null)}
+          onSaved={(updated) => {
+            setSubtasks((prev) => prev?.map((s) => (s.id === updated.id ? updated : s)) ?? null)
           }}
-          placeholder="+ 새 하위 항목"
-          className="w-full text-sm text-zinc-500 placeholder:text-zinc-400 bg-transparent outline-none"
         />
-      </li>
-    </ul>
+      )}
+    </div>
   )
 }
