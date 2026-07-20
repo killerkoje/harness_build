@@ -393,6 +393,34 @@ describe('REST API', () => {
     expect(res.status).toBe(400)
   })
 
+  it('PUT /api/subtasks/:id updates notes without touching title or done', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const plan = (
+      await request(app)
+        .post(`/api/projects/${project.id}/plans`)
+        .send({
+          title: 'p',
+          sections: {
+            overview: 'o',
+            targetUsers: 't',
+            mvpFeatures: [{ priority: '높음', title: '로그인', description: 'd' }],
+            outOfScope: 'x',
+          },
+        })
+    ).body
+    await request(app).post(`/api/plans/${plan.id}/approve`)
+    const issue = (await request(app).get(`/api/projects/${project.id}/issues`)).body[0]
+    const created = await request(app).post(`/api/issues/${issue.id}/subtasks`).send({ title: 't' })
+
+    const res = await request(app)
+      .put(`/api/subtasks/${created.body.id}`)
+      .send({ notes: '완료: API 라우터 작성' })
+    expect(res.status).toBe(200)
+    expect(res.body.notes).toBe('완료: API 라우터 작성')
+    expect(res.body.title).toBe('t')
+    expect(res.body.done).toBe(false)
+  })
+
   it('GET /api/projects/:id/issues includes subtaskProgress per issue', async () => {
     const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
     const plan = (

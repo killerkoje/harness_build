@@ -183,9 +183,9 @@ export function createApp(db: Database.Database) {
   })
 
   app.put('/api/subtasks/:id', asyncHandler(async (req, res) => {
-    const { title, done } = req.body ?? {}
+    const { title, done, notes } = req.body ?? {}
     if (title !== undefined && !title) return res.status(400).json({ error: 'title required' })
-    const updated = updateSubtask(db, Number(req.params.id), { title, done })
+    const updated = updateSubtask(db, Number(req.params.id), { title, done, notes })
     if (!updated) return res.status(404).json({ error: 'not found' })
     await maybeAutoCompleteIssue(db, updated.issueId)
     res.json(updated)
