@@ -44,3 +44,30 @@ export function deleteWireframeByIssue(db: Database.Database, issueId: number): 
   const result = db.prepare('DELETE FROM wireframes WHERE issue_id = ?').run(issueId)
   return result.changes > 0
 }
+
+export interface WireframeSummary {
+  issueId: number
+  issueNumber: number
+  issueTitle: string
+  screenCount: number
+  updatedAt: string
+}
+
+export function listWireframesByProject(db: Database.Database, projectId: number): WireframeSummary[] {
+  const rows = db
+    .prepare(
+      `SELECT w.issue_id, w.screens, w.updated_at, i.number AS issue_number, i.title AS issue_title
+       FROM wireframes w
+       JOIN issues i ON i.id = w.issue_id
+       WHERE i.project_id = ?
+       ORDER BY i.number ASC`
+    )
+    .all(projectId) as any[]
+  return rows.map((row) => ({
+    issueId: row.issue_id,
+    issueNumber: row.issue_number,
+    issueTitle: row.issue_title,
+    screenCount: JSON.parse(row.screens).length,
+    updatedAt: row.updated_at,
+  }))
+}

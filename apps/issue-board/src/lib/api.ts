@@ -41,6 +41,14 @@ export interface Wireframe {
   screens: WireframeScreen[]
 }
 
+export interface WireframeSummary {
+  issueId: number
+  issueNumber: number
+  issueTitle: string
+  screenCount: number
+  updatedAt: string
+}
+
 export interface Plan {
   id: number
   projectId: number
@@ -125,6 +133,10 @@ export async function fetchWireframe(issueId: number): Promise<Wireframe | null>
   const res = await fetch(`${BASE_URL}/api/issues/${issueId}/wireframe`)
   if (res.status === 404) return null
   return json(res)
+}
+
+export async function fetchWireframesByProject(projectId: number): Promise<WireframeSummary[]> {
+  return json(await fetch(`${BASE_URL}/api/projects/${projectId}/wireframes`))
 }
 
 export async function approveIssue(issueId: number): Promise<Issue> {

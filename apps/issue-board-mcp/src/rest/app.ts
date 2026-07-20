@@ -26,7 +26,7 @@ import {
   completeIssue,
   setIssueNotionStatus,
 } from '../models/issues.js'
-import { upsertWireframe, getWireframeByIssue } from '../models/wireframes.js'
+import { upsertWireframe, getWireframeByIssue, listWireframesByProject } from '../models/wireframes.js'
 import {
   listSubtasksByIssue,
   createSubtask,
@@ -160,6 +160,10 @@ export function createApp(db: Database.Database) {
     const wireframe = getWireframeByIssue(db, Number(req.params.id))
     if (!wireframe) return res.status(404).json({ error: 'not found' })
     res.json(wireframe)
+  })
+
+  app.get('/api/projects/:projectId/wireframes', (req, res) => {
+    res.json(listWireframesByProject(db, Number(req.params.projectId)))
   })
 
   app.get('/api/issues/:id/subtasks', (req, res) => {
