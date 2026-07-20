@@ -31,7 +31,7 @@ export default function WireframeBoard({
   }
 
   return (
-    <div className="w-full min-w-0 max-w-5xl mx-auto space-y-4 sm:space-y-5">
+    <div className="w-full min-w-0 max-w-5xl space-y-4 sm:space-y-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-base sm:text-lg font-semibold truncate">
