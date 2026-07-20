@@ -3,6 +3,7 @@
 // src/components/IssueSubtasks.tsx
 import { useEffect, useRef, useState } from 'react'
 import { createSubtask, deleteSubtask, fetchSubtasks, updateSubtask, type Subtask } from '@/lib/api'
+import SubtaskNoteSidebar from './SubtaskNoteSidebar'
 
 type Progress = { total: number; done: number } | null
 
@@ -28,6 +29,7 @@ export default function IssueSubtasks({
   const [loadError, setLoadError] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [newTitle, setNewTitle] = useState('')
+  const [noteSubtaskId, setNoteSubtaskId] = useState<number | null>(null)
   const addingRef = useRef(false)
 
   useEffect(() => {
@@ -86,7 +88,10 @@ export default function IssueSubtasks({
     return <p className="text-xs text-zinc-400 ml-6">불러오는 중...</p>
   }
 
+  const noteTarget = noteSubtaskId === null ? null : (subtasks.find((s) => s.id === noteSubtaskId) ?? null)
+
   return (
+    <div>
     <ul className="ml-6 space-y-2 list-none">
       {actionError && <li className={`text-xs text-red-600 ${BOX}`}>{actionError}</li>}
       {subtasks.map((subtask) => (
@@ -100,6 +105,16 @@ export default function IssueSubtasks({
           >
             {subtask.title}
           </span>
+          <button
+            type="button"
+            onClick={() => setNoteSubtaskId(subtask.id)}
+            className={`text-sm px-1 shrink-0 ${
+              subtask.notes ? 'text-indigo-500 hover:text-indigo-700' : 'text-zinc-300 hover:text-zinc-500'
+            }`}
+            aria-label="작업 로그"
+          >
+            📄
+          </button>
           <select
             value={subtask.done ? 'done' : 'open'}
             onChange={(e) => handleStatusChange(subtask, e.target.value === 'done')}
@@ -135,5 +150,16 @@ export default function IssueSubtasks({
         />
       </li>
     </ul>
+    {noteTarget && (
+      <SubtaskNoteSidebar
+        key={noteTarget.id}
+        subtask={noteTarget}
+        onClose={() => setNoteSubtaskId(null)}
+        onSaved={(updated) => {
+          setSubtasks((prev) => prev?.map((s) => (s.id === updated.id ? updated : s)) ?? null)
+        }}
+      />
+    )}
+    </div>
   )
 }
