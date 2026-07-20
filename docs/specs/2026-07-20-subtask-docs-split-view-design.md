@@ -7,24 +7,25 @@
 ## 결정 사항 (사용자 확인 완료)
 
 - **반영 범위**: 전용 페이지로 새로 만든다. 기존 이슈카드 확장식 사이드바/문서버튼은 **제거**하고, 이 화면이 문서 기능의 유일한 진입점이 된다.
-- **진입점**: 이슈 카드에서 설명 문단 아래(방금 제거한 "와이어프레임 보기 →" 링크와 같은 자리)에 "문서 보기 →" 링크. 이슈 카드를 펼치지 않아도 바로 이동 가능.
-- **좌측 하위 태스크 목록**: 읽기 전용. 상태(완료/미완료)는 정적 칩으로만 표시, 상태 변경·추가·삭제는 이 화면에서 하지 않는다(기존 이슈 목록 화면에서만). 클릭하면 그 하위 태스크의 문서만 선택된다.
+- **진입점 (수정됨 — 최초 결정 이후 사용자가 정정)**: 이슈 카드 레벨 링크가 아니라 **하위 태스크(하위 이슈) 하나하나에** 문서 진입점이 붙는다. 이슈를 펼쳐서 하위 태스크 체크리스트를 봤을 때, 각 행에 그 하위 태스크의 문서로 바로 이동하는 링크/버튼이 있다. URL은 `issueId` 외에 `subtaskId`도 받아서(하위 라우팅 아이디) 스플릿 뷰가 **그 하위 태스크를 미리 선택한 상태**로 열린다. 이슈 카드 자체에는 문서 관련 링크를 두지 않는다(첫 결정 때 넣었던 "문서 보기 →" 이슈 레벨 링크는 제거).
+- **좌측 하위 태스크 목록**: 읽기 전용. 상태(완료/미완료)는 정적 칩으로만 표시, 상태 변경·추가·삭제는 이 화면에서 하지 않는다(기존 이슈 목록 화면에서만). 클릭하면 그 하위 태스크의 문서만 선택된다. `subtaskId`로 들어왔으면 그 항목이 처음부터 선택돼 있어야 한다.
 - **우측 문서 패널**: 편집/미리보기 **탭** 전환(기존 사이드바처럼 세로로 나란히 쌓지 않음), 저장 버튼 + 상태 메시지("저장됨 ✓" / "수정됨"), `⌘/Ctrl+S` 저장 단축키.
 - **리사이저**: 좌우 패널 너비를 드래그로 조절 가능 (목업과 동일한 컨셉).
 
 ## 라우팅
 
-기존 와이어프레임 화면과 동일한 패턴을 따른다 — 새 폴더를 만들지 않고, 기존 `/projects/[id]/issues` 라우트에 `?issueId=` 쿼리 파라미터로 분기한다:
+기존 와이어프레임 화면과 동일한 패턴을 따른다 — 새 폴더를 만들지 않고, 기존 `/projects/[id]/issues` 라우트에 `?issueId=&subtaskId=` 쿼리 파라미터로 분기한다:
 
 - `?issueId` 없음 → 기존 `IssueList` (이슈 목록)
-- `?issueId` 있음 → 새 `IssueDocsBoard` (해당 이슈의 문서 스플릿 뷰), 서버 컴포넌트에서 `fetchIssue(issueId)` + `fetchSubtasks(issueId)`로 데이터 로드
+- `?issueId` 있음 → 새 `IssueDocsBoard` (해당 이슈의 문서 스플릿 뷰), 서버 컴포넌트에서 `fetchIssue(issueId)` + `fetchSubtasks(issueId)`로 데이터 로드. `?subtaskId`도 같이 있으면 그 하위 태스크를 초기 선택 상태로 넘긴다(없거나 목록에 없는 id면 첫 번째 하위 태스크로 폴백).
 
 ## 컴포넌트 설계
 
 ### `IssueDocsBoard.tsx` (신규, client component)
 
-Props: `projectId: number`, `issue: Issue`, `subtasks: Subtask[]`
+Props: `projectId: number`, `issue: Issue`, `subtasks: Subtask[]`, `initialSubtaskId?: number`
 
+- 초기 선택: `initialSubtaskId`가 넘어오고 그 id가 `subtasks`에 실제로 있으면 그 하위 태스크를 선택 상태로 시작. 없거나(넘어오지 않았거나 존재하지 않는 id) `subtasks`가 비어있지 않으면 첫 번째 하위 태스크로 폴백.
 - 상단: `← 이슈 목록` 링크(`/projects/{projectId}/issues`), `#{issue.number} {issue.title}` + 완료/미완료 칩
 - 좌측 리스트: 각 하위 태스크 = 제목(완료면 취소선) + 상태 칩 + "문서 있음"/"문서 없음" 필(dot 표시), 클릭 시 `selectedId` 갱신
 - 하위 태스크가 0개면: "하위 태스크가 없습니다" 안내만 표시(우측 패널 없음)
@@ -38,14 +39,16 @@ Props: `projectId: number`, `issue: Issue`, `subtasks: Subtask[]`
 
 ### 삭제/되돌리는 것
 
-- `apps/issue-board/src/components/SubtaskNoteSidebar.tsx` — 삭제
-- `apps/issue-board/src/components/IssueSubtasks.tsx` — 📄 버튼, `noteSubtaskId` state, `SubtaskNoteSidebar` import/렌더, 감싸던 `<div>` 래퍼를 모두 제거하고 원래(하위 태스크 체크리스트만 있는) 형태로 되돌린다. 상태 변경(`handleStatusChange`)·삭제·추가 로직은 그대로 유지.
+- `apps/issue-board/src/components/SubtaskNoteSidebar.tsx` — 삭제 (완료)
+- `apps/issue-board/src/components/IssueSubtasks.tsx` — 📄 버튼, `noteSubtaskId` state, `SubtaskNoteSidebar` import/렌더, 감싸던 `<div>` 래퍼를 모두 제거하고 원래(하위 태스크 체크리스트만 있는) 형태로 되돌린 뒤(완료), **다시** `projectId` prop과 하위 태스크별 "문서" 링크를 추가한다(아래 참고). 상태 변경(`handleStatusChange`)·삭제·추가 로직은 그대로 유지.
+- `apps/issue-board/src/components/IssueList.tsx`에 추가했던 이슈 레벨 "문서 보기 →" 링크 — **제거**(진입점이 하위 태스크별로 바뀌었으므로)
 
 ### 새로 추가/수정하는 것
 
-- `apps/issue-board/src/components/IssueList.tsx` — `projectId` prop을 다시 받고, 설명 문단 아래에 `문서 보기 →` 링크(`/projects/{projectId}/issues?issueId={issue.id}`) 추가
-- `apps/issue-board/src/app/projects/[id]/issues/page.tsx` — `searchParams.issueId` 읽어서 분기, `IssueList`에 `projectId` 다시 전달
-- `apps/issue-board/src/components/IssueDocsBoard.tsx` — 신규
+- `apps/issue-board/src/components/IssueList.tsx` — `projectId` prop은 유지하되(아래 `IssueSubtasks`로 전달하기 위해 필요), 이슈 카드 자체의 "문서 보기 →" 링크는 제거. `<IssueSubtasks issueId={issue.id} projectId={projectId} onProgressChange={...} />`로 `projectId` 전달.
+- `apps/issue-board/src/components/IssueSubtasks.tsx` — `projectId: number` prop 추가. 각 하위 태스크 행(상태 셀렉트 왼쪽)에 작은 "문서" 링크/버튼 추가, `href={/projects/{projectId}/issues?issueId={issueId}&subtaskId={subtask.id}}`. `subtask.notes` 유무에 따라 스타일 구분은 필수 아님(단순 링크로 충분) — 이 저장소의 이모지+`color` 조합이 실제로는 안 보인다는 게 이미 확인된 사실이므로, 텍스트 링크나 색상이 아닌 다른 방식(예: 배경색 배지)으로 "문서 있음" 표시를 하고 싶다면 그렇게 하되, 필수 요구사항은 아니다 — 최소 요구사항은 "클릭하면 그 하위 태스크의 문서로 이동"이다.
+- `apps/issue-board/src/app/projects/[id]/issues/page.tsx` — `searchParams.issueId` + `searchParams.subtaskId` 읽어서 분기, `IssueList`에 `projectId` 전달, `IssueDocsBoard`에 `initialSubtaskId` 전달
+- `apps/issue-board/src/components/IssueDocsBoard.tsx` — 신규(완료), `initialSubtaskId` prop 추가 필요(위 참고)
 
 ## 스코프 제외
 

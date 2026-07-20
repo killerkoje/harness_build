@@ -4,7 +4,9 @@
 
 **Goal:** 하위 태스크 행의 문서 아이콘→고정 사이드바 UI를 걷어내고, 이슈별 전용 문서 화면(좌: 하위 태스크 목록, 드래그 리사이저, 우: 편집/미리보기 탭)으로 교체한다.
 
-**Architecture:** 백엔드(DB 컬럼·모델·REST)와 프론트 API 클라이언트(`updateSubtask(id, { notes })`)는 기존 그대로 재사용한다. 기존 와이어프레임 화면과 동일한 패턴 — `/projects/[id]/issues` 라우트에 `?issueId=` 쿼리 파라미터로 분기해서, 있으면 새 `IssueDocsBoard`(전용 화면), 없으면 기존 `IssueList`(이슈 목록)를 렌더한다. `IssueSubtasks.tsx`는 문서 관련 UI를 걷어내고 원래(체크리스트만 있는) 형태로 되돌린다.
+**Architecture:** 백엔드(DB 컬럼·모델·REST)와 프론트 API 클라이언트(`updateSubtask(id, { notes })`)는 기존 그대로 재사용한다. 기존 와이어프레임 화면과 동일한 패턴 — `/projects/[id]/issues` 라우트에 `?issueId=&subtaskId=` 쿼리 파라미터로 분기해서, 있으면 새 `IssueDocsBoard`(전용 화면, `subtaskId`가 있으면 그 하위 태스크를 미리 선택), 없으면 기존 `IssueList`(이슈 목록)를 렌더한다. 문서 진입점은 이슈 카드가 아니라 **하위 태스크 행 하나하나**에 붙는다(`IssueSubtasks.tsx`).
+
+> **참고:** 이 플랜은 진행 중 사용자 정정(Task 3까지 구현한 뒤 "문서 보기는 이슈가 아니라 하위 태스크마다 있어야 한다"는 피드백)을 반영해 Task 3.5/4.5로 보강했다. Task 1~4, Task 5, Task 6은 최신 상태를 반영해 갱신되어 있다.
 
 **Tech Stack:** Next.js 15 · React 19 · Tailwind v4 · react-markdown · remark-gfm — 기존 `apps/issue-board`와 동일 스택. 백엔드 변경 없음.
 
@@ -17,10 +19,10 @@
 | 파일 | 역할 |
 |---|---|
 | `apps/issue-board/src/components/SubtaskNoteSidebar.tsx` | (삭제) 사이드바 UI, 스플릿 뷰로 대체됨 |
-| `apps/issue-board/src/components/IssueSubtasks.tsx` | (수정) 문서 버튼/사이드바 관련 코드 제거, 원래 체크리스트 전용 형태로 복귀 |
-| `apps/issue-board/src/components/IssueList.tsx` | (수정) `projectId` prop 복귀 + "문서 보기 →" 링크 추가 |
-| `apps/issue-board/src/components/IssueDocsBoard.tsx` | (신규) 스플릿 뷰 화면 |
-| `apps/issue-board/src/app/projects/[id]/issues/page.tsx` | (수정) `searchParams.issueId`로 목록/문서화면 분기 |
+| `apps/issue-board/src/components/IssueSubtasks.tsx` | (수정, 2단계) 먼저 문서 버튼/사이드바 코드 제거 → 이후 `projectId` prop + 하위 태스크별 "문서" 링크 추가 |
+| `apps/issue-board/src/components/IssueList.tsx` | (수정, 2단계) 먼저 `projectId` prop + 이슈 레벨 링크 추가 → 이후 이슈 레벨 링크는 제거(진입점이 하위 태스크로 바뀜), `projectId`는 `IssueSubtasks`로 전달하기 위해 유지 |
+| `apps/issue-board/src/components/IssueDocsBoard.tsx` | (신규, 2단계) 스플릿 뷰 화면 → 이후 `initialSubtaskId`로 특정 하위 태스크 딥링크 지원 |
+| `apps/issue-board/src/app/projects/[id]/issues/page.tsx` | (수정) `searchParams.issueId`+`subtaskId`로 목록/문서화면 분기 |
 
 ---
 
@@ -561,7 +563,201 @@ git commit -m "feat(issue-board): add IssueDocsBoard split-view component"
 
 ---
 
-## Task 5: `issues/page.tsx` — `?issueId=` 분기 연결
+## Task 3.5: 진입점을 이슈 레벨 → 하위 태스크 레벨로 정정
+
+> **왜 이 태스크가 추가됐나:** Task 3까지 구현한 뒤 사용자가 "문서 보기는 이슈가 아니라 하위 태스크 하나하나에 붙어야 한다"고 정정했다. `docs/specs/2026-07-20-subtask-docs-split-view-design.md`의 "진입점(수정됨)" 항목 참고. Task 3에서 만든 이슈 카드의 "문서 보기 →" 링크는 없애고, 대신 `IssueSubtasks.tsx`(하위 태스크 체크리스트)의 각 행에 그 하위 태스크 전용 문서 링크를 붙인다.
+
+**Files:**
+- Modify: `apps/issue-board/src/components/IssueList.tsx`
+- Modify: `apps/issue-board/src/components/IssueSubtasks.tsx`
+
+- [ ] **Step 1: `IssueList.tsx`에서 이슈 레벨 문서 링크 제거, `IssueSubtasks`에 `projectId` 전달**
+
+`apps/issue-board/src/components/IssueList.tsx`에서 아래 텍스트를 (Task 3에서 추가한 블록):
+
+```tsx
+                  </div>
+                  <p className="text-xs text-zinc-500">{issue.description}</p>
+                  <div className="mt-2">
+                    <a
+                      href={`/projects/${projectId}/issues?issueId=${issue.id}`}
+                      className="text-xs text-indigo-600"
+                    >
+                      문서 보기 →
+                    </a>
+                  </div>
+                </div>
+```
+
+아래로 교체한다 (링크 제거, `projectId`는 prop으로는 계속 유지 — 아래 `IssueSubtasks` 호출부에 넘겨야 하므로 삭제하지 않는다):
+
+```tsx
+                  </div>
+                  <p className="text-xs text-zinc-500">{issue.description}</p>
+                </div>
+```
+
+같은 파일에서 `<IssueSubtasks .../>` 호출부(아래 텍스트)를:
+
+```tsx
+                {isExpanded && (
+                  <IssueSubtasks
+                    issueId={issue.id}
+                    onProgressChange={(progress) => updateIssueProgress(issue.id, progress)}
+                  />
+                )}
+```
+
+아래로 교체한다:
+
+```tsx
+                {isExpanded && (
+                  <IssueSubtasks
+                    issueId={issue.id}
+                    projectId={projectId}
+                    onProgressChange={(progress) => updateIssueProgress(issue.id, progress)}
+                  />
+                )}
+```
+
+- [ ] **Step 2: `IssueSubtasks.tsx`에 `projectId` prop + 하위 태스크별 "문서" 링크 추가**
+
+`apps/issue-board/src/components/IssueSubtasks.tsx`에서 함수 시그니처(아래 텍스트)를:
+
+```tsx
+export default function IssueSubtasks({
+  issueId,
+  onProgressChange,
+}: {
+  issueId: number
+  onProgressChange?: (progress: Progress) => void
+}) {
+```
+
+아래로 교체한다:
+
+```tsx
+export default function IssueSubtasks({
+  issueId,
+  projectId,
+  onProgressChange,
+}: {
+  issueId: number
+  projectId: number
+  onProgressChange?: (progress: Progress) => void
+}) {
+```
+
+같은 파일에서, 각 하위 태스크 행(아래 텍스트, 제목 `<span>`과 상태 `<select>` 사이)을:
+
+```tsx
+          <span
+            className={
+              subtask.done
+                ? 'line-through text-zinc-400 text-sm flex-1 min-w-0'
+                : 'text-sm text-zinc-800 flex-1 min-w-0'
+            }
+          >
+            {subtask.title}
+          </span>
+          <select
+```
+
+아래로 교체한다 (제목과 상태 셀렉트 사이에 "문서" 링크 삽입):
+
+```tsx
+          <span
+            className={
+              subtask.done
+                ? 'line-through text-zinc-400 text-sm flex-1 min-w-0'
+                : 'text-sm text-zinc-800 flex-1 min-w-0'
+            }
+          >
+            {subtask.title}
+          </span>
+          <a
+            href={`/projects/${projectId}/issues?issueId=${issueId}&subtaskId=${subtask.id}`}
+            className="text-xs text-indigo-600 shrink-0"
+          >
+            문서
+          </a>
+          <select
+```
+
+- [ ] **Step 3: 타입 체크**
+
+Run: `cd apps/issue-board && npx tsc --noEmit`
+Expected: 여전히 `page.tsx`의 `projectId` 누락 에러 하나만 남아있어야 한다(Task 5에서 해결) — `IssueList.tsx`/`IssueSubtasks.tsx` 관련 새 에러는 없어야 한다.
+
+- [ ] **Step 4: 커밋**
+
+```bash
+git add apps/issue-board/src/components/IssueList.tsx apps/issue-board/src/components/IssueSubtasks.tsx
+git commit -m "refactor(issue-board): move docs entry point from issue card to each subtask row"
+```
+
+---
+
+## Task 4.5: `IssueDocsBoard.tsx` — `initialSubtaskId` 지원
+
+**Files:**
+- Modify: `apps/issue-board/src/components/IssueDocsBoard.tsx`
+
+- [ ] **Step 1: props에 `initialSubtaskId` 추가, 초기 선택 로직 반영**
+
+`apps/issue-board/src/components/IssueDocsBoard.tsx`에서 (컴포넌트 시그니처) 아래 텍스트를:
+
+```tsx
+export default function IssueDocsBoard({
+  projectId,
+  issue,
+  subtasks: initialSubtasks,
+}: {
+  projectId: number
+  issue: Issue
+  subtasks: Subtask[]
+}) {
+  const [subtasks, setSubtasks] = useState(initialSubtasks)
+  const [selectedId, setSelectedId] = useState<number | null>(initialSubtasks[0]?.id ?? null)
+  const [draft, setDraft] = useState(initialSubtasks[0]?.notes ?? '')
+```
+
+아래로 교체한다:
+
+```tsx
+export default function IssueDocsBoard({
+  projectId,
+  issue,
+  subtasks: initialSubtasks,
+  initialSubtaskId,
+}: {
+  projectId: number
+  issue: Issue
+  subtasks: Subtask[]
+  initialSubtaskId?: number
+}) {
+  const initialSelected =
+    initialSubtasks.find((s) => s.id === initialSubtaskId) ?? initialSubtasks[0] ?? null
+  const [subtasks, setSubtasks] = useState(initialSubtasks)
+  const [selectedId, setSelectedId] = useState<number | null>(initialSelected?.id ?? null)
+  const [draft, setDraft] = useState(initialSelected?.notes ?? '')
+```
+
+- [ ] **Step 2: 타입 체크**
+
+Run: `cd apps/issue-board && npx tsc --noEmit`
+Expected: `IssueDocsBoard` 자체는 에러 없음 (아직 아무 데서도 `initialSubtaskId`를 넘기지 않으므로 — Task 5에서 연결)
+
+- [ ] **Step 3: 커밋**
+
+```bash
+git add apps/issue-board/src/components/IssueDocsBoard.tsx
+git commit -m "feat(issue-board): support deep-linking IssueDocsBoard to a specific subtask"
+```
+
+---
+
+## Task 5: `issues/page.tsx` — `?issueId=&subtaskId=` 분기 연결
 
 **Files:**
 - Modify: `apps/issue-board/src/app/projects/[id]/issues/page.tsx`
@@ -582,17 +778,24 @@ export default async function IssuesPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ issueId?: string }>
+  searchParams: Promise<{ issueId?: string; subtaskId?: string }>
 }) {
   const { id } = await params
   const projectId = Number(id)
-  const { issueId } = await searchParams
+  const { issueId, subtaskId } = await searchParams
 
   try {
     if (issueId) {
       const issue = await fetchIssue(Number(issueId))
       const subtasks = await fetchSubtasks(issue.id)
-      return <IssueDocsBoard projectId={projectId} issue={issue} subtasks={subtasks} />
+      return (
+        <IssueDocsBoard
+          projectId={projectId}
+          issue={issue}
+          subtasks={subtasks}
+          initialSubtaskId={subtaskId ? Number(subtaskId) : undefined}
+        />
+      )
     }
 
     const [issues, plans] = await Promise.all([fetchIssues(projectId), fetchPlans(projectId)])
@@ -637,8 +840,8 @@ curl -sf http://localhost:5173 -o /dev/null -w "issue-board: %{http_code}\n" || 
 
 `http://localhost:5173/projects/<projectId>/issues`를 열어:
 
-- 이슈 카드에 더 이상 📄 문서 아이콘이 없는지 (하위 태스크 펼쳐도 체크리스트만 보임)
-- 카드 설명 아래 "문서 보기 →" 링크가 있는지, 클릭하면 `?issueId=`가 붙은 전용 화면으로 이동하는지
+- 이슈 카드에 더 이상 📄 문서 아이콘이나 "문서 보기 →" 링크가 없는지 (카드 자체엔 문서 진입점 없음)
+- 이슈를 펼쳤을 때 각 하위 태스크 행에 "문서" 링크가 있는지, 클릭하면 `?issueId=...&subtaskId=...`가 붙은 전용 화면으로 이동하면서 **그 하위 태스크가 처음부터 선택된 상태**로 열리는지 (다른 하위 태스크가 아니라 정확히 클릭한 그 항목)
 - 좌측에 하위 태스크 목록(제목, 완료/미완료 칩, 문서 있음/없음 필)이 보이는지, 상태 변경 UI가 없는지(읽기 전용)
 - 하위 태스크를 클릭하면 우측 패널이 그 항목의 문서로 바뀌는지
 - 편집 탭에서 마크다운 입력 → 저장 버튼 활성화("수정됨" 표시) → 저장 클릭 → "저장됨 ✓"로 바뀌는지
