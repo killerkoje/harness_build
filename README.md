@@ -195,6 +195,8 @@ cd apps/issue-board && npm run dev       # :5173
 
 대시보드의 "패턴확인" 버튼은 `apps/pattern-viewer`(:3100)를 **지금 보고 있는 프로젝트 id**로 열어(`?projectId=`), 그 프로젝트의 `.harness/patterns`만 보여준다. `projectId` 없이 직접 접속하면 issue-board-mcp에 등록된 프로젝트 목록에서 고르는 화면이 뜬다.
 
+옆의 "프로젝트" 버튼은 해당 프로젝트의 `dev_url`(DB `projects.dev_url`, `PATCH /api/projects/:id/dev-url`로만 설정 가능 — 대시보드 UI에는 입력 경로가 없다)을 **`?projectId=`를 붙여서** 새 탭으로 연다. 여러 프로젝트의 dev 서버가 로컬에서 전부 같은 포트(예: 3000)로 뜨더라도 탭 URL로는 어느 프로젝트인지 구분된다. `dev_url`이 비어 있으면 링크 대신 비활성 상태로 "프로젝트 미구현"이 뜬다.
+
 스택: Next.js 15 · React 19 · Tailwind v4 · TS (대시보드) / Node 20 · TypeScript · better-sqlite3 · express · `@modelcontextprotocol/sdk` (백엔드)
 
 ### Notion 동기화 (선택)
