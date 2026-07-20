@@ -18,11 +18,9 @@ function allSubtasksDone(issue: Issue): boolean {
 export default function IssueList({
   issues,
   plans,
-  projectId,
 }: {
   issues: Issue[]
   plans: Plan[]
-  projectId: number
 }) {
   const [items, setItems] = useState(issues)
   const [roundFilter, setRoundFilter] = useState<number | 'all'>('all')
@@ -114,7 +112,6 @@ export default function IssueList({
                 {isExpanded && (
                   <IssueSubtasks
                     issueId={issue.id}
-                    projectId={projectId}
                     onProgressChange={(progress) => updateIssueProgress(issue.id, progress)}
                   />
                 )}
