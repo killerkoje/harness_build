@@ -9,7 +9,7 @@ export default async function IssuesPage({ params }: { params: Promise<{ id: str
 
   try {
     const [issues, plans] = await Promise.all([fetchIssues(projectId), fetchPlans(projectId)])
-    return <IssueList issues={issues} plans={plans} projectId={projectId} />
+    return <IssueList issues={issues} plans={plans} />
   } catch {
     return <ConnectionErrorBanner />
   }
