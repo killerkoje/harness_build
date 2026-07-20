@@ -19,9 +19,11 @@ function computeProgress(list: Subtask[]): Progress {
 
 export default function IssueSubtasks({
   issueId,
+  projectId,
   onProgressChange,
 }: {
   issueId: number
+  projectId: number
   onProgressChange?: (progress: Progress) => void
 }) {
   const [subtasks, setSubtasks] = useState<Subtask[] | null>(null)
@@ -100,6 +102,12 @@ export default function IssueSubtasks({
           >
             {subtask.title}
           </span>
+          <a
+            href={`/projects/${projectId}/issues?issueId=${issueId}&subtaskId=${subtask.id}`}
+            className="text-xs text-indigo-600 shrink-0"
+          >
+            문서
+          </a>
           <select
             value={subtask.done ? 'done' : 'open'}
             onChange={(e) => handleStatusChange(subtask, e.target.value === 'done')}

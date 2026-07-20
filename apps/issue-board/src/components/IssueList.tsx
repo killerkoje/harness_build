@@ -109,19 +109,12 @@ export default function IssueList({
                     )}
                   </div>
                   <p className="text-xs text-zinc-500">{issue.description}</p>
-                  <div className="mt-2">
-                    <a
-                      href={`/projects/${projectId}/issues?issueId=${issue.id}`}
-                      className="text-xs text-indigo-600"
-                    >
-                      문서 보기 →
-                    </a>
-                  </div>
                 </div>
 
                 {isExpanded && (
                   <IssueSubtasks
                     issueId={issue.id}
+                    projectId={projectId}
                     onProgressChange={(progress) => updateIssueProgress(issue.id, progress)}
                   />
                 )}
