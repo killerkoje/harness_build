@@ -1,10 +1,6 @@
 'use client'
 
 // src/components/ProjectQuickLinks.tsx
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { updateProjectDevUrl } from '@/lib/api'
-
 const PATTERN_VIEWER_URL = process.env.NEXT_PUBLIC_PATTERN_VIEWER_URL ?? 'http://localhost:3100'
 
 interface Props {
@@ -12,24 +8,20 @@ interface Props {
   devUrl: string | null
 }
 
-export default function ProjectQuickLinks({ projectId, devUrl }: Props) {
-  const router = useRouter()
-  const [saving, setSaving] = useState(false)
-
-  async function handleDevProjectClick(e: React.MouseEvent) {
-    if (devUrl) return // let the anchor's href navigate normally
-    e.preventDefault()
-    const input = window.prompt('개발 프로젝트 dev 서버 URL을 입력하세요 (예: http://localhost:3000)')
-    if (!input) return
-    setSaving(true)
-    try {
-      await updateProjectDevUrl(projectId, input)
-      router.refresh()
-      window.open(input, '_blank', 'noopener,noreferrer')
-    } finally {
-      setSaving(false)
-    }
+// most projects' dev servers all default to the same localhost port, so tag the
+// URL with projectId to tell tabs apart, mirroring the pattern-viewer link below
+function withProjectId(url: string, projectId: number): string {
+  try {
+    const parsed = new URL(url)
+    parsed.searchParams.set('projectId', String(projectId))
+    return parsed.toString()
+  } catch {
+    return url
   }
+}
+
+export default function ProjectQuickLinks({ projectId, devUrl }: Props) {
+  const devHref = devUrl ? withProjectId(devUrl, projectId) : null
 
   return (
     <div className="flex shrink-0 items-center gap-1.5 px-2 sm:px-4 md:px-6 py-1.5">
@@ -41,17 +33,25 @@ export default function ProjectQuickLinks({ projectId, devUrl }: Props) {
       >
         패턴확인
       </a>
-      <a
-        href={devUrl ?? '#'}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={handleDevProjectClick}
-        aria-busy={saving}
-        title={devUrl ?? 'dev 서버 URL 설정 필요'}
-        className="shrink-0 rounded-md border border-zinc-200 px-2.5 py-1 text-xs text-zinc-600 hover:bg-zinc-50 whitespace-nowrap"
-      >
-        개발 프로젝트
-      </a>
+      {devHref ? (
+        <a
+          href={devHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={devHref}
+          className="shrink-0 rounded-md border border-zinc-200 px-2.5 py-1 text-xs text-zinc-600 hover:bg-zinc-50 whitespace-nowrap"
+        >
+          개발 프로젝트
+        </a>
+      ) : (
+        <span
+          aria-disabled="true"
+          title="dev 서버 URL 없음"
+          className="shrink-0 cursor-not-allowed rounded-md border border-zinc-100 px-2.5 py-1 text-xs text-zinc-300 whitespace-nowrap"
+        >
+          개발 프로젝트 없음
+        </span>
+      )}
     </div>
   )
 }

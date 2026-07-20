@@ -97,16 +97,6 @@ export async function deleteProject(projectId: number): Promise<void> {
   if (!res.ok) throw new Error(`request failed: ${res.status}`)
 }
 
-export async function updateProjectDevUrl(projectId: number, devUrl: string | null): Promise<Project> {
-  return json(
-    await fetch(`${BASE_URL}/api/projects/${projectId}/dev-url`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ devUrl }),
-    })
-  )
-}
-
 export async function fetchIssues(projectId: number): Promise<Issue[]> {
   return json(await fetch(`${BASE_URL}/api/projects/${projectId}/issues`))
 }
