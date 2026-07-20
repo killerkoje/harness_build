@@ -18,9 +18,11 @@ function allSubtasksDone(issue: Issue): boolean {
 export default function IssueList({
   issues,
   plans,
+  projectId,
 }: {
   issues: Issue[]
   plans: Plan[]
+  projectId: number
 }) {
   const [items, setItems] = useState(issues)
   const [roundFilter, setRoundFilter] = useState<number | 'all'>('all')
@@ -107,6 +109,14 @@ export default function IssueList({
                     )}
                   </div>
                   <p className="text-xs text-zinc-500">{issue.description}</p>
+                  <div className="mt-2">
+                    <a
+                      href={`/projects/${projectId}/issues?issueId=${issue.id}`}
+                      className="text-xs text-indigo-600"
+                    >
+                      문서 보기 →
+                    </a>
+                  </div>
                 </div>
 
                 {isExpanded && (
