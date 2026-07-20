@@ -5,6 +5,22 @@ import { getProject } from './projects.js'
 import { seedIssueYaml } from '../handoff.js'
 import { pushIssueToNotion } from './notion.js'
 
+/**
+ * Ordering of the issue lifecycle. Used to stop status-changing operations
+ * from moving an issue backward (e.g. re-saving a wireframe on an already
+ * dev_approved issue must not un-approve it).
+ */
+const STATUS_ORDER: Record<IssueStatus, number> = {
+  planned: 0,
+  wireframed: 1,
+  dev_approved: 2,
+  done: 3,
+}
+
+function isBackwardStatus(from: IssueStatus, to: IssueStatus): boolean {
+  return STATUS_ORDER[to] < STATUS_ORDER[from]
+}
+
 function rowToIssue(row: any): Issue {
   return {
     id: row.id,
@@ -125,6 +141,24 @@ export function setIssueStatus(db: Database.Database, id: number, status: IssueS
   )
 }
 
+/**
+ * Same as setIssueStatus, but refuses to move the issue backward in the
+ * lifecycle (planned < wireframed < dev_approved < done). Used by callers
+ * where re-running the same action (e.g. re-saving a wireframe) must not
+ * undo further progress that already happened.
+ */
+export function advanceIssueStatus(
+  db: Database.Database,
+  id: number,
+  status: IssueStatus
+): Issue | null {
+  const issue = getIssue(db, id)
+  if (!issue) return null
+  if (isBackwardStatus(issue.status, status)) return issue
+  setIssueStatus(db, id, status)
+  return getIssue(db, id)
+}
+
 export function getIssueByNumber(
   db: Database.Database,
   projectId: number,
@@ -169,6 +203,7 @@ export function updateIssueFields(
 export async function approveIssueForDev(db: Database.Database, issueId: number): Promise<Issue | null> {
   const issue = getIssue(db, issueId)
   if (!issue) return null
+  if (isBackwardStatus(issue.status, 'dev_approved')) return issue
 
   setIssueStatus(db, issueId, 'dev_approved')
   const updated = getIssue(db, issueId)!

@@ -1,10 +1,13 @@
 // src/models/subtasks.test.ts
 import { describe, it, expect, beforeEach } from 'vitest'
 import type Database from 'better-sqlite3'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { createDb } from '../db.js'
 import { getOrCreateProject } from './projects.js'
 import { createPlan } from './plans.js'
-import { createIssuesFromPlan, getIssue } from './issues.js'
+import { createIssuesFromPlan, getIssue, approveIssueForDev } from './issues.js'
 import {
   listSubtasksByIssue,
   createSubtask,
@@ -89,41 +92,69 @@ describe('subtasks model', () => {
   })
 
   describe('maybeAutoCompleteIssue', () => {
+    // completeIssue requires the issue to have already gone through
+    // approve_issue (status 'dev_approved'), which seeds .harness/issues/*.yaml
+    // on disk — so this issue needs a real, writable project root.
+    let approvedIssueId: number
+
+    beforeEach(async () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'issue-board-subtasks-'))
+      const approvedProjectId = getOrCreateProject(db, projectRoot).id
+      const approvedPlanId = createPlan(db, approvedProjectId, 'p', sections).id
+      const [approvedIssue] = createIssuesFromPlan(
+        db,
+        approvedProjectId,
+        approvedPlanId,
+        sections.mvpFeatures
+      )
+      approvedIssueId = approvedIssue.id
+      await approveIssueForDev(db, approvedIssueId)
+    })
+
     it('sets the issue status to done when every subtask is done', async () => {
-      const a = createSubtask(db, issueId, '하나')
-      const b = createSubtask(db, issueId, '둘')
+      const a = createSubtask(db, approvedIssueId, '하나')
+      const b = createSubtask(db, approvedIssueId, '둘')
       updateSubtask(db, a.id, { done: true })
       updateSubtask(db, b.id, { done: true })
 
-      await maybeAutoCompleteIssue(db, issueId)
+      await maybeAutoCompleteIssue(db, approvedIssueId)
 
-      expect(getIssue(db, issueId)?.status).toBe('done')
+      expect(getIssue(db, approvedIssueId)?.status).toBe('done')
     })
 
     it('does nothing while some subtasks are still open', async () => {
-      const a = createSubtask(db, issueId, '하나')
-      createSubtask(db, issueId, '둘')
+      const a = createSubtask(db, approvedIssueId, '하나')
+      createSubtask(db, approvedIssueId, '둘')
       updateSubtask(db, a.id, { done: true })
 
-      await maybeAutoCompleteIssue(db, issueId)
+      await maybeAutoCompleteIssue(db, approvedIssueId)
 
-      expect(getIssue(db, issueId)?.status).toBe('planned')
+      expect(getIssue(db, approvedIssueId)?.status).toBe('dev_approved')
     })
 
     it('does nothing when the issue has no subtasks at all', async () => {
-      await maybeAutoCompleteIssue(db, issueId)
-      expect(getIssue(db, issueId)?.status).toBe('planned')
+      await maybeAutoCompleteIssue(db, approvedIssueId)
+      expect(getIssue(db, approvedIssueId)?.status).toBe('dev_approved')
     })
 
     it('is a no-op when the issue is already done', async () => {
-      const a = createSubtask(db, issueId, '하나')
+      const a = createSubtask(db, approvedIssueId, '하나')
       updateSubtask(db, a.id, { done: true })
-      await maybeAutoCompleteIssue(db, issueId)
-      expect(getIssue(db, issueId)?.status).toBe('done')
+      await maybeAutoCompleteIssue(db, approvedIssueId)
+      expect(getIssue(db, approvedIssueId)?.status).toBe('done')
 
       // Re-running after it's already done must not throw or change anything.
+      await maybeAutoCompleteIssue(db, approvedIssueId)
+      expect(getIssue(db, approvedIssueId)?.status).toBe('done')
+    })
+
+    it('does not auto-complete an issue that has not been approved for dev yet', async () => {
+      const a = createSubtask(db, issueId, '하나')
+      updateSubtask(db, a.id, { done: true })
+
       await maybeAutoCompleteIssue(db, issueId)
-      expect(getIssue(db, issueId)?.status).toBe('done')
+
+      expect(getIssue(db, issueId)?.status).toBe('planned')
     })
   })
 })

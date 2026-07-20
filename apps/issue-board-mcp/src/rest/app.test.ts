@@ -211,6 +211,22 @@ describe('REST API', () => {
 
     const yamlPath = path.join(projectRoot, '.harness/issues/1.yaml')
     expect(fs.existsSync(yamlPath)).toBe(true)
+
+    // Re-saving the wireframe or re-approving after the issue has moved on
+    // must not un-approve / un-complete it.
+    const wfAgainRes = await request(app)
+      .put(`/api/issues/${issue.id}/wireframe`)
+      .send({ screens })
+    expect(wfAgainRes.status).toBe(200)
+    expect((await request(app).get(`/api/issues/${issue.id}`)).body.status).toBe('dev_approved')
+
+    const completeRes = await request(app).post(`/api/issues/${issue.id}/complete`)
+    expect(completeRes.status).toBe(200)
+    expect(completeRes.body.status).toBe('done')
+
+    const reapproveRes = await request(app).post(`/api/issues/${issue.id}/approve`)
+    expect(reapproveRes.status).toBe(200)
+    expect(reapproveRes.body.status).toBe('done')
   })
 
   it('PUT/GET design-system upserts and returns tokens + component issue links', async () => {
@@ -464,12 +480,38 @@ describe('REST API', () => {
     ).body
     await request(app).post(`/api/plans/${plan.id}/approve`)
     const issue = (await request(app).get(`/api/projects/${project.id}/issues`)).body[0]
+    await request(app).post(`/api/issues/${issue.id}/approve`)
     const created = await request(app).post(`/api/issues/${issue.id}/subtasks`).send({ title: 't' })
 
     await request(app).put(`/api/subtasks/${created.body.id}`).send({ done: true })
 
     const updatedIssue = (await request(app).get(`/api/issues/${issue.id}`)).body
     expect(updatedIssue.status).toBe('done')
+  })
+
+  it('PUT /api/subtasks/:id does not auto-complete an issue that has not been dev-approved', async () => {
+    const project = (await request(app).post('/api/projects').send({ rootPath: projectRoot })).body
+    const plan = (
+      await request(app)
+        .post(`/api/projects/${project.id}/plans`)
+        .send({
+          title: 'p',
+          sections: {
+            overview: 'o',
+            targetUsers: 't',
+            mvpFeatures: [{ priority: '높음', title: '로그인', description: 'd' }],
+            outOfScope: 'x',
+          },
+        })
+    ).body
+    await request(app).post(`/api/plans/${plan.id}/approve`)
+    const issue = (await request(app).get(`/api/projects/${project.id}/issues`)).body[0]
+    const created = await request(app).post(`/api/issues/${issue.id}/subtasks`).send({ title: 't' })
+
+    await request(app).put(`/api/subtasks/${created.body.id}`).send({ done: true })
+
+    const updatedIssue = (await request(app).get(`/api/issues/${issue.id}`)).body
+    expect(updatedIssue.status).toBe('planned')
   })
 
   it('DELETE /api/subtasks/:id auto-completes the issue when the last open subtask is removed', async () => {
@@ -489,6 +531,7 @@ describe('REST API', () => {
     ).body
     await request(app).post(`/api/plans/${plan.id}/approve`)
     const issue = (await request(app).get(`/api/projects/${project.id}/issues`)).body[0]
+    await request(app).post(`/api/issues/${issue.id}/approve`)
     const done = await request(app).post(`/api/issues/${issue.id}/subtasks`).send({ title: '완료됨' })
     const open = await request(app).post(`/api/issues/${issue.id}/subtasks`).send({ title: '미완료' })
     await request(app).put(`/api/subtasks/${done.body.id}`).send({ done: true })

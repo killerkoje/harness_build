@@ -79,12 +79,19 @@ export function deleteSubtask(db: Database.Database, id: number): boolean {
   return result.changes > 0
 }
 
+/**
+ * Only auto-completes an issue once it has actually been through
+ * approve_issue (status 'dev_approved'). Subtask checkboxes alone must not
+ * fast-forward a 'planned'/'wireframed' issue straight to 'done' — that
+ * would report an issue as finished even though `.harness/issues/{n}.yaml`
+ * was never seeded, so the dev pipeline never picked it up.
+ */
 export async function maybeAutoCompleteIssue(db: Database.Database, issueId: number): Promise<void> {
   const subtasks = listSubtasksByIssue(db, issueId)
   if (subtasks.length === 0) return
   const allDone = subtasks.every((s) => s.done)
   if (!allDone) return
   const issue = getIssue(db, issueId)
-  if (!issue || issue.status === 'done') return
+  if (!issue || issue.status !== 'dev_approved') return
   await completeIssue(db, issueId)
 }

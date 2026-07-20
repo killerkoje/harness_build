@@ -138,6 +138,18 @@ describe('issues model', () => {
     it('returns null for a nonexistent issue', async () => {
       expect(await approveIssueForDev(db, 999999)).toBeNull()
     })
+
+    it('does not regress an already-done issue back to dev_approved', async () => {
+      const [issue] = createIssuesFromPlan(db, issuesProjectId, issuesPlanId, [sections.mvpFeatures[0]])
+      await approveIssueForDev(db, issue.id)
+      await completeIssue(db, issue.id)
+      expect(getIssue(db, issue.id)?.status).toBe('done')
+
+      const reapproved = await approveIssueForDev(db, issue.id)
+
+      expect(reapproved?.status).toBe('done')
+      expect(getIssue(db, issue.id)?.status).toBe('done')
+    })
   })
 
   describe('completeIssue', () => {

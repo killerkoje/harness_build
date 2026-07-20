@@ -21,7 +21,7 @@ import {
 import {
   listIssuesByProjectWithProgress,
   getIssue,
-  setIssueStatus,
+  advanceIssueStatus,
   approveIssueForDev,
   completeIssue,
   setIssueNotionStatus,
@@ -152,7 +152,7 @@ export function createApp(db: Database.Database) {
     if (!issue) return res.status(404).json({ error: 'not found' })
 
     const wireframe = upsertWireframe(db, issueId, req.body.screens)
-    setIssueStatus(db, issueId, 'wireframed')
+    advanceIssueStatus(db, issueId, 'wireframed')
     res.json(wireframe)
   })
 

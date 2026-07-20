@@ -24,7 +24,7 @@ import {
   listIssuesByProject,
   approveIssueForDev,
   completeIssue,
-  setIssueStatus,
+  advanceIssueStatus,
 } from '../models/issues.js'
 import { upsertWireframe } from '../models/wireframes.js'
 import { createSubtasksBulk } from '../models/subtasks.js'
@@ -243,7 +243,7 @@ export function createMcpServer(db: Database.Database): McpServer {
         return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
       }
       const wireframe = upsertWireframe(db, issueId, screens)
-      setIssueStatus(db, issueId, 'wireframed')
+      advanceIssueStatus(db, issueId, 'wireframed')
       return { content: [{ type: 'text', text: JSON.stringify(wireframe) }] }
     }
   )
