@@ -44,6 +44,11 @@ describe('subtasks model', () => {
     expect(subtask.issueId).toBe(issueId)
   })
 
+  it('createSubtask starts with empty notes', () => {
+    const subtask = createSubtask(db, issueId, '제목')
+    expect(subtask.notes).toBe('')
+  })
+
   it('createSubtasksBulk creates multiple subtasks in order', () => {
     const created = createSubtasksBulk(db, issueId, ['하나', '둘', '셋'])
     expect(created.map((s) => s.title)).toEqual(['하나', '둘', '셋'])
@@ -59,6 +64,17 @@ describe('subtasks model', () => {
     const renamed = updateSubtask(db, subtask.id, { title: '새 제목' })
     expect(renamed?.title).toBe('새 제목')
     expect(renamed?.done).toBe(true)
+  })
+
+  it('updateSubtask updates notes independently of title and done', () => {
+    const subtask = createSubtask(db, issueId, '제목')
+    const withNotes = updateSubtask(db, subtask.id, { notes: '완료: API 라우터 작성함' })
+    expect(withNotes?.notes).toBe('완료: API 라우터 작성함')
+    expect(withNotes?.title).toBe('제목')
+    expect(withNotes?.done).toBe(false)
+
+    const toggled = updateSubtask(db, subtask.id, { done: true })
+    expect(toggled?.notes).toBe('완료: API 라우터 작성함')
   })
 
   it('updateSubtask returns null for a nonexistent id', () => {

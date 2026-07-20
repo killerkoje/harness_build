@@ -59,14 +59,15 @@ export function createSubtasksBulk(
 export function updateSubtask(
   db: Database.Database,
   id: number,
-  fields: { title?: string; done?: boolean }
+  fields: { title?: string; done?: boolean; notes?: string }
 ): Subtask | null {
   const existing = getSubtask(db, id)
   if (!existing) return null
   const now = new Date().toISOString()
-  db.prepare('UPDATE issue_subtasks SET title = ?, done = ?, updated_at = ? WHERE id = ?').run(
+  db.prepare('UPDATE issue_subtasks SET title = ?, done = ?, notes = ?, updated_at = ? WHERE id = ?').run(
     fields.title ?? existing.title,
     (fields.done ?? existing.done) ? 1 : 0,
+    fields.notes ?? existing.notes,
     now,
     id
   )
