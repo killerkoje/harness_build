@@ -8,6 +8,9 @@ import { updateSubtask, type Subtask } from '@/lib/api'
 
 const MIN_LIST_WIDTH = 220
 const DOC_PANE_MIN_MARGIN = 320
+const MIN_PANEL_WIDTH = 560
+const DEFAULT_PANEL_WIDTH = 900
+const PANEL_WIDTH_MARGIN = 80
 
 export default function SubtaskDocsOverlay({
   subtasks,
@@ -27,8 +30,11 @@ export default function SubtaskDocsOverlay({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [listWidth, setListWidth] = useState(280)
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
+  const [entered, setEntered] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const draggingRef = useRef(false)
+  const draggingListRef = useRef(false)
+  const draggingPanelRef = useRef(false)
 
   const selected = subtasks.find((s) => s.id === selectedId) ?? null
   const dirty = selected != null && draft !== selected.notes
@@ -77,15 +83,38 @@ export default function SubtaskDocsOverlay({
   }, [dirty, draft, selected])
 
   useEffect(() => {
+    const id = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  useEffect(() => {
     function onMouseMove(e: MouseEvent) {
-      if (!draggingRef.current || !containerRef.current) return
+      if (!draggingListRef.current || !containerRef.current) return
       const rect = containerRef.current.getBoundingClientRect()
       const raw = e.clientX - rect.left
       const max = rect.width - DOC_PANE_MIN_MARGIN
       setListWidth(Math.max(MIN_LIST_WIDTH, Math.min(max, raw)))
     }
     function onMouseUp() {
-      draggingRef.current = false
+      draggingListRef.current = false
+    }
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [])
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!draggingPanelRef.current) return
+      const raw = window.innerWidth - e.clientX
+      const max = window.innerWidth - PANEL_WIDTH_MARGIN
+      setPanelWidth(Math.max(MIN_PANEL_WIDTH, Math.min(max, raw)))
+    }
+    function onMouseUp() {
+      draggingPanelRef.current = false
     }
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('mouseup', onMouseUp)
@@ -96,12 +125,22 @@ export default function SubtaskDocsOverlay({
   }, [])
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4" onClick={handleClose}>
+    <div className="fixed inset-0 z-30 bg-black/40" onClick={handleClose}>
       <div
-        ref={containerRef}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-4xl h-[80vh] bg-white rounded-xl shadow-xl border border-zinc-200 flex overflow-hidden"
+        style={{ width: panelWidth }}
+        className={`fixed top-0 right-0 h-full bg-white shadow-xl border-l border-zinc-200 flex transition-transform duration-200 ease-out ${
+          entered ? 'translate-x-0' : 'translate-x-full'
+        }`}
       >
+        <div
+          onMouseDown={(e) => {
+            e.preventDefault()
+            draggingPanelRef.current = true
+          }}
+          className="w-1.5 shrink-0 cursor-col-resize bg-zinc-100 hover:bg-indigo-500 transition-colors"
+        />
+        <div ref={containerRef} className="flex-1 min-w-0 flex overflow-hidden">
         <div
           style={{ width: listWidth }}
           className="shrink-0 border-r border-zinc-200 overflow-y-auto p-2 space-y-1.5 bg-zinc-50"
@@ -142,7 +181,7 @@ export default function SubtaskDocsOverlay({
         <div
           onMouseDown={(e) => {
             e.preventDefault()
-            draggingRef.current = true
+            draggingListRef.current = true
           }}
           className="w-1.5 shrink-0 cursor-col-resize bg-zinc-100 hover:bg-indigo-500 transition-colors"
         />
@@ -244,6 +283,7 @@ export default function SubtaskDocsOverlay({
               </div>
             </>
           )}
+        </div>
         </div>
       </div>
     </div>
