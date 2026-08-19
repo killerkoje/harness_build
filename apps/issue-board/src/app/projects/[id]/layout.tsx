@@ -2,6 +2,7 @@
 import ProjectSidebar from '@/components/ProjectSidebar'
 import TabNav from '@/components/TabNav'
 import ProjectQuickLinks from '@/components/ProjectQuickLinks'
+import { fetchProjects } from '@/lib/api'
 
 export default async function ProjectLayout({
   children,
@@ -12,13 +13,9 @@ export default async function ProjectLayout({
 }) {
   const { id } = await params
   const projectId = Number(id)
-  const baseUrl = process.env.NEXT_PUBLIC_ISSUE_BOARD_API_URL ?? 'http://localhost:4000'
-  // fetch itself can throw (e.g. MCP server down/unreachable), not just
-  // return a non-ok response — fall back the same way for both.
   let projects: { id: number; name: string; devUrl?: string | null }[]
   try {
-    const res = await fetch(`${baseUrl}/api/projects`)
-    projects = res.ok ? await res.json() : [{ id: projectId, name: `프로젝트 ${projectId}` }]
+    projects = await fetchProjects()
   } catch {
     projects = [{ id: projectId, name: `프로젝트 ${projectId}` }]
   }

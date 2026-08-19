@@ -4,6 +4,7 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Plan } from '@/lib/api'
+import PlanStatusSelect from '@/components/PlanStatusSelect'
 
 const PRIORITY_STYLE: Record<string, string> = {
   높음: 'bg-red-50 text-red-700',
@@ -31,7 +32,7 @@ function Callout({ children }: { children: React.ReactNode }) {
         ? 'border-rose-200 bg-rose-50/70'
         : 'border-zinc-200 bg-zinc-50'
   return (
-    <blockquote className={`my-3 rounded-lg border-l-4 px-4 py-3 text-sm leading-relaxed ${tone}`}>
+    <blockquote className={`my-3 rounded-lg border-l-4 px-4 py-3 leading-relaxed ${tone}`}>
       {children}
     </blockquote>
   )
@@ -39,17 +40,22 @@ function Callout({ children }: { children: React.ReactNode }) {
 
 function MarkdownPlan({ markdown }: { markdown: string }) {
   return (
-    <div className="plan-md max-w-none text-sm text-zinc-800">
+    <div className="plan-md max-w-none text-[1.1375rem] text-zinc-800">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ children }) => (
-            <h1 className="text-xl font-semibold tracking-tight mb-4">{children}</h1>
+            <h1 className="text-[1.4625rem] font-semibold tracking-tight mb-4">{children}</h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-base font-semibold text-zinc-900 mt-8 mb-3 pb-1 border-b border-zinc-100">
+            <h2 className="text-[1.3rem] font-semibold text-zinc-900 mt-8 mb-3 pb-1 border-b border-zinc-100">
               {children}
             </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-[1.3125rem] font-semibold text-zinc-900 mt-6 mb-2 leading-snug">
+              {children}
+            </h3>
           ),
           p: ({ children }) => <p className="my-2 leading-relaxed text-zinc-700">{children}</p>,
           ul: ({ children }) => <ul className="my-2 ml-5 list-disc space-y-1 text-zinc-700">{children}</ul>,
@@ -58,7 +64,7 @@ function MarkdownPlan({ markdown }: { markdown: string }) {
           blockquote: ({ children }) => <Callout>{children}</Callout>,
           table: ({ children }) => (
             <div className="my-3 overflow-x-auto rounded-lg border border-zinc-200">
-              <table className="w-full text-sm">{children}</table>
+              <table className="w-full text-[1.1375rem]">{children}</table>
             </div>
           ),
           thead: ({ children }) => <thead className="bg-zinc-50 text-zinc-600">{children}</thead>,
@@ -133,10 +139,8 @@ export default function PlanView({ plan }: { plan: Plan }) {
   return (
     <div className="max-w-3xl space-y-4">
       <div className="flex items-center gap-2">
-        <h1 className="text-xl font-semibold">{plan.title}</h1>
-        <span className="text-xs px-2 py-0.5 rounded bg-zinc-100 text-zinc-600">
-          {plan.status === 'approved' ? '확정' : '초안'}
-        </span>
+        <h1 className="text-[1.4625rem] font-semibold">{plan.title}</h1>
+        <PlanStatusSelect planId={plan.id} status={plan.status} />
       </div>
       {plan.sections.markdown ? (
         <MarkdownPlan markdown={plan.sections.markdown} />

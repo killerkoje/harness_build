@@ -1,4 +1,3 @@
-// src/lib/api.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   fetchIssues,
@@ -7,41 +6,82 @@ import {
   deleteProject,
   fetchPlans,
   fetchSubtasks,
+  updatePlanStatus,
   createSubtask,
   updateSubtask,
   deleteSubtask,
 } from './api.js'
 
+const URL = 'https://example.supabase.co'
+
 describe('api client', () => {
   beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', URL)
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'test-anon')
     vi.stubGlobal('fetch', vi.fn())
   })
 
-  it('fetchIssues calls GET /api/projects/:id/issues and returns parsed json', async () => {
-    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => [{ id: 1, number: 1 }] })
+  it('fetchIssues calls supabase issues + subtasks', async () => {
+    ;(fetch as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ id: 1, project_id: 42, number: 1, plan_id: null, title: 'a', priority: '보통', description: '', status: 'planned', notion_page_id: null, notion_status: null, created_at: '', updated_at: '' }],
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
     const issues = await fetchIssues(42)
-    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/projects/42/issues')
-    expect(issues).toEqual([{ id: 1, number: 1 }])
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      `${URL}/rest/v1/issues?select=*&project_id=eq.42&order=number`,
+      expect.any(Object)
+    )
+    expect(issues[0]?.id).toBe(1)
   })
 
-  it('approveIssue calls POST /api/issues/:id/approve', async () => {
-    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({ id: 7, status: 'dev_approved' }) })
+  it('approveIssue patches issue status', async () => {
+    ;(fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          id: 7,
+          project_id: 1,
+          number: 1,
+          plan_id: null,
+          title: 'a',
+          priority: '보통',
+          description: '',
+          status: 'dev_approved',
+          notion_page_id: null,
+          notion_status: null,
+          created_at: '',
+          updated_at: '',
+        },
+      ],
+    })
     const issue = await approveIssue(7)
-    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/issues/7/approve', { method: 'POST' })
+    expect(fetch).toHaveBeenCalledWith(
+      `${URL}/rest/v1/issues?id=eq.7`,
+      expect.objectContaining({ method: 'PATCH' })
+    )
     expect(issue.status).toBe('dev_approved')
   })
 
-  it('fetchProjects calls GET /api/projects and returns parsed json', async () => {
-    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => [{ id: 1, name: 'a' }] })
+  it('fetchProjects calls supabase projects', async () => {
+    ;(fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => [{ id: 1, root_path: '/a', name: 'a', description: '', dev_url: null }],
+    })
     const projects = await fetchProjects()
-    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/projects')
-    expect(projects).toEqual([{ id: 1, name: 'a' }])
+    expect(fetch).toHaveBeenCalledWith(`${URL}/rest/v1/projects?select=*&order=id`, expect.any(Object))
+    expect(projects).toEqual([{ id: 1, rootPath: '/a', name: 'a', description: '', devUrl: null }])
   })
 
-  it('deleteProject calls DELETE /api/projects/:id', async () => {
+  it('deleteProject deletes via supabase', async () => {
     ;(fetch as any).mockResolvedValue({ ok: true })
     await deleteProject(5)
-    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/projects/5', { method: 'DELETE' })
+    expect(fetch).toHaveBeenCalledWith(
+      `${URL}/rest/v1/projects?id=eq.5`,
+      expect.objectContaining({ method: 'DELETE' })
+    )
   })
 
   it('deleteProject throws when the request fails', async () => {
@@ -49,59 +89,90 @@ describe('api client', () => {
     await expect(deleteProject(999)).rejects.toThrow('request failed: 404')
   })
 
-  it('fetchPlans calls GET /api/projects/:id/plans and returns parsed json', async () => {
-    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => [{ id: 1, title: 'p1' }] })
-    const plans = await fetchPlans(42)
-    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/projects/42/plans')
-    expect(plans).toEqual([{ id: 1, title: 'p1' }])
-  })
-
-  it('fetchSubtasks calls GET /api/issues/:id/subtasks and returns parsed json', async () => {
-    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => [{ id: 1, title: 't', done: false }] })
-    const subtasks = await fetchSubtasks(7)
-    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/issues/7/subtasks')
-    expect(subtasks).toEqual([{ id: 1, title: 't', done: false }])
-  })
-
-  it('createSubtask calls POST /api/issues/:id/subtasks with the title', async () => {
-    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({ id: 1, title: '새 태스크', done: false }) })
-    const subtask = await createSubtask(7, '새 태스크')
-    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/issues/7/subtasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: '새 태스크' }),
+  it('updatePlanStatus patches plan status', async () => {
+    ;(fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { id: 1, project_id: 42, title: 'p1', status: 'approved', sections: { overview: '', targetUsers: '', mvpFeatures: [], outOfScope: '' } },
+      ],
     })
+    const plan = await updatePlanStatus(1, 'approved')
+    expect(fetch).toHaveBeenCalledWith(
+      `${URL}/rest/v1/plans?id=eq.1`,
+      expect.objectContaining({ method: 'PATCH' })
+    )
+    expect(plan.status).toBe('approved')
+  })
+
+  it('fetchPlans calls supabase plans', async () => {
+    ;(fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { id: 1, project_id: 42, title: 'p1', status: 'draft', sections: { overview: '', targetUsers: '', mvpFeatures: [], outOfScope: '' } },
+      ],
+    })
+    const plans = await fetchPlans(42)
+    expect(fetch).toHaveBeenCalledWith(
+      `${URL}/rest/v1/plans?select=*&project_id=eq.42&order=id`,
+      expect.any(Object)
+    )
+    expect(plans[0]?.title).toBe('p1')
+  })
+
+  it('fetchSubtasks calls supabase issue_subtasks', async () => {
+    ;(fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => [{ id: 1, issue_id: 7, title: 't', done: false, notes: '' }],
+    })
+    const subtasks = await fetchSubtasks(7)
+    expect(fetch).toHaveBeenCalledWith(
+      `${URL}/rest/v1/issue_subtasks?select=*&issue_id=eq.7&order=id`,
+      expect.any(Object)
+    )
+    expect(subtasks).toEqual([{ id: 1, issueId: 7, title: 't', done: false, notes: '' }])
+  })
+
+  it('createSubtask posts to supabase', async () => {
+    ;(fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => [{ id: 1, issue_id: 7, title: '새 태스크', done: false, notes: '' }],
+    })
+    const subtask = await createSubtask(7, '새 태스크')
+    expect(fetch).toHaveBeenCalledWith(
+      `${URL}/rest/v1/issue_subtasks`,
+      expect.objectContaining({ method: 'POST' })
+    )
     expect(subtask.title).toBe('새 태스크')
   })
 
-  it('updateSubtask calls PUT /api/subtasks/:id with partial fields', async () => {
-    ;(fetch as any).mockResolvedValue({ ok: true, json: async () => ({ id: 1, title: 't', done: true }) })
-    const updated = await updateSubtask(1, { done: true })
-    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/subtasks/1', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ done: true }),
+  it('updateSubtask patches supabase', async () => {
+    ;(fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => [{ id: 1, issue_id: 7, title: 't', done: true, notes: '' }],
     })
+    const updated = await updateSubtask(1, { done: true })
+    expect(fetch).toHaveBeenCalledWith(
+      `${URL}/rest/v1/issue_subtasks?id=eq.1`,
+      expect.objectContaining({ method: 'PATCH' })
+    )
     expect(updated.done).toBe(true)
   })
 
   it('updateSubtask forwards the notes field', async () => {
     ;(fetch as any).mockResolvedValue({
       ok: true,
-      json: async () => ({ id: 1, title: 't', done: false, notes: '메모' }),
+      json: async () => [{ id: 1, issue_id: 7, title: 't', done: false, notes: '메모' }],
     })
     const updated = await updateSubtask(1, { notes: '메모' })
-    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/subtasks/1', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: '메모' }),
-    })
     expect(updated.notes).toBe('메모')
   })
 
-  it('deleteSubtask calls DELETE /api/subtasks/:id', async () => {
+  it('deleteSubtask deletes via supabase', async () => {
     ;(fetch as any).mockResolvedValue({ ok: true })
     await deleteSubtask(1)
-    expect(fetch).toHaveBeenCalledWith('http://localhost:4000/api/subtasks/1', { method: 'DELETE' })
+    expect(fetch).toHaveBeenCalledWith(
+      `${URL}/rest/v1/issue_subtasks?id=eq.1`,
+      expect.objectContaining({ method: 'DELETE' })
+    )
   })
 })

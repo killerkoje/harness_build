@@ -96,10 +96,11 @@ function buildEpicProperties(planTitle: string) {
  * async).
  */
 export async function pushIssueToNotion(
-  db: Database.Database,
+  db: Database.Database | null,
   issue: Issue,
   epicPageId?: string | null,
-  config: NotionConfig | null = getNotionConfig()
+  config: NotionConfig | null = getNotionConfig(),
+  persistPageId?: (issueId: number, pageId: string) => void | Promise<void>
 ): Promise<void> {
   if (!config) return
 
@@ -137,7 +138,9 @@ export async function pushIssueToNotion(
   if (!res) return
   const data = (await res.json()) as { id?: string }
   if (data.id) {
-    setIssueNotionPageId(db, issue.id, data.id)
+    if (persistPageId) await persistPageId(issue.id, data.id)
+    else if (db) setIssueNotionPageId(db, issue.id, data.id)
+    issue.notionPageId = data.id
   } else {
     console.error(`[notion] create issue ${issue.id} succeeded but response had no page id`)
   }

@@ -1,5 +1,6 @@
 // src/app/layout.tsx
 import './globals.css'
+import RealtimeRefresh from '@/components/RealtimeRefresh'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,7 +11,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body className="bg-zinc-50 text-zinc-900 antialiased">{children}</body>
+      <body className="bg-zinc-50 text-zinc-900 antialiased">
+        <RealtimeRefresh />
+        {children}
+      </body>
     </html>
   )
 }

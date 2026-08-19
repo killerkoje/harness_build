@@ -5,6 +5,8 @@ import express from 'express'
 import { createDb } from './db.js'
 import { createApp } from './rest/app.js'
 import { createMcpServer } from './mcp/server.js'
+import { createStore } from './store.js'
+import { isSupabaseEnabled } from './supabase.js'
 
 try {
   process.loadEnvFile(path.join(process.cwd(), '.env'))
@@ -23,14 +25,15 @@ const PORT = Number(process.env.PORT ?? 4000)
 const DB_PATH = process.env.ISSUE_BOARD_DB ?? path.join(process.cwd(), 'issue-board.db')
 
 const db = createDb(DB_PATH)
-const restApp = createApp(db)
+const store = createStore(db)
+const restApp = createApp(db, store)
 
 restApp.post('/mcp', express.json(), async (req, res) => {
   // This route is registered after createApp()'s own error middleware, so
   // next(err) here would fall through to Express's default HTML error page
   // instead of that JSON handler — respond directly instead.
   try {
-    const server = createMcpServer(db)
+    const server = createMcpServer(db, store)
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
     res.on('close', () => {
       transport.close()
@@ -47,5 +50,6 @@ restApp.post('/mcp', express.json(), async (req, res) => {
 })
 
 restApp.listen(PORT, () => {
-  console.log(`issue-board-mcp listening on :${PORT} (REST /api/*, MCP /mcp), db=${DB_PATH}`)
+  const backend = isSupabaseEnabled() ? 'supabase' : `sqlite ${DB_PATH}`
+  console.log(`issue-board-mcp listening on :${PORT} (REST /api/*, MCP /mcp), db=${backend}`)
 })

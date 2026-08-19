@@ -2,33 +2,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type Database from 'better-sqlite3'
-import {
-  getOrCreateProject,
-  createProject,
-  getProjectContext,
-  getProject,
-} from '../models/projects.js'
-import {
-  createPlan,
-  createPlanFromMarkdown,
-  getPlan,
-  snapshotPlan,
-  updatePlanSections,
-  updatePlanContent,
-  approvePlanAndCreateIssues,
-  syncIssuesFromPlan,
-} from '../models/plans.js'
-import {
-  getIssue,
-  getIssueByNumber,
-  listIssuesByProject,
-  approveIssueForDev,
-  completeIssue,
-  advanceIssueStatus,
-} from '../models/issues.js'
-import { upsertWireframe } from '../models/wireframes.js'
-import { createSubtasksBulk } from '../models/subtasks.js'
-import { upsertDesignSystem, getDesignSystemByProject } from '../models/design-systems.js'
+import { sqliteStore, type Store } from '../store.js'
 import { isNotionConfigured } from '../models/notion.js'
 
 const NOTION_SETUP_PROMPT =
@@ -52,7 +26,7 @@ const planSectionsSchema = z.object({
   markdown: z.string().optional(),
 })
 
-export function createMcpServer(db: Database.Database): McpServer {
+export function createMcpServer(db: Database.Database, store: Store = sqliteStore(db)): McpServer {
   const server = new McpServer({ name: 'issue-board', version: '0.1.0' })
 
   server.tool(
@@ -60,7 +34,7 @@ export function createMcpServer(db: Database.Database): McpServer {
     'repoPath(절대경로)로 등록된 프로젝트·기획·이슈 요약. 없으면 project=null',
     { repoPath: z.string() },
     async ({ repoPath }) => {
-      const ctx = getProjectContext(db, repoPath)
+      const ctx = await store.getProjectContext(repoPath)
       return { content: [{ type: 'text', text: JSON.stringify(ctx) }] }
     }
   )
@@ -74,7 +48,7 @@ export function createMcpServer(db: Database.Database): McpServer {
       repoPath: z.string(),
     },
     async ({ name, description, repoPath }) => {
-      const project = createProject(db, { name, description, repoPath })
+      const project = await store.createProject({ name, description, repoPath })
       return { content: [{ type: 'text', text: JSON.stringify(project) }] }
     }
   )
@@ -92,7 +66,7 @@ export function createMcpServer(db: Database.Database): McpServer {
     async ({ projectId, projectRoot, title, content, sections }) => {
       let pid = projectId
       if (pid == null && projectRoot) {
-        pid = getOrCreateProject(db, projectRoot).id
+        pid = (await store.getOrCreateProject(projectRoot)).id
       }
       if (pid == null) {
         return {
@@ -100,15 +74,15 @@ export function createMcpServer(db: Database.Database): McpServer {
           isError: true,
         }
       }
-      if (!getProject(db, pid)) {
+      if (!(await store.getProject(pid))) {
         return { content: [{ type: 'text', text: `project ${pid} not found` }], isError: true }
       }
 
       let plan
       if (content) {
-        plan = createPlanFromMarkdown(db, pid, title, content)
+        plan = await store.createPlanFromMarkdown(pid, title, content)
       } else if (sections) {
-        plan = createPlan(db, pid, title, sections)
+        plan = await store.createPlan(pid, title, sections)
       } else {
         return {
           content: [{ type: 'text', text: 'content 또는 sections 필요' }],
@@ -129,32 +103,32 @@ export function createMcpServer(db: Database.Database): McpServer {
       status: z.enum(['draft', 'approved']).optional(),
     },
     async ({ planId, content, sections, status }) => {
-      if (content) updatePlanContent(db, planId, content)
-      else if (sections) updatePlanSections(db, planId, sections)
+      if (content) await store.updatePlanContent(planId, content)
+      else if (sections) await store.updatePlanSections(planId, sections)
 
       if (status === 'approved') {
-        const existing = getPlan(db, planId)
+        const existing = await store.getPlan(planId)
         if (!existing) {
           return { content: [{ type: 'text', text: `plan ${planId} not found` }], isError: true }
         }
         if (existing.status === 'approved') {
-          const result = await syncIssuesFromPlan(db, planId)
-          snapshotPlan(db, planId, 'amended')
-          const content = [{ type: 'text' as const, text: JSON.stringify(result) }]
+          const result = await store.syncIssuesFromPlan(planId)
+          await store.snapshotPlan(planId, 'amended')
+          const body = [{ type: 'text' as const, text: JSON.stringify(result) }]
           if (result.created.length > 0 && !isNotionConfigured()) {
-            content.push({ type: 'text' as const, text: NOTION_SETUP_PROMPT })
+            body.push({ type: 'text' as const, text: NOTION_SETUP_PROMPT })
           }
-          return { content }
+          return { content: body }
         }
-        const result = await approvePlanAndCreateIssues(db, planId)
-        const content = [{ type: 'text' as const, text: JSON.stringify(result) }]
+        const result = await store.approvePlanAndCreateIssues(planId)
+        const body = [{ type: 'text' as const, text: JSON.stringify(result) }]
         if (result.issues.length > 0 && !isNotionConfigured()) {
-          content.push({ type: 'text' as const, text: NOTION_SETUP_PROMPT })
+          body.push({ type: 'text' as const, text: NOTION_SETUP_PROMPT })
         }
-        return { content }
+        return { content: body }
       }
 
-      return { content: [{ type: 'text', text: JSON.stringify(getPlan(db, planId)) }] }
+      return { content: [{ type: 'text', text: JSON.stringify(await store.getPlan(planId)) }] }
     }
   )
 
@@ -163,7 +137,7 @@ export function createMcpServer(db: Database.Database): McpServer {
     '현재 기획 상태를 라벨과 함께 수동 스냅샷으로 남긴다 (승인과 무관하게 중간 마일스톤용)',
     { planId: z.number(), label: z.string() },
     async ({ planId, label }) => {
-      const snap = snapshotPlan(db, planId, label)
+      const snap = await store.snapshotPlan(planId, label)
       return { content: [{ type: 'text', text: JSON.stringify(snap) }] }
     }
   )
@@ -174,7 +148,7 @@ export function createMcpServer(db: Database.Database): McpServer {
     { planId: z.number() },
     async ({ planId }) => {
       try {
-        const result = await syncIssuesFromPlan(db, planId)
+        const result = await store.syncIssuesFromPlan(planId)
         return { content: [{ type: 'text', text: JSON.stringify(result) }] }
       } catch (e) {
         return {
@@ -190,8 +164,8 @@ export function createMcpServer(db: Database.Database): McpServer {
     '프로젝트의 이슈 목록을 반환한다',
     { projectRoot: z.string() },
     async ({ projectRoot }) => {
-      const project = getOrCreateProject(db, projectRoot)
-      const issues = listIssuesByProject(db, project.id)
+      const project = await store.getOrCreateProject(projectRoot)
+      const issues = await store.listIssuesByProject(project.id)
       return { content: [{ type: 'text', text: JSON.stringify(issues) }] }
     }
   )
@@ -201,8 +175,8 @@ export function createMcpServer(db: Database.Database): McpServer {
     '프로젝트 표시 번호(number)로 이슈를 조회한다',
     { projectRoot: z.string(), number: z.number() },
     async ({ projectRoot, number }) => {
-      const project = getOrCreateProject(db, projectRoot)
-      const issue = getIssueByNumber(db, project.id, number)
+      const project = await store.getOrCreateProject(projectRoot)
+      const issue = await store.getIssueByNumber(project.id, number)
       if (!issue) {
         return { content: [{ type: 'text', text: `issue #${number} not found` }], isError: true }
       }
@@ -215,8 +189,8 @@ export function createMcpServer(db: Database.Database): McpServer {
     '프로젝트의 디자인 시스템을 조회한다',
     { projectRoot: z.string() },
     async ({ projectRoot }) => {
-      const project = getOrCreateProject(db, projectRoot)
-      const ds = getDesignSystemByProject(db, project.id)
+      const project = await store.getOrCreateProject(projectRoot)
+      const ds = await store.getDesignSystemByProject(project.id)
       if (!ds) {
         return { content: [{ type: 'text', text: 'design system not found' }], isError: true }
       }
@@ -238,12 +212,12 @@ export function createMcpServer(db: Database.Database): McpServer {
       ),
     },
     async ({ issueId, screens }) => {
-      const issue = getIssue(db, issueId)
+      const issue = await store.getIssue(issueId)
       if (!issue) {
         return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
       }
-      const wireframe = upsertWireframe(db, issueId, screens)
-      advanceIssueStatus(db, issueId, 'wireframed')
+      const wireframe = await store.upsertWireframe(issueId, screens)
+      await store.advanceIssueStatus(issueId, 'wireframed')
       return { content: [{ type: 'text', text: JSON.stringify(wireframe) }] }
     }
   )
@@ -253,7 +227,7 @@ export function createMcpServer(db: Database.Database): McpServer {
     '이슈를 개발 승인 상태(dev_approved)로 전환하고 .harness/issues/{number}.yaml을 시딩해 기존 dev 파이프라인과 연결한다',
     { issueId: z.number() },
     async ({ issueId }) => {
-      const updated = await approveIssueForDev(db, issueId)
+      const updated = await store.approveIssueForDev(issueId)
       if (!updated) {
         return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
       }
@@ -266,7 +240,7 @@ export function createMcpServer(db: Database.Database): McpServer {
     '이슈를 완료(done) 상태로 전환한다. /dev 파이프라인이 커밋을 끝낸 뒤 호출 (Notion 상태도 완료로 동기화)',
     { issueId: z.number() },
     async ({ issueId }) => {
-      const updated = await completeIssue(db, issueId)
+      const updated = await store.completeIssue(issueId)
       if (!updated) {
         return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
       }
@@ -279,11 +253,11 @@ export function createMcpServer(db: Database.Database): McpServer {
     '이슈에 개발자용 하위 태스크(체크리스트)를 여러 개 한 번에 추가한다. 이미 있는 하위 태스크는 건드리지 않고 뒤에 이어붙인다',
     { issueId: z.number(), titles: z.array(z.string()) },
     async ({ issueId, titles }) => {
-      const issue = getIssue(db, issueId)
+      const issue = await store.getIssue(issueId)
       if (!issue) {
         return { content: [{ type: 'text', text: `issue ${issueId} not found` }], isError: true }
       }
-      const subtasks = createSubtasksBulk(db, issueId, titles)
+      const subtasks = await store.createSubtasksBulk(issueId, titles)
       return { content: [{ type: 'text', text: JSON.stringify(subtasks) }] }
     }
   )
@@ -311,8 +285,8 @@ export function createMcpServer(db: Database.Database): McpServer {
         .optional(),
     },
     async ({ projectRoot, name, version, packageName, storybookPath, tokens, components }) => {
-      const project = getOrCreateProject(db, projectRoot)
-      const ds = upsertDesignSystem(db, project.id, {
+      const project = await store.getOrCreateProject(projectRoot)
+      const ds = await store.upsertDesignSystem(project.id, {
         name,
         version,
         packageName,
